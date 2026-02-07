@@ -20,23 +20,23 @@ Implement the core networking logic using `kwtransport` with automatic connectio
     - [x] Write tests for retry behavior on connection failure.
     - [x] Implement retry loop in `BabelfishClient`.
 - [x] Task: Implement VAD state streaming from WebTransport. 144aa9a
-    - [x] Write tests for VAD state updates via incoming streams/datagrams.
-    - [x] Implement VAD state parsing in the client.
+    - [x] Write tests for VAD state updates via incoming bidirectional streams.
+    - [x] Implement VAD state parsing in the client using `acceptBi()`.
 - [x] Task: Conductor - User Manual Verification 'Phase 2: WebTransport Client Implementation' (Protocol in workflow.md)
 
-## Phase 3: Presentation & UI State
+## Phase 3: Presentation & UI State [checkpoint: e96e272]
 Bridge the domain logic to the UI using ViewModels and state flows.
 
-- [~] Task: Create `MainViewModel` to manage application-wide status.
-- [ ] Task: Implement TDD for `MainViewModel` state mapping.
-    - [ ] Write tests ensuring `BabelfishClient` states are correctly exposed as UI state.
-    - [ ] Implement `MainViewModel` using `BabelfishClient`.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Presentation & UI State' (Protocol in workflow.md)
+- [x] Task: Create `MainViewModel` to manage application-wide status. e96e272
+- [x] Task: Implement TDD for `MainViewModel` state mapping. e96e272
+    - [x] Write tests ensuring `BabelfishClient` states are correctly exposed as UI state.
+    - [x] Implement `MainViewModel` using `BabelfishClient`.
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Presentation & UI State' (Protocol in workflow.md)
 
 ## Phase 4: Status UI & System Tray
 Implement the visual components for the status card and system integration.
 
-- [ ] Task: Create `StatusCard` Composable.
+- [~] Task: Create `StatusCard` Composable.
     - [ ] Implement visual states (colors/animations) based on MD3 guidelines and spec.
 - [ ] Task: Implement System Tray integration for JVM/Desktop.
     - [ ] Create `TrayManager` to handle icon updates and context menu.
