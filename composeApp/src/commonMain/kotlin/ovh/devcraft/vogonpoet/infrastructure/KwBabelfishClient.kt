@@ -1,6 +1,5 @@
 package ovh.devcraft.vogonpoet.infrastructure
 
-import io.github.arosov.kwtransport.Connection
 import io.github.arosov.kwtransport.Endpoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,6 +10,7 @@ import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
 
 class KwBabelfishClient(
+    private val endpointProvider: EndpointProvider = EndpointProvider { RealBabelfishEndpoint(Endpoint.createClientEndpoint()) },
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 ) : BabelfishClient {
 
@@ -20,32 +20,63 @@ class KwBabelfishClient(
     private val _vadState = MutableStateFlow(VadState.Idle)
     override val vadState: StateFlow<VadState> = _vadState.asStateFlow()
 
-    private var endpoint: Endpoint? = null
-    private var connection: Connection? = null
+    private var endpoint: BabelfishEndpoint? = null
+    private var connection: BabelfishConnection? = null
+    private var connectionJob: Job? = null
 
     override suspend fun connect() {
-        if (_connectionState.value is ConnectionState.Connected || _connectionState.value is ConnectionState.Connecting) return
+        if (connectionJob?.isActive == true) return
 
-        _connectionState.value = ConnectionState.Connecting
-        
-        try {
-            val newEndpoint = Endpoint.createClientEndpoint()
-            endpoint = newEndpoint
-            val newConnection = newEndpoint.connect("https://localhost:8123")
-            connection = newConnection
-            _connectionState.value = ConnectionState.Connected
-            
-            // TODO: Start listening for VAD updates
-            
-        } catch (e: Exception) {
-            _connectionState.value = ConnectionState.Error(e.message ?: "Unknown error")
-            cleanup()
+        connectionJob = scope.launch {
+            var retryDelay = 1000L
+            val maxDelay = 30000L
+
+            while (isActive) {
+                _connectionState.value = ConnectionState.Connecting
+                try {
+                    val newEndpoint = endpointProvider.createClientEndpoint()
+                    endpoint = newEndpoint
+                    val newConnection = newEndpoint.connect("https://localhost:8123")
+                    connection = newConnection
+                    _connectionState.value = ConnectionState.Connected
+                    
+                    listenForUpdates(newConnection)
+                    
+                    break // Connection successful
+                } catch (e: Exception) {
+                    _connectionState.value = ConnectionState.Error(e.message ?: "Unknown error")
+                    cleanup()
+                    
+                    delay(retryDelay)
+                    retryDelay = (retryDelay * 2).coerceAtMost(maxDelay)
+                }
+            }
+        }
+    }
+
+    private suspend fun listenForUpdates(connection: BabelfishConnection) = coroutineScope {
+        while (isActive && !connection.isClosed) {
+            try {
+                val datagram = connection.receiveDatagram()
+                val message = datagram.decodeToString()
+                if (message.startsWith("VAD:")) {
+                    val isListening = message.substringAfter("VAD:").trim() == "1"
+                    _vadState.value = if (isListening) VadState.Listening else VadState.Idle
+                }
+            } catch (e: Exception) {
+                if (isActive && !connection.isClosed) {
+                    delay(100)
+                }
+            }
         }
     }
 
     override fun disconnect() {
+        connectionJob?.cancel()
+        connectionJob = null
         cleanup()
         _connectionState.value = ConnectionState.Disconnected
+        _vadState.value = VadState.Idle
     }
 
     private fun cleanup() {
