@@ -5,11 +5,13 @@ composeMultiplatform = "1.10.0"
 junit = "4.13.2"
 kotlin = "2.3.0"
 kotlinx-coroutines = "1.10.2"
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kwtransport = "0.0.3"
 material3 = "1.10.0-alpha05"
 
 [libraries]
 kwtransport = { module = "io.github.arosov:kwtransport", version.ref = "kwtransport" }
+kwtransport-linux-x64 = { module = "io.github.arosov:kwtransport-jvm-linux-x64", version.ref = "kwtransport" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
