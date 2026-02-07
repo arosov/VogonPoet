@@ -33,13 +33,13 @@ Bridge the domain logic to the UI using ViewModels and state flows.
     - [x] Implement `MainViewModel` using `BabelfishClient`.
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Presentation & UI State' (Protocol in workflow.md)
 
-## Phase 4: Status UI & System Tray
+## Phase 4: Status UI & System Tray [checkpoint: 9a3b4ea]
 Implement the visual components for the status card and system integration.
 
-- [~] Task: Create `StatusCard` Composable.
-    - [ ] Implement visual states (colors/animations) based on MD3 guidelines and spec.
-- [ ] Task: Implement System Tray integration for JVM/Desktop.
-    - [ ] Create `TrayManager` to handle icon updates and context menu.
-    - [ ] Connect `TrayManager` to the application state.
-- [ ] Task: Integrate `StatusCard` into the main `App` entry point.
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Status UI & System Tray' (Protocol in workflow.md)
+- [x] Task: Create `StatusCard` Composable. 9a3b4ea
+    - [x] Implement visual states (colors/animations) based on MD3 guidelines and spec.
+- [x] Task: Implement System Tray integration for JVM/Desktop. 9a3b4ea
+    - [x] Create `VogonPoetTray` Composable in `jvmMain`.
+    - [x] Connect `VogonPoetTray` to the application state.
+- [x] Task: Integrate `StatusCard` into the main `App` entry point. 9a3b4ea
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Status UI & System Tray' (Protocol in workflow.md)
