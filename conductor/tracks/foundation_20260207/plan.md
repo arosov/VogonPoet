@@ -16,18 +16,18 @@ Implement the core networking logic using `kwtransport` with automatic connectio
 - [x] Task: Implement TDD for `BabelfishClient` connection logic. 446d634
     - [x] Write tests for initial connection attempt to `localhost:8123`.
     - [x] Implement `kwtransport` client initialization.
-- [~] Task: Implement reconnection logic with exponential backoff.
-    - [ ] Write tests for retry behavior on connection failure.
-    - [ ] Implement retry loop in `BabelfishClient`.
-- [ ] Task: Implement VAD state streaming from WebTransport.
-    - [ ] Write tests for VAD state updates via incoming streams/datagrams.
-    - [ ] Implement VAD state parsing in the client.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: WebTransport Client Implementation' (Protocol in workflow.md)
+- [x] Task: Implement reconnection logic with exponential backoff. 144aa9a
+    - [x] Write tests for retry behavior on connection failure.
+    - [x] Implement retry loop in `BabelfishClient`.
+- [x] Task: Implement VAD state streaming from WebTransport. 144aa9a
+    - [x] Write tests for VAD state updates via incoming streams/datagrams.
+    - [x] Implement VAD state parsing in the client.
+- [x] Task: Conductor - User Manual Verification 'Phase 2: WebTransport Client Implementation' (Protocol in workflow.md)
 
 ## Phase 3: Presentation & UI State
 Bridge the domain logic to the UI using ViewModels and state flows.
 
-- [ ] Task: Create `MainViewModel` to manage application-wide status.
+- [~] Task: Create `MainViewModel` to manage application-wide status.
 - [ ] Task: Implement TDD for `MainViewModel` state mapping.
     - [ ] Write tests ensuring `BabelfishClient` states are correctly exposed as UI state.
     - [ ] Implement `MainViewModel` using `BabelfishClient`.
