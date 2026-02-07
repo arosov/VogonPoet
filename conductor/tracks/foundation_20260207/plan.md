@@ -1,18 +1,18 @@
 # Implementation Plan - WebTransport Foundation & Status UI
 
-## Phase 1: Dependency & Domain Model
+## Phase 1: Dependency & Domain Model [checkpoint: 02e12cf]
 Establish the project structure and core data models for connection and VAD states.
 
 - [x] Task: Add `kwtransport` and necessary dependencies to `libs.versions.toml` and `composeApp/build.gradle.kts`. 22a5ca8
 - [x] Task: Define the domain models for `ConnectionState` and `VadState`. 8db235a
-    - [ ] Create `ConnectionState` sealed class (Disconnected, Connecting, Connected, Error).
-    - [ ] Create `VadState` enum (Idle, Listening).
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Dependency & Domain Model' (Protocol in workflow.md)
+    - [x] Create `ConnectionState` sealed class (Disconnected, Connecting, Connected, Error).
+    - [x] Create `VadState` enum (Idle, Listening).
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Dependency & Domain Model' (Protocol in workflow.md)
 
 ## Phase 2: WebTransport Client Implementation
 Implement the core networking logic using `kwtransport` with automatic connection and retry logic.
 
-- [ ] Task: Create `BabelfishClient` interface and its implementation in `commonMain`.
+- [~] Task: Create `BabelfishClient` interface and its implementation in `commonMain`.
 - [ ] Task: Implement TDD for `BabelfishClient` connection logic.
     - [ ] Write tests for initial connection attempt to `localhost:8123`.
     - [ ] Implement `kwtransport` client initialization.
