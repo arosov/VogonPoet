@@ -13,10 +13,10 @@ Establish the project structure and core data models for connection and VAD stat
 Implement the core networking logic using `kwtransport` with automatic connection and retry logic.
 
 - [x] Task: Create `BabelfishClient` interface and its implementation in `commonMain`. 4716173
-- [~] Task: Implement TDD for `BabelfishClient` connection logic.
-    - [ ] Write tests for initial connection attempt to `localhost:8123`.
-    - [ ] Implement `kwtransport` client initialization.
-- [ ] Task: Implement reconnection logic with exponential backoff.
+- [x] Task: Implement TDD for `BabelfishClient` connection logic. 446d634
+    - [x] Write tests for initial connection attempt to `localhost:8123`.
+    - [x] Implement `kwtransport` client initialization.
+- [~] Task: Implement reconnection logic with exponential backoff.
     - [ ] Write tests for retry behavior on connection failure.
     - [ ] Implement retry loop in `BabelfishClient`.
 - [ ] Task: Implement VAD state streaming from WebTransport.
