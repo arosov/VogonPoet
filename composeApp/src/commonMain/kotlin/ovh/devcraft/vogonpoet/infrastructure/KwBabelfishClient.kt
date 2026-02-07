@@ -55,18 +55,22 @@ class KwBabelfishClient(
     }
 
     private suspend fun listenForUpdates(connection: BabelfishConnection) = coroutineScope {
-        while (isActive && !connection.isClosed) {
+        launch {
             try {
-                val datagram = connection.receiveDatagram()
-                val message = datagram.decodeToString()
-                if (message.startsWith("VAD:")) {
-                    val isListening = message.substringAfter("VAD:").trim() == "1"
-                    _vadState.value = if (isListening) VadState.Listening else VadState.Idle
+                // Babelfish initiates a bidirectional stream for control/status
+                val streamPair = connection.acceptBi()
+                streamPair.recv.chunks().collect { chunk ->
+                    val message = chunk.decodeToString()
+                    // Handle messages that might be bundled in one chunk or split
+                    message.lines().forEach { line ->
+                        if (line.startsWith("VAD:")) {
+                            val isListening = line.substringAfter("VAD:").trim() == "1"
+                            _vadState.value = if (isListening) VadState.Listening else VadState.Idle
+                        }
+                    }
                 }
             } catch (e: Exception) {
-                if (isActive && !connection.isClosed) {
-                    delay(100)
-                }
+                // Stream closed or error
             }
         }
     }

@@ -2,6 +2,8 @@ package ovh.devcraft.vogonpoet.infrastructure
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
@@ -48,18 +50,23 @@ class KwBabelfishClientTest {
     }
 
     @Test
-    fun testVadStateUpdates() = runTest {
+    fun testVadStateUpdatesViaStream() = runTest {
+        val chunksFlow = MutableSharedFlow<ByteArray>()
+        
+        val fakeRecvStream = object : BabelfishRecvStream {
+            override fun chunks(): Flow<ByteArray> = chunksFlow
+        }
+        
+        val fakeStreamPair = object : BabelfishStreamPair {
+            override val send = object : BabelfishSendStream {}
+            override val recv = fakeRecvStream
+        }
+
         val fakeConnection = object : BabelfishConnection {
             var closed = false
-            val datagrams = mutableListOf<ByteArray>()
-            
             override val isClosed: Boolean get() = closed
-            override suspend fun receiveDatagram(): ByteArray {
-                while (datagrams.isEmpty()) {
-                    delay(10)
-                }
-                return datagrams.removeAt(0)
-            }
+            override suspend fun receiveDatagram(): ByteArray = ByteArray(0)
+            override suspend fun acceptBi(): BabelfishStreamPair = fakeStreamPair
             override fun close() { closed = true }
         }
 
@@ -74,19 +81,16 @@ class KwBabelfishClientTest {
         )
 
         client.connect()
-        // Wait for connection and listener to start
         advanceTimeBy(100)
         
         // Send VAD:1
-        fakeConnection.datagrams.add("VAD:1".encodeToByteArray())
-        // Wait for processing
-        advanceTimeBy(200)
+        chunksFlow.emit("VAD:1\n".encodeToByteArray())
+        advanceTimeBy(100)
         assertEquals(VadState.Listening, client.vadState.value)
 
         // Send VAD:0
-        fakeConnection.datagrams.add("VAD:0".encodeToByteArray())
-        // Wait for processing
-        advanceTimeBy(200)
+        chunksFlow.emit("VAD:0\n".encodeToByteArray())
+        advanceTimeBy(100)
         assertEquals(VadState.Idle, client.vadState.value)
 
         client.disconnect()
