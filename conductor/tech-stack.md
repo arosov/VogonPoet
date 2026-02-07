@@ -1,0 +1,16 @@
+# Tech Stack - VogonPoet
+
+## Core UI & Logic
+- **Language:** Kotlin 2.3.0
+- **UI Framework:** Compose Multiplatform 1.10.0
+- **Design System:** Material Design 3 (Material3 1.10.0-alpha05)
+- **Lifecycle Management:** AndroidX Lifecycle (Runtime & ViewModel) 2.9.6
+
+## Concurrency & Networking
+- **Asynchronous Programming:** Kotlinx Coroutines 1.10.2
+- **Communication Protocol:** WebTransport (for low-latency backend streaming)
+
+## Build System & Infrastructure
+- **Build Tool:** Gradle (Kotlin DSL)
+- **Dependency Management:** Gradle Version Catalogs (`libs.versions.toml`)
+- **Primary Target:** JVM / Desktop (Linux, Windows, macOS)
