@@ -4,7 +4,7 @@
 Establish the project structure and core data models for connection and VAD states.
 
 - [x] Task: Add `kwtransport` and necessary dependencies to `libs.versions.toml` and `composeApp/build.gradle.kts`. 22a5ca8
-- [~] Task: Define the domain models for `ConnectionState` and `VadState`.
+- [x] Task: Define the domain models for `ConnectionState` and `VadState`. 8db235a
     - [ ] Create `ConnectionState` sealed class (Disconnected, Connecting, Connected, Error).
     - [ ] Create `VadState` enum (Idle, Listening).
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Dependency & Domain Model' (Protocol in workflow.md)
