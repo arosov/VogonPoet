@@ -8,8 +8,13 @@
 - **Speed is a Feature:** Emphasize the ultra-low latency of the system. The UI should be marketed and perceived as "instant," matching the high-performance parakeet-stream backend.
 
 ## Visual Identity
-- **Material Design 3 (Dark Mode Primary):** Adhere to the Material Design 3 specification, prioritizing a well-crafted Dark Mode. This reduces eye strain and helps the UI feel less intrusive when used as a persistent overlay.
-- **Meaningful Color:** Use the MD3 color palette to provide functional feedback. State changes (e.g., active listening vs. idle) should be represented by subtle but clear shifts in the primary or accent color tokens.
+- **Gruvbox Dark Aesthetic:** Adhere to the Gruvbox color palette, prioritizing the "Dark" variant for a high-contrast yet easy-on-the-eyes "retro-technical" look.
+- **Meaningful Color (Gruvbox):**
+    - **Green (#98971a / #b8bb26):** Active Listening / Connected.
+    - **Red (#cc241d / #fb4934):** Errors / Disconnected.
+    - **Blue (#458588 / #83a598):** Processing / Connecting.
+    - **Background (#282828):** Main surface color.
+    - **Foreground (#ebdbb2):** Primary text color.
 
 ## User Experience Principles
 - **Minimalist Presence:** Every UI element must justify its existence. If it doesn't help the user understand the state or control the backend, it should be removed.
