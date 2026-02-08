@@ -95,4 +95,48 @@ class KwBabelfishClientTest {
 
         client.disconnect()
     }
+
+    @Test
+    fun testJsonConfigUpdates() = runTest {
+        val chunksFlow = MutableSharedFlow<ByteArray>()
+        
+        val fakeRecvStream = object : BabelfishRecvStream {
+            override fun chunks(): Flow<ByteArray> = chunksFlow
+        }
+        
+        val fakeStreamPair = object : BabelfishStreamPair {
+            override val send = object : BabelfishSendStream {}
+            override val recv = fakeRecvStream
+        }
+
+        val fakeConnection = object : BabelfishConnection {
+            override val isClosed: Boolean get() = false
+            override suspend fun receiveDatagram(): ByteArray = ByteArray(0)
+            override suspend fun acceptBi(): BabelfishStreamPair = fakeStreamPair
+            override fun close() {}
+        }
+
+        val fakeEndpoint = object : BabelfishEndpoint {
+            override suspend fun connect(url: String) = fakeConnection
+            override fun close() {}
+        }
+
+        val client = KwBabelfishClient(
+            endpointProvider = { fakeEndpoint },
+            scope = this
+        )
+
+        client.connect()
+        advanceTimeBy(100)
+        
+        // Send JSON config
+        val jsonConfig = """{"type": "config", "data": {"hardware": {"device": "cuda"}}}"""
+        chunksFlow.emit((jsonConfig + "\n").encodeToByteArray())
+        advanceTimeBy(100)
+        
+        // Verification is mainly visual in logs as per request, but we ensure it doesn't crash
+        // and handles the message.
+        
+        client.disconnect()
+    }
 }
