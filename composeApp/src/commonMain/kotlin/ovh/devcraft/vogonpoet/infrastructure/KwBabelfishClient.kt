@@ -18,6 +18,7 @@ class KwBabelfishClient(
         val clientEndpoint = Endpoint.createClientEndpoint(
             certificateHashes = listOf(certHash),
             acceptAllCerts = true,
+            maxIdleTimeoutMillis = 0L,
             keepAliveIntervalMillis = 10_000L
         )
         RealBabelfishEndpoint(clientEndpoint)
