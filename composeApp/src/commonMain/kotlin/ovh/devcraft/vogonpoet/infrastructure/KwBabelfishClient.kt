@@ -46,11 +46,11 @@ class KwBabelfishClient(
 
             while (isActive) {
                 _connectionState.value = ConnectionState.Connecting
-                println("Attempting to connect to Babelfish at https://127.0.0.1:8123/config...")
+                println("Attempting to connect to Babelfish at 127.0.0.1:8123...")
                 try {
                     val newEndpoint = endpointProvider.createClientEndpoint()
                     endpoint = newEndpoint
-                    val newConnection = newEndpoint.connect("https://127.0.0.1:8123/config")
+                    val newConnection = newEndpoint.connect("127.0.0.1:8123")
                     connection = newConnection
                     _connectionState.value = ConnectionState.Connected
                     println("Successfully connected to Babelfish.")
