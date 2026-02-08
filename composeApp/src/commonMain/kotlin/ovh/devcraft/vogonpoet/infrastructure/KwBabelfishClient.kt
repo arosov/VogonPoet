@@ -14,9 +14,13 @@ import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 class KwBabelfishClient(
     private val endpointProvider: EndpointProvider = EndpointProvider {
         // Hash for local dev cert
-        val certHash = "c2:df:32:4f:2b:5d:cd:36:32:76:e2:46:3c:20:64:ca:a0:7a:0c:03:1c:41:9c:fc:79:87:10:68:63:69:35:e3"
-        val clientEndpoint = Endpoint.createClientEndpoint(certificateHashes = listOf(certHash))
-        RealBabelfishEndpoint(clientEndpoint) 
+        val certHash = "dd:c9:8f:b8:e5:33:79:67:8e:cd:0c:fe:59:c4:91:43:ad:11:09:d4:70:3f:4b:10:d2:27:bc:23:27:9b:3d:ef"
+        val clientEndpoint = Endpoint.createClientEndpoint(
+            certificateHashes = listOf(certHash),
+            acceptAllCerts = true,
+            keepAliveIntervalMillis = 10_000L
+        )
+        RealBabelfishEndpoint(clientEndpoint)
     },
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 ) : BabelfishClient {
@@ -75,9 +79,9 @@ class KwBabelfishClient(
     private suspend fun listenForUpdates(connection: BabelfishConnection) = coroutineScope {
         launch {
             try {
-                println("Listening for updates from Babelfish...")
-                // Babelfish initiates a bidirectional stream for control/status
-                val streamPair = connection.acceptBi()
+                println("Opening bidirectional stream for control/status...")
+                // Client initiates the control stream
+                val streamPair = connection.openBi()
                 streamPair.recv.chunks().collect { chunk ->
                     val message = chunk.decodeToString()
                     // Handle messages that might be bundled in one chunk or split

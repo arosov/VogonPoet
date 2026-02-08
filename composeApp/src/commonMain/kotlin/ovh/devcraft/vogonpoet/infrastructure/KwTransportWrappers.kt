@@ -11,6 +11,7 @@ interface BabelfishConnection {
     val isClosed: Boolean
     suspend fun receiveDatagram(): ByteArray
     suspend fun acceptBi(): BabelfishStreamPair
+    suspend fun openBi(): BabelfishStreamPair
     fun close()
 }
 
@@ -36,6 +37,7 @@ class RealBabelfishConnection(private val connection: Connection) : BabelfishCon
     override val isClosed: Boolean get() = connection.isClosed()
     override suspend fun receiveDatagram(): ByteArray = connection.receiveDatagram()
     override suspend fun acceptBi(): BabelfishStreamPair = RealBabelfishStreamPair(connection.acceptBi())
+    override suspend fun openBi(): BabelfishStreamPair = RealBabelfishStreamPair(connection.openBi())
     override fun close() = connection.close()
 }
 

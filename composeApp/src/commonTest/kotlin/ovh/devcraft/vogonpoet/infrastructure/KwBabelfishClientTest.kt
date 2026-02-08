@@ -67,6 +67,7 @@ class KwBabelfishClientTest {
             override val isClosed: Boolean get() = closed
             override suspend fun receiveDatagram(): ByteArray = ByteArray(0)
             override suspend fun acceptBi(): BabelfishStreamPair = fakeStreamPair
+            override suspend fun openBi(): BabelfishStreamPair = fakeStreamPair
             override fun close() { closed = true }
         }
 
@@ -113,6 +114,7 @@ class KwBabelfishClientTest {
             override val isClosed: Boolean get() = false
             override suspend fun receiveDatagram(): ByteArray = ByteArray(0)
             override suspend fun acceptBi(): BabelfishStreamPair = fakeStreamPair
+            override suspend fun openBi(): BabelfishStreamPair = fakeStreamPair
             override fun close() {}
         }
 
