@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.components.StatusCard
+import ovh.devcraft.vogonpoet.ui.theme.*
 
 @Composable
 fun App(viewModel: MainViewModel) {
@@ -15,7 +16,7 @@ fun App(viewModel: MainViewModel) {
     val vadState by viewModel.vadState.collectAsState()
 
     MaterialTheme(
-        colorScheme = darkColorScheme()
+        colorScheme = GruvboxDarkColorScheme
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -35,7 +36,13 @@ fun App(viewModel: MainViewModel) {
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                Button(onClick = { viewModel.reconnect() }) {
+                Button(
+                    onClick = { viewModel.reconnect() },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GruvboxBlueDark,
+                        contentColor = GruvboxFg0
+                    )
+                ) {
                     Text("Reconnect")
                 }
             }

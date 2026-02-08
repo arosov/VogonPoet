@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
+import ovh.devcraft.vogonpoet.ui.theme.*
 
 @Composable
 fun StatusCard(
@@ -19,28 +20,30 @@ fun StatusCard(
     modifier: Modifier = Modifier
 ) {
     val baseColor = when (connectionState) {
-        is ConnectionState.Disconnected -> Color.Gray
-        is ConnectionState.Connecting -> Color.Blue
-        is ConnectionState.Connected -> if (vadState == VadState.Listening) Color.Green else Color(0xFF4CAF50) // MD3 Green
-        is ConnectionState.Error -> Color(0xFFB71C1C) // MD3 Red 900
+        is ConnectionState.Disconnected -> GruvboxGray
+        is ConnectionState.Connecting -> GruvboxBlueDark
+        is ConnectionState.Connected -> if (vadState == VadState.Listening) GruvboxGreenLight else GruvboxGreenDark
+        is ConnectionState.Error -> GruvboxRedDark
     }
 
     val color by animateColorAsState(baseColor)
 
     // Pulsing animation for Listening state
     val infiniteTransition = rememberInfiniteTransition()
-    val alpha by if (connectionState is ConnectionState.Connected && vadState == VadState.Listening) {
+    val animatedAlpha = if (connectionState is ConnectionState.Connected && vadState == VadState.Listening) {
         infiniteTransition.animateFloat(
-            initialValue = 0.6f,
+            initialValue = 0.7f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(
-                animation = tween(1000, easing = LinearEasing),
+                animation = tween(800, easing = LinearEasing),
                 repeatMode = RepeatMode.Reverse
             )
         )
     } else {
-        remember { mutableStateOf(1f) }
+        null
     }
+    
+    val alpha = animatedAlpha?.value ?: 1f
 
     Card(
         modifier = modifier
@@ -48,7 +51,8 @@ fun StatusCard(
             .padding(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = color.copy(alpha = alpha)
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier
@@ -64,7 +68,7 @@ fun StatusCard(
                     is ConnectionState.Error -> "Connection Error"
                 },
                 style = MaterialTheme.typography.headlineMedium,
-                color = Color.White
+                color = GruvboxFg0
             )
             
             if (connectionState is ConnectionState.Error) {
@@ -72,7 +76,7 @@ fun StatusCard(
                 Text(
                     text = connectionState.message,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.8f)
+                    color = GruvboxFg1.copy(alpha = 0.9f)
                 )
             }
         }
