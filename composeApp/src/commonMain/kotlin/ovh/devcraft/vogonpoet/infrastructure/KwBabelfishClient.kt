@@ -14,8 +14,8 @@ import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 class KwBabelfishClient(
     private val endpointProvider: EndpointProvider = EndpointProvider { 
         // Hash for local dev cert
-        val certHash = "C2DF324F2B5DCD363276E2463C2064CAA07A0C031C419CFC79871068636935E3"
-        val clientEndpoint = Endpoint.createClientEndpoint(certHash)
+        val certHash = "c2:df:32:4f:2b:5d:cd:36:32:76:e2:46:3c:20:64:ca:a0:7a:0c:03:1c:41:9c:fc:79:87:10:68:63:69:35:e3"
+        val clientEndpoint = Endpoint.createClientEndpoint(certificateHashes = listOf(certHash))
         RealBabelfishEndpoint(clientEndpoint) 
     },
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
