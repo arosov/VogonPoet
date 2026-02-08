@@ -37,6 +37,8 @@ class KwBabelfishClient(
     private var connection: BabelfishConnection? = null
     private var connectionJob: Job? = null
 
+    private val SERVER_URL = "https://127.0.0.1:8123/config"
+
     override suspend fun connect() {
         if (connectionJob?.isActive == true) return
 
@@ -46,11 +48,11 @@ class KwBabelfishClient(
 
             while (isActive) {
                 _connectionState.value = ConnectionState.Connecting
-                println("Attempting to connect to Babelfish at 127.0.0.1:8123...")
+                println("Attempting to connect to Babelfish at $SERVER_URL...")
                 try {
                     val newEndpoint = endpointProvider.createClientEndpoint()
                     endpoint = newEndpoint
-                    val newConnection = newEndpoint.connect("127.0.0.1:8123")
+                    val newConnection = newEndpoint.connect(SERVER_URL)
                     connection = newConnection
                     _connectionState.value = ConnectionState.Connected
                     println("Successfully connected to Babelfish.")
