@@ -127,7 +127,6 @@
           "title": "Wakeword"
         },
         "wakeword_sensitivity": {
-          "default": 0.5,
           "title": "Wakeword Sensitivity",
           "type": "number"
         },
