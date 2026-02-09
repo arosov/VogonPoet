@@ -78,6 +78,7 @@ fun VadWindow(
                             Modifier
                                 .fillMaxSize()
                                 .alpha(if (isReady) 1f else 0.3f),
+                        contentAlignment = Alignment.Center,
                     ) {
                         when (vadState) {
                             VadState.Idle -> {
