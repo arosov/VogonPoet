@@ -35,7 +35,8 @@ fun VadWindow(
     val config by viewModel.config.collectAsState()
 
     // Get activation detection settings
-    val iconOnly = config?.ui?.activation_detection?.icon_only ?: false
+    // TEST: Force icon only mode for testing
+    val iconOnly = true // config?.ui?.activation_detection?.icon_only ?: false
     val overlayMode = config?.ui?.activation_detection?.overlay_mode ?: false
 
     // Check if backend is ready
@@ -47,8 +48,8 @@ fun VadWindow(
             // Small window for icon-only mode
             WindowState(width = 85.dp, height = 85.dp)
         } else {
-            // Default size for full mode - tighter wrap
-            WindowState(width = 170.dp, height = 220.dp)
+            // Default size for full mode
+            WindowState(width = 170.dp, height = 200.dp)
         }
 
     Window(
