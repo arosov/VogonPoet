@@ -16,11 +16,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
+import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.theme.GruvboxBg1
 import ovh.devcraft.vogonpoet.ui.theme.GruvboxDarkColorScheme
 import ovh.devcraft.vogonpoet.ui.theme.GruvboxFg0
+import ovh.devcraft.vogonpoet.ui.theme.GruvboxGray
 import ovh.devcraft.vogonpoet.ui.theme.GruvboxGreenLight
 
 @Composable
@@ -29,11 +31,15 @@ fun VadWindow(
     onCloseRequest: () -> Unit,
 ) {
     val vadState by viewModel.vadState.collectAsState()
+    val connectionState by viewModel.connectionState.collectAsState()
     val config by viewModel.config.collectAsState()
 
     // Get activation detection settings
     val iconOnly = config?.ui?.activation_detection?.icon_only ?: false
     val overlayMode = config?.ui?.activation_detection?.overlay_mode ?: false
+
+    // Check if backend is ready
+    val isReady = connectionState is ConnectionState.Connected
 
     // Determine window properties based on overlay mode
     val windowState =
@@ -42,7 +48,7 @@ fun VadWindow(
             WindowState(width = 85.dp, height = 85.dp)
         } else {
             // Default size for full mode - tighter wrap
-            WindowState(width = 200.dp, height = 160.dp)
+            WindowState(width = 170.dp, height = 220.dp)
         }
 
     Window(
@@ -66,37 +72,21 @@ fun VadWindow(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    when (vadState) {
-                        VadState.Idle -> {
-                            if (iconOnly) {
-                                // Icon only mode - just the microphone
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .size(80.dp)
-                                            .background(
-                                                color = androidx.compose.ui.graphics.Color.Transparent,
-                                                shape = androidx.compose.foundation.shape.CircleShape,
-                                            ),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        text = "🎤",
-                                        fontSize = 48.sp,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier.alpha(0.5f),
-                                    )
-                                }
-                            } else {
-                                // Full mode with text
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center,
-                                ) {
+                    // Content with reduced alpha when not ready
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .alpha(if (isReady) 1f else 0.3f),
+                    ) {
+                        when (vadState) {
+                            VadState.Idle -> {
+                                if (iconOnly) {
+                                    // Icon only mode - just the microphone
                                     Box(
                                         modifier =
                                             Modifier
-                                                .size(120.dp)
+                                                .size(80.dp)
                                                 .background(
                                                     color = androidx.compose.ui.graphics.Color.Transparent,
                                                     shape = androidx.compose.foundation.shape.CircleShape,
@@ -105,57 +95,58 @@ fun VadWindow(
                                     ) {
                                         Text(
                                             text = "🎤",
-                                            fontSize = 64.sp,
+                                            fontSize = 48.sp,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.alpha(0.5f),
+                                        )
+                                    }
+                                } else {
+                                    // Full mode with text
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center,
+                                    ) {
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .size(120.dp)
+                                                    .background(
+                                                        color = androidx.compose.ui.graphics.Color.Transparent,
+                                                        shape = androidx.compose.foundation.shape.CircleShape,
+                                                    ),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Text(
+                                                text = "🎤",
+                                                fontSize = 64.sp,
+                                                textAlign = TextAlign.Center,
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Idle",
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            color = GruvboxFg0.copy(alpha = 0.6f),
+                                            textAlign = TextAlign.Center,
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "Waiting for activation...",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = GruvboxFg0.copy(alpha = 0.5f),
                                             textAlign = TextAlign.Center,
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Idle",
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        color = GruvboxFg0.copy(alpha = 0.6f),
-                                        textAlign = TextAlign.Center,
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "Waiting for activation...",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = GruvboxFg0.copy(alpha = 0.5f),
-                                        textAlign = TextAlign.Center,
-                                    )
                                 }
                             }
-                        }
 
-                        VadState.Listening -> {
-                            if (iconOnly) {
-                                // Icon only mode - glowing microphone
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .size(80.dp)
-                                            .background(
-                                                color = GruvboxGreenLight.copy(alpha = 0.3f),
-                                                shape = androidx.compose.foundation.shape.CircleShape,
-                                            ),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        text = "🎤",
-                                        fontSize = 48.sp,
-                                        textAlign = TextAlign.Center,
-                                    )
-                                }
-                            } else {
-                                // Full mode with text
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center,
-                                ) {
+                            VadState.Listening -> {
+                                if (iconOnly) {
+                                    // Icon only mode - glowing microphone
                                     Box(
                                         modifier =
                                             Modifier
-                                                .size(120.dp)
+                                                .size(80.dp)
                                                 .background(
                                                     color = GruvboxGreenLight.copy(alpha = 0.3f),
                                                     shape = androidx.compose.foundation.shape.CircleShape,
@@ -164,22 +155,82 @@ fun VadWindow(
                                     ) {
                                         Text(
                                             text = "🎤",
-                                            fontSize = 64.sp,
+                                            fontSize = 48.sp,
                                             textAlign = TextAlign.Center,
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                } else {
+                                    // Full mode with text
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center,
+                                    ) {
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .size(120.dp)
+                                                    .background(
+                                                        color = GruvboxGreenLight.copy(alpha = 0.3f),
+                                                        shape = androidx.compose.foundation.shape.CircleShape,
+                                                    ),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Text(
+                                                text = "🎤",
+                                                fontSize = 64.sp,
+                                                textAlign = TextAlign.Center,
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Listening",
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            color = GruvboxGreenLight,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "Speech detected",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = GruvboxFg0.copy(alpha = 0.7f),
+                                            textAlign = TextAlign.Center,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Overlay when backend is not ready
+                    if (!isReady) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(GruvboxBg1.copy(alpha = 0.7f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (iconOnly) {
+                                Text(
+                                    text = "⏳",
+                                    fontSize = 32.sp,
+                                    textAlign = TextAlign.Center,
+                                )
+                            } else {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                ) {
                                     Text(
-                                        text = "Listening",
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        color = GruvboxGreenLight,
+                                        text = "⏳",
+                                        fontSize = 48.sp,
                                         textAlign = TextAlign.Center,
                                     )
-                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = "Speech detected - processing...",
+                                        text = "Initializing...",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = GruvboxFg0.copy(alpha = 0.7f),
+                                        color = GruvboxGray,
                                         textAlign = TextAlign.Center,
                                     )
                                 }
