@@ -35,30 +35,32 @@ fun VadWindow(
     val iconOnly = config?.ui?.activation_detection?.icon_only ?: false
     val overlayMode = config?.ui?.activation_detection?.overlay_mode ?: false
 
-    // Determine window properties based on mode
-    // Skinny window: 60dp width for icon-only, 200dp for full mode
+    // Determine window properties based on overlay mode
     val windowState =
         if (iconOnly) {
-            WindowState(width = 60.dp, height = 60.dp)
+            // Small window for icon-only mode
+            WindowState(width = 120.dp, height = 120.dp)
         } else {
-            WindowState(width = 200.dp, height = 200.dp)
+            // Default size for full mode
+            WindowState(width = 300.dp, height = 300.dp)
         }
 
     Window(
         onCloseRequest = onCloseRequest,
-        title = "VogonPoet",
+        title = "VogonPoet - Activation Detection",
         state = windowState,
-        undecorated = overlayMode || iconOnly, // Undecorated in both overlay and icon-only modes
+        // Overlay mode properties
+        undecorated = overlayMode,
         alwaysOnTop = overlayMode,
-        focusable = !overlayMode && !iconOnly,
-        transparent = overlayMode || iconOnly,
+        focusable = !overlayMode,
+        transparent = overlayMode,
     ) {
         MaterialTheme(
             colorScheme = GruvboxDarkColorScheme,
         ) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = if (overlayMode || iconOnly) GruvboxBg1.copy(alpha = 0.0f) else GruvboxBg1,
+                color = if (overlayMode) GruvboxBg1.copy(alpha = 0.8f) else GruvboxBg1,
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -67,30 +69,36 @@ fun VadWindow(
                     when (vadState) {
                         VadState.Idle -> {
                             if (iconOnly) {
-                                // Icon only mode - tiny microphone
+                                // Icon only mode - just the microphone
                                 Text(
                                     text = "🎤",
-                                    fontSize = 32.sp,
+                                    fontSize = 48.sp,
                                     textAlign = TextAlign.Center,
-                                    modifier = Modifier.alpha(0.4f),
+                                    modifier = Modifier.alpha(0.5f),
                                 )
                             } else {
-                                // Full mode with text - compact
+                                // Full mode with text
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center,
-                                    modifier = Modifier.padding(8.dp),
                                 ) {
                                     Text(
                                         text = "🎤",
-                                        fontSize = 48.sp,
+                                        fontSize = 64.sp,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = "Idle",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = GruvboxFg0.copy(alpha = 0.6f),
                                         textAlign = TextAlign.Center,
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = "Idle",
+                                        text = "Waiting for activation...",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = GruvboxFg0.copy(alpha = 0.6f),
+                                        color = GruvboxFg0.copy(alpha = 0.5f),
                                         textAlign = TextAlign.Center,
                                     )
                                 }
@@ -99,34 +107,33 @@ fun VadWindow(
 
                         VadState.Listening -> {
                             if (iconOnly) {
-                                // Icon only mode - glowing microphone, compact
+                                // Icon only mode - glowing microphone
                                 Box(
                                     modifier =
                                         Modifier
-                                            .size(48.dp)
+                                            .size(80.dp)
                                             .background(
-                                                color = GruvboxGreenLight.copy(alpha = 0.4f),
+                                                color = GruvboxGreenLight.copy(alpha = 0.3f),
                                                 shape = androidx.compose.foundation.shape.CircleShape,
                                             ),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
                                         text = "🎤",
-                                        fontSize = 32.sp,
+                                        fontSize = 48.sp,
                                         textAlign = TextAlign.Center,
                                     )
                                 }
                             } else {
-                                // Full mode with text - compact
+                                // Full mode with text
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center,
-                                    modifier = Modifier.padding(8.dp),
                                 ) {
                                     Box(
                                         modifier =
                                             Modifier
-                                                .size(80.dp)
+                                                .size(120.dp)
                                                 .background(
                                                     color = GruvboxGreenLight.copy(alpha = 0.3f),
                                                     shape = androidx.compose.foundation.shape.CircleShape,
@@ -135,15 +142,22 @@ fun VadWindow(
                                     ) {
                                         Text(
                                             text = "🎤",
-                                            fontSize = 48.sp,
+                                            fontSize = 64.sp,
                                             textAlign = TextAlign.Center,
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(16.dp))
                                     Text(
                                         text = "Listening",
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = MaterialTheme.typography.headlineMedium,
                                         color = GruvboxGreenLight,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Speech detected - processing...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = GruvboxFg0.copy(alpha = 0.7f),
                                         textAlign = TextAlign.Center,
                                     )
                                 }
