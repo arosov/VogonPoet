@@ -41,6 +41,7 @@ fun App(viewModel: MainViewModel) {
 
                 // Interactive Configuration Form
                 ConfigForm(
+                    viewModel = viewModel,
                     config = config,
                     onSave = { newConfig ->
                         viewModel.saveConfig(newConfig)

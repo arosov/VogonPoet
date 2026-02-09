@@ -17,4 +17,14 @@ interface BabelfishClient {
     fun disconnect()
 
     suspend fun saveConfig(config: Babelfish)
+
+    suspend fun listMicrophones(): List<Microphone>
+
+    suspend fun setMicTest(enabled: Boolean)
 }
+
+data class Microphone(
+    val index: Int,
+    val name: String,
+    val isDefault: Boolean,
+)

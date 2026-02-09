@@ -5,9 +5,11 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.*
 import ovh.devcraft.vogonpoet.domain.BabelfishClient
+import ovh.devcraft.vogonpoet.domain.Microphone
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.MessageDirection
 import ovh.devcraft.vogonpoet.domain.model.ProtocolMessage
@@ -193,6 +195,64 @@ class KwBabelfishClient(
             println("Config sent to backend: $configJson")
         } catch (e: Exception) {
             println("Failed to save config: ${e.message}")
+            throw e
+        }
+    }
+
+    override suspend fun listMicrophones(): List<Microphone> {
+        val currentConnection = connection ?: throw IllegalStateException("Not connected")
+
+        return try {
+            val message = """{"type":"list_microphones"}"""
+
+            // Open a new stream to send the request
+            val streamPair = currentConnection.openBi()
+            streamPair.send.write(message.encodeToByteArray())
+            streamPair.send.close()
+
+            logMessage(MessageDirection.Sent, message)
+            println("Requesting microphone list...")
+
+            // Wait for response
+            val responseBytes = streamPair.recv.chunks().first()
+            val responseText = responseBytes.decodeToString()
+            logMessage(MessageDirection.Received, responseText)
+
+            val element = json.parseToJsonElement(responseText)
+            if (element is JsonObject && element["type"]?.jsonPrimitive?.content == "microphones_list") {
+                val data = element["data"]?.jsonArray
+                data?.map { item ->
+                    val obj = item.jsonObject
+                    Microphone(
+                        index = obj["index"]?.jsonPrimitive?.int ?: 0,
+                        name = obj["name"]?.jsonPrimitive?.content ?: "Unknown",
+                        isDefault = obj["is_default"]?.jsonPrimitive?.boolean ?: false,
+                    )
+                } ?: emptyList()
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            println("Failed to list microphones: ${e.message}")
+            throw e
+        }
+    }
+
+    override suspend fun setMicTest(enabled: Boolean) {
+        val currentConnection = connection ?: throw IllegalStateException("Not connected")
+
+        try {
+            val message = """{"type":"set_mic_test","enabled":$enabled}"""
+
+            // Open a new stream to send the command
+            val streamPair = currentConnection.openBi()
+            streamPair.send.write(message.encodeToByteArray())
+            streamPair.send.close()
+
+            logMessage(MessageDirection.Sent, message)
+            println("Setting microphone test mode: $enabled")
+        } catch (e: Exception) {
+            println("Failed to set mic test mode: ${e.message}")
             throw e
         }
     }

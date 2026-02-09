@@ -6,7 +6,8 @@
   "permission": {
     "external_directory": {
       "~/dev/VogonPoet/babelfish/**": "allow"
-    }
+    },
+    "lsp": "allow"
   },
   "tui": {
     "status_bar": {

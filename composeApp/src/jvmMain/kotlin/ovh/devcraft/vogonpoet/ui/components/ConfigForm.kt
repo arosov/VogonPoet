@@ -11,12 +11,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import ovh.devcraft.vogonpoet.domain.model.ConnectionState
+import ovh.devcraft.vogonpoet.domain.model.VadState
 import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
+import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfigForm(
+    viewModel: MainViewModel,
     config: Babelfish?,
     onSave: (Babelfish) -> Unit,
     modifier: Modifier = Modifier,
@@ -43,6 +47,20 @@ fun ConfigForm(
     var forceShortcut by remember(config) { mutableStateOf(config.ui?.shortcuts?.force_listen ?: "Ctrl+Shift+L") }
     var iconOnly by remember(config) { mutableStateOf(config.ui?.activation_detection?.icon_only ?: false) }
     var overlayMode by remember(config) { mutableStateOf(config.ui?.activation_detection?.overlay_mode ?: false) }
+
+    // Microphone state
+    val microphoneList by viewModel.microphoneList.collectAsState()
+    val isMicTesting by viewModel.isMicTesting.collectAsState()
+    val connectionState by viewModel.connectionState.collectAsState()
+    var micExpanded by remember { mutableStateOf(false) }
+    var selectedMicIndex by remember(config) { mutableStateOf(config.hardware?.microphone_index ?: -1L) }
+
+    // Load microphones when connected
+    LaunchedEffect(connectionState) {
+        if (connectionState is ConnectionState.Connected) {
+            viewModel.loadMicrophones()
+        }
+    }
 
     val scrollState = rememberScrollState()
 
@@ -131,7 +149,129 @@ fun ConfigForm(
                 }
             }
 
-            // Panel 2: Pipeline Strategy
+            // Panel 2: Microphone Selection
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                    CardDefaults.outlinedCardColors(
+                        containerColor = GruvboxBg1.copy(alpha = 0.5f),
+                    ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        text = "Microphone",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = GruvboxFg0,
+                    )
+
+                    // Microphone Selector
+                    val currentConnectionState by viewModel.connectionState.collectAsState()
+                    val isConnected = currentConnectionState is ConnectionState.Connected
+
+                    ExposedDropdownMenuBox(
+                        expanded = micExpanded,
+                        onExpandedChange = { if (isConnected) micExpanded = it },
+                    ) {
+                        OutlinedTextField(
+                            value =
+                                microphoneList.find { it.index.toLong() == selectedMicIndex }?.name
+                                    ?: if (selectedMicIndex == -1L) "Default Microphone" else "Microphone $selectedMicIndex",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Input Device") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = micExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            enabled = isConnected,
+                            colors =
+                                OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = GruvboxGreenDark,
+                                    focusedLabelColor = GruvboxGreenDark,
+                                ),
+                        )
+                        ExposedDropdownMenu(
+                            expanded = micExpanded,
+                            onDismissRequest = { micExpanded = false },
+                        ) {
+                            // Default option
+                            DropdownMenuItem(
+                                text = { Text("Default Microphone") },
+                                onClick = {
+                                    selectedMicIndex = -1
+                                    micExpanded = false
+                                },
+                            )
+                            // List available microphones
+                            microphoneList.forEach { mic ->
+                                DropdownMenuItem(
+                                    text = { Text(mic.name + if (mic.isDefault) " (Default)" else "") },
+                                    onClick = {
+                                        selectedMicIndex = mic.index.toLong()
+                                        micExpanded = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+
+                    if (!isConnected) {
+                        Text(
+                            text = "Connect to backend to see available microphones",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = GruvboxGray,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Test Microphone Button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (isMicTesting) "Testing Microphone..." else "Test Microphone",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (isConnected) GruvboxFg0 else GruvboxGray,
+                            )
+                            Text(
+                                text = "Listen for voice activity without transcribing",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = GruvboxFg0.copy(alpha = 0.6f),
+                            )
+                        }
+                        Button(
+                            onClick = { viewModel.toggleMicTest(!isMicTesting) },
+                            enabled = isConnected,
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = if (isMicTesting) GruvboxYellowDark else GruvboxGreenDark,
+                                    contentColor = GruvboxFg0,
+                                ),
+                        ) {
+                            Text(if (isMicTesting) "Stop Test" else "Start Test")
+                        }
+                    }
+
+                    // Voice activity indicator during test
+                    if (isMicTesting) {
+                        val vadState by viewModel.vadState.collectAsState()
+                        if (vadState == VadState.Listening) {
+                            Text(
+                                text = "Voice detected!",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = GruvboxGreenLight,
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Panel 3: Pipeline Strategy
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
                 colors =
@@ -484,7 +624,7 @@ fun ConfigForm(
                                 Babelfish.Hardware(
                                     device = device,
                                     vram_limit_gb = config.hardware?.vram_limit_gb,
-                                    microphone_index = config.hardware?.microphone_index,
+                                    microphone_index = if (selectedMicIndex >= 0) selectedMicIndex else null,
                                 ),
                             pipeline =
                                 Babelfish.Pipeline(
