@@ -20,7 +20,7 @@
   "agent": {
     "plan": {
       "mode": "primary",
-      "model": "opencode/gemini-3-pro",
+      "model": "openrouter/qwen/qwen3-235b-a22b-thinking-2507",
       "tools": {
         "write": false,
         "edit": false,
@@ -29,7 +29,7 @@
     },
     "build": {
       "mode": "primary",
-      "model": "moonshot/kimi-k2-5",
+      "model": "opencode/kimi-k2.5",
       "tools": {
         "write": true,
         "edit": true,
