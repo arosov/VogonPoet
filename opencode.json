@@ -7,5 +7,14 @@
     "external_directory": {
       "~/dev/VogonPoet/babelfish/**": "allow"
     }
-  }
+  },
+  "tui": {
+    "status_bar": {
+      "enabled": true,
+      "show_elapsed_time": true,
+      "show_git_status": true
+    }
+  },
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["opencode-gemini-auth@latest"]
 }
