@@ -31,7 +31,7 @@ fun main() {
         val icon = painterResource(Res.drawable.compose_multiplatform)
 
         var showSettings by remember { mutableStateOf(true) }
-        var showVadWindow by remember { mutableStateOf(true) } // TEST: Show on start
+        var showVadWindow by remember { mutableStateOf(false) }
         var showProtocolLog by remember { mutableStateOf(false) }
 
         // Settings Window State - narrower and taller

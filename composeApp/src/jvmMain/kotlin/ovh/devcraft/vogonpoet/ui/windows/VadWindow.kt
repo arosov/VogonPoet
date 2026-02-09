@@ -35,8 +35,7 @@ fun VadWindow(
     val config by viewModel.config.collectAsState()
 
     // Get activation detection settings
-    // TEST: Force icon only mode for testing
-    val iconOnly = true // config?.ui?.activation_detection?.icon_only ?: false
+    val iconOnly = config?.ui?.activation_detection?.icon_only ?: false
     val overlayMode = config?.ui?.activation_detection?.overlay_mode ?: false
 
     // Check if backend is ready
