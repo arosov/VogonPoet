@@ -14,8 +14,9 @@ fun ApplicationScope.VogonPoetTray(
     vadState: VadState,
     icon: Painter,
     onExit: () -> Unit,
-    onReconnect: () -> Unit,
-    onRestartEngine: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenVadWindow: () -> Unit,
+    onOpenProtocolLog: () -> Unit,
 ) {
     val trayState = rememberTrayState()
     val tooltip =
@@ -32,8 +33,9 @@ fun ApplicationScope.VogonPoetTray(
         icon = icon,
         tooltip = tooltip,
         menu = {
-            Item("Reconnect", onClick = onReconnect)
-            Item("Restart Engine", onClick = onRestartEngine)
+            Item("Settings", onClick = onOpenSettings)
+            Item("Activation Detection", onClick = onOpenVadWindow)
+            Item("Protocol Log", onClick = onOpenProtocolLog)
             Item("Exit", onClick = onExit)
         },
     )

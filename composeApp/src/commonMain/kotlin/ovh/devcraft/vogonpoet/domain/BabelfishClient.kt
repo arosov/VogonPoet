@@ -15,4 +15,6 @@ interface BabelfishClient {
     suspend fun connect()
 
     fun disconnect()
+
+    suspend fun saveConfig(config: Babelfish)
 }

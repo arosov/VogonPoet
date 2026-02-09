@@ -1,5 +1,8 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "experimental": {
+      "lsp_tool": true
+  },
   "permission": {
     "external_directory": {
       "~/dev/VogonPoet/babelfish/**": "allow"

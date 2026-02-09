@@ -1,8 +1,6 @@
 package ovh.devcraft.vogonpoet
 
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import kotlinx.coroutines.CoroutineScope
@@ -13,6 +11,8 @@ import ovh.devcraft.vogonpoet.infrastructure.BackendManager
 import ovh.devcraft.vogonpoet.infrastructure.KwBabelfishClient
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.VogonPoetTray
+import ovh.devcraft.vogonpoet.ui.windows.ProtocolLogWindow
+import ovh.devcraft.vogonpoet.ui.windows.VadWindow
 import vogonpoet.composeapp.generated.resources.Res
 import vogonpoet.composeapp.generated.resources.compose_multiplatform
 
@@ -27,20 +27,44 @@ fun main() {
         val vadState by viewModel.vadState.collectAsState()
         val icon = painterResource(Res.drawable.compose_multiplatform)
 
+        var showSettings by remember { mutableStateOf(true) }
+        var showVadWindow by remember { mutableStateOf(false) }
+        var showProtocolLog by remember { mutableStateOf(false) }
+
+        // Settings Window (Main Configuration)
+        if (showSettings) {
+            Window(
+                onCloseRequest = { showSettings = false },
+                title = "VogonPoet - Settings",
+            ) {
+                App(viewModel)
+            }
+        }
+
+        // VAD Window (Activation Detection)
+        if (showVadWindow) {
+            VadWindow(
+                viewModel = viewModel,
+                onCloseRequest = { showVadWindow = false },
+            )
+        }
+
+        // Protocol Log Window
+        if (showProtocolLog) {
+            ProtocolLogWindow(
+                viewModel = viewModel,
+                onCloseRequest = { showProtocolLog = false },
+            )
+        }
+
         VogonPoetTray(
             connectionState = connectionState,
             vadState = vadState,
             icon = icon,
             onExit = ::exitApplication,
-            onReconnect = { viewModel.reconnect() },
-            onRestartEngine = { viewModel.restartBackend() },
+            onOpenSettings = { showSettings = true },
+            onOpenVadWindow = { showVadWindow = true },
+            onOpenProtocolLog = { showProtocolLog = true },
         )
-
-        Window(
-            onCloseRequest = ::exitApplication,
-            title = "VogonPoet",
-        ) {
-            App(viewModel)
-        }
     }
 }

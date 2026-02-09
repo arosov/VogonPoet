@@ -7,8 +7,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
-import ovh.devcraft.vogonpoet.ui.components.ConfigEditor
-import ovh.devcraft.vogonpoet.ui.components.MessageInspector
+import ovh.devcraft.vogonpoet.ui.components.ConfigForm
 import ovh.devcraft.vogonpoet.ui.components.StatusCard
 import ovh.devcraft.vogonpoet.ui.theme.*
 
@@ -16,7 +15,6 @@ import ovh.devcraft.vogonpoet.ui.theme.*
 fun App(viewModel: MainViewModel) {
     val connectionState by viewModel.connectionState.collectAsState()
     val vadState by viewModel.vadState.collectAsState()
-    val messages by viewModel.messages.collectAsState()
     val config by viewModel.config.collectAsState()
 
     MaterialTheme(
@@ -41,29 +39,12 @@ fun App(viewModel: MainViewModel) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Button(
-                    onClick = { viewModel.reconnect() },
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = GruvboxBlueDark,
-                            contentColor = GruvboxFg0,
-                        ),
-                ) {
-                    Text("Reconnect")
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Show config editor if config is available
-                ConfigEditor(
+                // Interactive Configuration Form
+                ConfigForm(
                     config = config,
-                    modifier = Modifier.weight(1f),
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                MessageInspector(
-                    messages = messages,
+                    onSave = { newConfig ->
+                        viewModel.saveConfig(newConfig)
+                    },
                     modifier = Modifier.weight(1f),
                 )
             }

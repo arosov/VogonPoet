@@ -51,6 +51,11 @@
           "default": "solid",
           "title": "Anchor Preset",
           "type": "string"
+        },
+        "anchor_trigger_interval_ms": {
+          "default": 2000,
+          "title": "Anchor Trigger Interval Ms",
+          "type": "integer"
         }
       },
       "title": "PipelineConfig",
@@ -107,6 +112,22 @@
           "default": true,
           "title": "Show Timestamps",
           "type": "boolean"
+        },
+        "shortcuts": {
+          "title": "Shortcuts",
+          "type": "object",
+          "properties": {
+            "toggle_listening": {
+              "default": "Ctrl+Shift+S",
+              "title": "Toggle Listening",
+              "type": "string"
+            },
+            "force_listen": {
+              "default": "Ctrl+Shift+L",
+              "title": "Push-to-Talk",
+              "type": "string"
+            }
+          }
         }
       },
       "title": "UIConfig",

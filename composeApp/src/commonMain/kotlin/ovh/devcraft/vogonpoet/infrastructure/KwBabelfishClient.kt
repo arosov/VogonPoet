@@ -177,6 +177,26 @@ class KwBabelfishClient(
         _vadState.value = VadState.Idle
     }
 
+    override suspend fun saveConfig(config: Babelfish) {
+        val currentConnection = connection ?: throw IllegalStateException("Not connected")
+
+        try {
+            val configJson = json.encodeToString(Babelfish.serializer(), config)
+            val message = """{"type":"update_config","data":$configJson}"""
+
+            // Open a new stream to send the config update
+            val streamPair = currentConnection.openBi()
+            streamPair.send.write(message.encodeToByteArray())
+            streamPair.send.close()
+
+            logMessage(MessageDirection.Sent, message)
+            println("Config sent to backend: $configJson")
+        } catch (e: Exception) {
+            println("Failed to save config: ${e.message}")
+            throw e
+        }
+    }
+
     private fun logMessage(
         direction: MessageDirection,
         content: String,

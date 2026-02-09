@@ -36,4 +36,15 @@ class MainViewModel(
     fun restartBackend() {
         BackendController.restart()
     }
+
+    fun saveConfig(config: Babelfish) {
+        viewModelScope.launch {
+            try {
+                babelfishClient.saveConfig(config)
+                println("Configuration saved successfully")
+            } catch (e: Exception) {
+                println("Failed to save configuration: ${e.message}")
+            }
+        }
+    }
 }
