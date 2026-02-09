@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 # --- Configuration ---
 PORT = 8123
+MIN_VRAM_MB = 6000
 
 # We assume the layout:
 #  <app_root>/
@@ -171,22 +172,52 @@ class BootstrapHandler:
             await self._send_update("Detecting Hardware...")
 
             is_nvidia = False
-            try:
-                # Check for nvidia-smi
-                if sys.platform == "win32":
-                    subprocess.check_output(["nvidia-smi"], stderr=subprocess.STDOUT)
-                    is_nvidia = True
-                else:
-                    # On Linux, also check /proc/driver/nvidia/version for more reliability
-                    if Path("/proc/driver/nvidia/version").exists():
-                        is_nvidia = True
-                    else:
-                        subprocess.check_output(
-                            ["nvidia-smi"], stderr=subprocess.STDOUT
+
+            if os.environ.get("VOGON_FORCE_CPU"):
+                logger.info("VOGON_FORCE_CPU is set. Ignoring GPU.")
+                await self._send_update(
+                    "Environment variable VOGON_FORCE_CPU set. Forcing CPU mode."
+                )
+            else:
+                try:
+                    # Query VRAM total in MiB
+                    # nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits
+                    output = subprocess.check_output(
+                        [
+                            "nvidia-smi",
+                            "--query-gpu=memory.total",
+                            "--format=csv,noheader,nounits",
+                        ],
+                        stderr=subprocess.STDOUT,
+                    ).decode("utf-8")
+
+                    # Parse output (can be multiple lines for multiple GPUs)
+                    vram_values = [
+                        int(x.strip())
+                        for x in output.strip().split("\n")
+                        if x.strip().isdigit()
+                    ]
+
+                    if vram_values:
+                        max_vram = max(vram_values)
+                        logger.info(
+                            f"Detected NVIDIA GPU(s) with VRAM: {vram_values} MiB. Max: {max_vram} MiB"
                         )
-                        is_nvidia = True
-            except:
-                pass
+
+                        if max_vram >= MIN_VRAM_MB:
+                            is_nvidia = True
+                            await self._send_update(
+                                f"Found NVIDIA GPU with {max_vram} MiB VRAM (>= {MIN_VRAM_MB} MiB)."
+                            )
+                        else:
+                            await self._send_update(
+                                f"Found NVIDIA GPU but VRAM ({max_vram} MiB) is below minimum ({MIN_VRAM_MB} MiB). Falling back to CPU."
+                            )
+                    else:
+                        logger.info("nvidia-smi returned no valid VRAM data.")
+                except Exception as e:
+                    logger.info(f"NVIDIA detection failed or no GPU found: {e}")
+                    # Keep is_nvidia = False
 
             hw_type = "NVIDIA GPU" if is_nvidia else "CPU"
             await self._send_update(f"Detected {hw_type}. Preparing environment...")
