@@ -55,9 +55,9 @@ fun ConfigForm(
     var micExpanded by remember { mutableStateOf(false) }
     var selectedMicIndex by remember(config) { mutableStateOf(config.hardware?.microphone_index ?: -1L) }
 
-    // Load microphones when connected
+    // Load microphones when connected or bootstrapping
     LaunchedEffect(connectionState) {
-        if (connectionState is ConnectionState.Connected) {
+        if (connectionState is ConnectionState.Connected || connectionState is ConnectionState.Bootstrapping) {
             viewModel.loadMicrophones()
         }
     }
@@ -169,11 +169,12 @@ fun ConfigForm(
 
                     // Microphone Selector
                     val currentConnectionState by viewModel.connectionState.collectAsState()
-                    val isConnected = currentConnectionState is ConnectionState.Connected
+                    val isReady =
+                        currentConnectionState is ConnectionState.Connected || currentConnectionState is ConnectionState.Bootstrapping
 
                     ExposedDropdownMenuBox(
                         expanded = micExpanded,
-                        onExpandedChange = { if (isConnected) micExpanded = it },
+                        onExpandedChange = { if (isReady) micExpanded = it },
                     ) {
                         OutlinedTextField(
                             value =
@@ -184,7 +185,7 @@ fun ConfigForm(
                             label = { Text("Input Device") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = micExpanded) },
                             modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            enabled = isConnected,
+                            enabled = isReady,
                             colors =
                                 OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = GruvboxGreenDark,
@@ -216,7 +217,7 @@ fun ConfigForm(
                         }
                     }
 
-                    if (!isConnected) {
+                    if (!isReady) {
                         Text(
                             text = "Connect to backend to see available microphones",
                             style = MaterialTheme.typography.bodySmall,
@@ -232,21 +233,15 @@ fun ConfigForm(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (isMicTesting) "Testing Microphone..." else "Test Microphone",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = if (isConnected) GruvboxFg0 else GruvboxGray,
-                            )
-                            Text(
-                                text = "Listen for voice activity without transcribing",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = GruvboxFg0.copy(alpha = 0.6f),
-                            )
-                        }
+                        Text(
+                            text = if (isMicTesting) "Testing Microphone..." else "Test Microphone",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (isReady) GruvboxFg0 else GruvboxGray,
+                            modifier = Modifier.weight(1f),
+                        )
                         Button(
                             onClick = { viewModel.toggleMicTest(!isMicTesting) },
-                            enabled = isConnected,
+                            enabled = isReady,
                             colors =
                                 ButtonDefaults.buttonColors(
                                     containerColor = if (isMicTesting) GruvboxYellowDark else GruvboxGreenDark,

@@ -16,6 +16,25 @@
       "show_git_status": true
     }
   },
-  "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-gemini-auth@latest"]
+  "plugin": ["opencode-gemini-auth@latest"],
+  "agent": {
+    "plan": {
+      "mode": "primary",
+      "model": "opencode/gemini-3-pro",
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": false
+      }
+    },
+    "build": {
+      "mode": "primary",
+      "model": "moonshot/kimi-k2-5",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true
+      }
+    }
+  }
 }
