@@ -1,8 +1,11 @@
 package ovh.devcraft.vogonpoet
 
 import androidx.compose.runtime.*
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,11 +34,19 @@ fun main() {
         var showVadWindow by remember { mutableStateOf(false) }
         var showProtocolLog by remember { mutableStateOf(false) }
 
+        // Settings Window State - narrower and taller
+        val settingsWindowState =
+            rememberWindowState(
+                width = 420.dp,
+                height = 800.dp,
+            )
+
         // Settings Window (Main Configuration)
         if (showSettings) {
             Window(
                 onCloseRequest = { showSettings = false },
                 title = "VogonPoet - Settings",
+                state = settingsWindowState,
             ) {
                 App(viewModel)
             }
