@@ -39,10 +39,10 @@ fun VadWindow(
     val windowState =
         if (iconOnly) {
             // Small window for icon-only mode
-            WindowState(width = 120.dp, height = 120.dp)
+            WindowState(width = 90.dp, height = 90.dp)
         } else {
-            // Default size for full mode
-            WindowState(width = 300.dp, height = 300.dp)
+            // Default size for full mode - tighter wrap
+            WindowState(width = 250.dp, height = 220.dp)
         }
 
     Window(
@@ -87,14 +87,14 @@ fun VadWindow(
                                         fontSize = 64.sp,
                                         textAlign = TextAlign.Center,
                                     )
-                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text = "Idle",
                                         style = MaterialTheme.typography.headlineMedium,
                                         color = GruvboxFg0.copy(alpha = 0.6f),
                                         textAlign = TextAlign.Center,
                                     )
-                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = "Waiting for activation...",
                                         style = MaterialTheme.typography.bodyMedium,
@@ -146,14 +146,14 @@ fun VadWindow(
                                             textAlign = TextAlign.Center,
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text = "Listening",
                                         style = MaterialTheme.typography.headlineMedium,
                                         color = GruvboxGreenLight,
                                         textAlign = TextAlign.Center,
                                     )
-                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = "Speech detected - processing...",
                                         style = MaterialTheme.typography.bodyMedium,
