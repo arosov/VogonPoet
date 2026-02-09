@@ -42,7 +42,7 @@ fun VadWindow(
             WindowState(width = 85.dp, height = 85.dp)
         } else {
             // Default size for full mode - tighter wrap
-            WindowState(width = 240.dp, height = 210.dp)
+            WindowState(width = 200.dp, height = 160.dp)
         }
 
     Window(
@@ -70,23 +70,45 @@ fun VadWindow(
                         VadState.Idle -> {
                             if (iconOnly) {
                                 // Icon only mode - just the microphone
-                                Text(
-                                    text = "🎤",
-                                    fontSize = 48.sp,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.alpha(0.5f),
-                                )
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .size(80.dp)
+                                            .background(
+                                                color = androidx.compose.ui.graphics.Color.Transparent,
+                                                shape = androidx.compose.foundation.shape.CircleShape,
+                                            ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = "🎤",
+                                        fontSize = 48.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.alpha(0.5f),
+                                    )
+                                }
                             } else {
                                 // Full mode with text
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center,
                                 ) {
-                                    Text(
-                                        text = "🎤",
-                                        fontSize = 64.sp,
-                                        textAlign = TextAlign.Center,
-                                    )
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .size(120.dp)
+                                                .background(
+                                                    color = androidx.compose.ui.graphics.Color.Transparent,
+                                                    shape = androidx.compose.foundation.shape.CircleShape,
+                                                ),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            text = "🎤",
+                                            fontSize = 64.sp,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                    }
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = "Idle",
