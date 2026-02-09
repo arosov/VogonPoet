@@ -47,6 +47,7 @@ fun ConfigForm(
     var forceShortcut by remember(config) { mutableStateOf(config.ui?.shortcuts?.force_listen ?: "Ctrl+Shift+L") }
     var iconOnly by remember(config) { mutableStateOf(config.ui?.activation_detection?.icon_only ?: false) }
     var overlayMode by remember(config) { mutableStateOf(config.ui?.activation_detection?.overlay_mode ?: false) }
+    var cacheDir by remember(config) { mutableStateOf(config.cache?.cache_dir ?: "") }
 
     // Microphone state
     val microphoneList by viewModel.microphoneList.collectAsState()
@@ -484,7 +485,7 @@ fun ConfigForm(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
-                        text = "Activation Detection Window",
+                        text = "Speech Detection",
                         style = MaterialTheme.typography.titleMedium,
                         color = GruvboxFg0,
                     )
@@ -610,6 +611,103 @@ fun ConfigForm(
                 }
             }
 
+            // Panel 6: Cache Directory
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                    CardDefaults.outlinedCardColors(
+                        containerColor = GruvboxBg1.copy(alpha = 0.5f),
+                    ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        text = "Cache Directory",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = GruvboxFg0,
+                    )
+
+                    // UV default cache path based on platform
+                    val defaultUvCacheDir =
+                        remember {
+                            val home = System.getProperty("user.home")
+                            val osName = System.getProperty("os.name").lowercase()
+                            when {
+                                osName.contains("win") -> System.getenv("LOCALAPPDATA")?.let { "$it\\uv" } ?: "$home\\AppData\\Local\\uv"
+                                osName.contains("mac") -> "$home/Library/Caches/uv"
+                                else -> "$home/.cache/uv"
+                            }
+                        }
+
+                    val displayPath = cacheDir.takeIf { it.isNotBlank() } ?: "(default: $defaultUvCacheDir)"
+
+                    // Display current path or default
+                    OutlinedTextField(
+                        value = displayPath,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("UV Cache Location") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = GruvboxGreenDark,
+                                focusedLabelColor = GruvboxGreenDark,
+                                disabledTextColor = if (cacheDir.isBlank()) GruvboxGray else GruvboxFg0,
+                            ),
+                        enabled = false,
+                    )
+
+                    // Buttons row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        // Browse button
+                        Button(
+                            onClick = {
+                                val chooser =
+                                    javax.swing.JFileChooser().apply {
+                                        fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
+                                        dialogTitle = "Select UV Cache Directory"
+                                        if (cacheDir.isNotBlank()) {
+                                            currentDirectory = java.io.File(cacheDir)
+                                        } else {
+                                            currentDirectory = java.io.File(defaultUvCacheDir)
+                                        }
+                                    }
+                                val result = chooser.showOpenDialog(null)
+                                if (result == javax.swing.JFileChooser.APPROVE_OPTION) {
+                                    cacheDir = chooser.selectedFile.absolutePath
+                                }
+                            },
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = GruvboxBlueDark,
+                                    contentColor = GruvboxFg0,
+                                ),
+                        ) {
+                            Text("Browse...")
+                        }
+
+                        // Reset button
+                        Button(
+                            onClick = { cacheDir = "" },
+                            enabled = cacheDir.isNotBlank(),
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = GruvboxRedDark.copy(alpha = 0.7f),
+                                    contentColor = GruvboxFg0,
+                                    disabledContainerColor = GruvboxGray.copy(alpha = 0.3f),
+                                ),
+                        ) {
+                            Text("Reset")
+                        }
+                    }
+                }
+            }
+
             // Save Button
             Button(
                 onClick = {
@@ -650,6 +748,10 @@ fun ConfigForm(
                                         ),
                                 ),
                             server = config.server ?: Babelfish.Server(),
+                            cache =
+                                Babelfish.Cache(
+                                    cache_dir = cacheDir.takeIf { it.isNotBlank() },
+                                ),
                         )
                     onSave(newConfig)
                 },

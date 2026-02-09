@@ -182,6 +182,24 @@
       },
       "title": "VoiceConfig",
       "type": "object"
+    },
+    "CacheConfig": {
+      "properties": {
+        "cache_dir": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cache Directory"
+        }
+      },
+      "title": "CacheConfig",
+      "type": "object"
     }
   },
   "properties": {
@@ -199,6 +217,9 @@
     },
     "server": {
       "$ref": "#/$defs/ServerConfig"
+    },
+    "cache": {
+      "$ref": "#/$defs/CacheConfig"
     }
   },
   "title": "BabelfishConfig",

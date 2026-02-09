@@ -213,25 +213,64 @@ class KwBabelfishClient(
             logMessage(MessageDirection.Sent, message)
             println("Requesting microphone list...")
 
-            // Wait for response
-            val responseBytes = streamPair.recv.chunks().first()
-            val responseText = responseBytes.decodeToString()
-            logMessage(MessageDirection.Received, responseText)
+            // Collect all chunks into buffer and parse line by line
+            var buffer = ""
+            var result: List<Microphone>? = null
 
-            val element = json.parseToJsonElement(responseText)
-            if (element is JsonObject && element["type"]?.jsonPrimitive?.content == "microphones_list") {
-                val data = element["data"]?.jsonArray
-                data?.map { item ->
-                    val obj = item.jsonObject
-                    Microphone(
-                        index = obj["index"]?.jsonPrimitive?.int ?: 0,
-                        name = obj["name"]?.jsonPrimitive?.content ?: "Unknown",
-                        isDefault = obj["is_default"]?.jsonPrimitive?.boolean ?: false,
-                    )
-                } ?: emptyList()
-            } else {
-                emptyList()
+            streamPair.recv.chunks().collect { chunk ->
+                if (result != null) return@collect
+
+                val text = chunk.decodeToString()
+                buffer += text
+
+                while (buffer.contains("\n") && result == null) {
+                    val line = buffer.substringBefore("\n")
+                    buffer = buffer.substringAfter("\n")
+
+                    if (line.isNotBlank()) {
+                        logMessage(MessageDirection.Received, line)
+                        try {
+                            val element = json.parseToJsonElement(line)
+                            if (element is JsonObject && element["type"]?.jsonPrimitive?.content == "microphones_list") {
+                                val data = element["data"]?.jsonArray
+                                result = data?.map { item ->
+                                    val obj = item.jsonObject
+                                    Microphone(
+                                        index = obj["index"]?.jsonPrimitive?.int ?: 0,
+                                        name = obj["name"]?.jsonPrimitive?.content ?: "Unknown",
+                                        isDefault = obj["is_default"]?.jsonPrimitive?.boolean ?: false,
+                                    )
+                                } ?: emptyList()
+                            }
+                        } catch (e: Exception) {
+                            println("Failed to parse line: ${e.message}")
+                        }
+                    }
+                }
             }
+
+            // Handle any remaining buffer
+            if (result == null && buffer.isNotBlank()) {
+                logMessage(MessageDirection.Received, buffer)
+                try {
+                    val element = json.parseToJsonElement(buffer)
+                    if (element is JsonObject && element["type"]?.jsonPrimitive?.content == "microphones_list") {
+                        val data = element["data"]?.jsonArray
+                        result = data?.map { item ->
+                            val obj = item.jsonObject
+                            Microphone(
+                                index = obj["index"]?.jsonPrimitive?.int ?: 0,
+                                name = obj["name"]?.jsonPrimitive?.content ?: "Unknown",
+                                isDefault = obj["is_default"]?.jsonPrimitive?.boolean ?: false,
+                            )
+                        } ?: emptyList()
+                    }
+                } catch (e: Exception) {
+                    println("Failed to parse remaining buffer: ${e.message}")
+                }
+            }
+
+            result ?: emptyList()
         } catch (e: Exception) {
             println("Failed to list microphones: ${e.message}")
             throw e
