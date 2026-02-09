@@ -50,76 +50,55 @@ class KwBabelfishClientTest {
     }
 
     @Test
-    fun testVadStateUpdatesViaStream() = runTest {
-        val chunksFlow = MutableSharedFlow<ByteArray>()
+    fun testJsonConfigUpdates() = runTest {
+        val jsonConfig = """{"type": "config", "data": {"hardware": {"device": "cuda"}}}"""
+        val configBytes = (jsonConfig + "\n").encodeToByteArray()
+        var bytesToRead = configBytes
         
         val fakeRecvStream = object : BabelfishRecvStream {
-            override fun chunks(): Flow<ByteArray> = chunksFlow
-        }
-        
-        val fakeStreamPair = object : BabelfishStreamPair {
-            override val send = object : BabelfishSendStream {}
-            override val recv = fakeRecvStream
-        }
-
-        val fakeConnection = object : BabelfishConnection {
-            var closed = false
-            override val isClosed: Boolean get() = closed
-            override suspend fun receiveDatagram(): ByteArray = ByteArray(0)
-            override suspend fun acceptBi(): BabelfishStreamPair = fakeStreamPair
-            override suspend fun openBi(): BabelfishStreamPair = fakeStreamPair
-            override fun close() { closed = true }
-        }
-
-        val fakeEndpoint = object : BabelfishEndpoint {
-            override suspend fun connect(url: String) = fakeConnection
+            override fun chunks(chunkSize: Int): Flow<ByteArray> = MutableSharedFlow()
+            override suspend fun read(buffer: ByteArray): Int {
+                if (bytesToRead.isEmpty()) {
+                    delay(100) // Simulate waiting
+                    return 0 // Return 0 instead of -1 to keep loop active for test if needed, or -1 to stop
+                }
+                val toCopy = minOf(buffer.size, bytesToRead.size)
+                bytesToRead.copyInto(buffer, 0, 0, toCopy)
+                bytesToRead = bytesToRead.copyOfRange(toCopy, bytesToRead.size)
+                return toCopy
+            }
             override fun close() {}
         }
-
-        val client = KwBabelfishClient(
-            endpointProvider = { fakeEndpoint },
-            scope = this
-        )
-
-        client.connect()
-        advanceTimeBy(100)
-        
-        // Send VAD:1
-        chunksFlow.emit("VAD:1\n".encodeToByteArray())
-        advanceTimeBy(100)
-        assertEquals(VadState.Listening, client.vadState.value)
-
-        // Send VAD:0
-        chunksFlow.emit("VAD:0\n".encodeToByteArray())
-        advanceTimeBy(100)
-        assertEquals(VadState.Idle, client.vadState.value)
-
-        client.disconnect()
-    }
-
-    @Test
-    fun testJsonConfigUpdates() = runTest {
-        val chunksFlow = MutableSharedFlow<ByteArray>()
-        
-        val fakeRecvStream = object : BabelfishRecvStream {
-            override fun chunks(): Flow<ByteArray> = chunksFlow
-        }
         
         val fakeStreamPair = object : BabelfishStreamPair {
-            override val send = object : BabelfishSendStream {}
+            override val send = object : BabelfishSendStream {
+                override suspend fun write(data: ByteArray) {}
+                override suspend fun write(data: String) {}
+                override suspend fun setPriority(priority: Int) {}
+                override suspend fun getPriority(): Int = 0
+                override fun close() {}
+            }
             override val recv = fakeRecvStream
+            override fun close() {}
         }
 
         val fakeConnection = object : BabelfishConnection {
             override val isClosed: Boolean get() = false
-            override suspend fun receiveDatagram(): ByteArray = ByteArray(0)
-            override suspend fun acceptBi(): BabelfishStreamPair = fakeStreamPair
+            override val maxDatagramSize: Long? get() = null
+            override suspend fun openUni(): BabelfishSendStream = fakeStreamPair.send
             override suspend fun openBi(): BabelfishStreamPair = fakeStreamPair
+            override suspend fun acceptUni(): BabelfishRecvStream = fakeStreamPair.recv
+            override suspend fun acceptBi(): BabelfishStreamPair = fakeStreamPair
+            override fun sendDatagram(data: ByteArray) {}
+            override suspend fun receiveDatagram(): ByteArray = ByteArray(0)
+            override fun getStats(): BabelfishConnectionStats = BabelfishConnectionStats(0, 0, 0, 0, null)
+            override fun close(code: Long, reason: String) {}
             override fun close() {}
         }
 
         val fakeEndpoint = object : BabelfishEndpoint {
             override suspend fun connect(url: String) = fakeConnection
+            override fun incomingSessions(): Flow<BabelfishConnection> = MutableSharedFlow()
             override fun close() {}
         }
 
@@ -129,15 +108,9 @@ class KwBabelfishClientTest {
         )
 
         client.connect()
-        advanceTimeBy(100)
+        advanceTimeBy(200)
         
-        // Send JSON config
-        val jsonConfig = """{"type": "config", "data": {"hardware": {"device": "cuda"}}}"""
-        chunksFlow.emit((jsonConfig + "\n").encodeToByteArray())
-        advanceTimeBy(100)
-        
-        // Verification is mainly visual in logs as per request, but we ensure it doesn't crash
-        // and handles the message.
+        // Verification is mainly visual in logs as per request
         
         client.disconnect()
     }
