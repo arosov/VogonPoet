@@ -73,7 +73,7 @@ fun StatusCard(
                         is ConnectionState.Disconnected -> "Disconnected"
                         is ConnectionState.Connecting -> "Connecting..."
                         is ConnectionState.Bootstrapping -> "Setting Up..."
-                        is ConnectionState.Connected -> if (vadState == VadState.Listening) "Listening" else "Connected"
+                        is ConnectionState.Connected -> if (vadState == VadState.Listening) "Listening" else "Ready"
                         is ConnectionState.Error -> "Connection Error"
                     },
                 style = MaterialTheme.typography.headlineMedium,
