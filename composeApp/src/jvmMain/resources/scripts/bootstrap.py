@@ -271,6 +271,9 @@ class BootstrapHandler:
 
             args = [UV_CMD, "run", "babelfish.py"]
 
+            if not is_nvidia:
+                args.append("--cpu")
+
             if sys.platform == "win32":
                 logger.info(f"Windows: Running {' '.join(args)} and waiting...")
                 # We use subprocess.call to block. When this returns, the script exits.
