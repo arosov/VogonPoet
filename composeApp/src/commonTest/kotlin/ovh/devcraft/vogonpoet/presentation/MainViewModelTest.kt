@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import ovh.devcraft.vogonpoet.domain.BabelfishClient
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
+import ovh.devcraft.vogonpoet.domain.model.ProtocolMessage
 import ovh.devcraft.vogonpoet.domain.model.VadState
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -19,7 +20,6 @@ import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelTest {
-
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @BeforeTest
@@ -35,10 +35,13 @@ class MainViewModelTest {
     private class FakeBabelfishClient : BabelfishClient {
         private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
         override val connectionState: StateFlow<ConnectionState> = _connectionState
-        
+
         private val _vadState = MutableStateFlow(VadState.Idle)
         override val vadState: StateFlow<VadState> = _vadState
-        
+
+        private val _messages = MutableStateFlow<List<ProtocolMessage>>(emptyList())
+        override val messages: StateFlow<List<ProtocolMessage>> = _messages
+
         var connectCalled = 0
 
         override suspend fun connect() {
@@ -49,30 +52,32 @@ class MainViewModelTest {
         override fun disconnect() {
             _connectionState.value = ConnectionState.Disconnected
         }
-        
+
         fun emitVad(state: VadState) {
             _vadState.value = state
         }
     }
 
     @Test
-    fun testInitializationStartsConnection() = runTest {
-        val fakeClient = FakeBabelfishClient()
-        val viewModel = MainViewModel(fakeClient)
-        
-        runCurrent()
-        assertEquals(1, fakeClient.connectCalled)
-    }
+    fun testInitializationStartsConnection() =
+        runTest {
+            val fakeClient = FakeBabelfishClient()
+            val viewModel = MainViewModel(fakeClient)
+
+            runCurrent()
+            assertEquals(1, fakeClient.connectCalled)
+        }
 
     @Test
-    fun testExposesClientStates() = runTest {
-        val fakeClient = FakeBabelfishClient()
-        val viewModel = MainViewModel(fakeClient)
-        
-        runCurrent()
-        fakeClient.emitVad(VadState.Listening)
-        assertEquals(VadState.Listening, viewModel.vadState.value)
-        
-        assertEquals(ConnectionState.Connected, viewModel.connectionState.value)
-    }
+    fun testExposesClientStates() =
+        runTest {
+            val fakeClient = FakeBabelfishClient()
+            val viewModel = MainViewModel(fakeClient)
+
+            runCurrent()
+            fakeClient.emitVad(VadState.Listening)
+            assertEquals(VadState.Listening, viewModel.vadState.value)
+
+            assertEquals(ConnectionState.Connected, viewModel.connectionState.value)
+        }
 }

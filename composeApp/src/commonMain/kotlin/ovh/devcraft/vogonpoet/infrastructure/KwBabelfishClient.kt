@@ -5,23 +5,25 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.datetime.Clock
 import kotlinx.serialization.json.*
 import ovh.devcraft.vogonpoet.domain.BabelfishClient
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
+import ovh.devcraft.vogonpoet.domain.model.MessageDirection
+import ovh.devcraft.vogonpoet.domain.model.ProtocolMessage
 import ovh.devcraft.vogonpoet.domain.model.VadState
 import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
+import java.time.Instant
 
 class KwBabelfishClient(
     private val endpointProvider: EndpointProvider =
         EndpointProvider {
-            // Hash for local dev cert
-            val certHash = "2b:b0:77:27:54:3b:8a:ed:4c:3b:46:c1:55:6a:6c:d2:dd:d8:fa:64:72:3a:7a:6b:cf:e9:3f:39:f7:5b:10:71"
             val clientEndpoint =
                 Endpoint.createClientEndpoint(
-                    certificateHashes = listOf(certHash),
+                    certificateHashes = emptyList(), // Disable hash pinning for bootstrap/local dev
                     acceptAllCerts = true,
-                    maxIdleTimeoutMillis = 0L,
-                    keepAliveIntervalMillis = 10_000L,
+                    maxIdleTimeoutMillis = 3000L,
+                    keepAliveIntervalMillis = 1000L,
                 )
             RealBabelfishEndpoint(clientEndpoint)
         },
@@ -39,6 +41,12 @@ class KwBabelfishClient(
 
     private val _vadState = MutableStateFlow(VadState.Idle)
     override val vadState: StateFlow<VadState> = _vadState.asStateFlow()
+
+    private val _messages = MutableStateFlow<List<ProtocolMessage>>(emptyList())
+    override val messages: StateFlow<List<ProtocolMessage>> = _messages.asStateFlow()
+
+    private val _config = MutableStateFlow<Babelfish?>(null)
+    override val config: StateFlow<Babelfish?> = _config.asStateFlow()
 
     private var endpoint: BabelfishEndpoint? = null
     private var connection: BabelfishConnection? = null
@@ -67,9 +75,10 @@ class KwBabelfishClient(
 
                         listenForUpdates(newConnection)
 
-                        break // Connection successful
+                        println("Connection session ended. Cleaning up and retrying...")
+                        cleanup()
                     } catch (e: Exception) {
-                        println("Connection failed: ${e.message}. Retrying in ${retryDelay}ms...")
+                        println("Connection failed or lost: ${e.message}. Retrying in ${retryDelay}ms...")
                         _connectionState.value = ConnectionState.Error(e.message ?: "Unknown error")
                         cleanup()
 
@@ -82,81 +91,82 @@ class KwBabelfishClient(
 
     private suspend fun listenForUpdates(connection: BabelfishConnection) =
         coroutineScope {
-            launch {
+            try {
+                println("[DEBUG] Opening bidirectional stream for control/status...")
+                val streamPair = connection.openBi()
+                println("[DEBUG] Bidirectional stream established.")
+
+                println("[DEBUG] Sending HELLO to trigger server response...")
+                val helloMsg = "{\"type\":\"hello\"}\n"
+                streamPair.send.write(helloMsg.encodeToByteArray())
+                logMessage(MessageDirection.Sent, helloMsg.trim())
+
+                val stats = connection.getStats()
+                println("[DEBUG] Connection Stats: RTT=${stats.rtt}ms, maxData=${stats.maxData}, maxStreamData=${stats.maxStreamData}")
+
+                var buffer = ""
                 try {
-                    println("[DEBUG] Opening bidirectional stream for control/status...")
-                    // Client initiates the control stream
-                    val streamPair = connection.openBi()
-                    println("[DEBUG] Bidirectional stream established.")
-
-                    // Send a "HELLO" message to ensure the server detects the stream
-                    // (aioquic might not fire events just for the stream header)
-                    println("[DEBUG] Sending HELLO to trigger server response...")
-                    streamPair.send.write("{\"type\":\"hello\"}\n".encodeToByteArray())
-
-                    val stats = connection.getStats()
-                    println("[DEBUG] Connection Stats: RTT=${stats.rtt}ms, maxData=${stats.maxData}, maxStreamData=${stats.maxStreamData}")
-
                     streamPair.recv.chunks().collect { chunk ->
-                        val message = chunk.decodeToString()
-                        println("[DEBUG] Received chunk (${chunk.size} bytes): \"$message\"")
-                        // println("[DEBUG] Hex: " + chunk.joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') })
+                        val text = chunk.decodeToString()
+                        buffer += text
 
-                        // Handle messages that might be bundled in one chunk or split
-                        message.lines().filter { it.isNotBlank() }.forEach { line ->
-                            println("[DEBUG] Processing line: \"$line\"")
-                            try {
-                                val element = json.parseToJsonElement(line)
-                                println("[DEBUG] JSON parsed successfully")
+                        while (buffer.contains("\n")) {
+                            val line = buffer.substringBefore("\n")
+                            buffer = buffer.substringAfter("\n")
 
-                                if (element is JsonObject) {
-                                    val type = element["type"]?.jsonPrimitive?.contentOrNull
-                                    println("[DEBUG] Message type identified: $type")
-
-                                    if (type == "config") {
-                                        println("[DEBUG] Processing config message")
-                                        val configData = element["data"]
-                                        if (configData != null) {
-                                            println("[DEBUG] Config data found, attempting to decode")
-                                            val config = json.decodeFromJsonElement<Babelfish>(configData)
-                                            println("Received Babelfish Configuration:")
-                                            println("- Hardware: ${config.hardware}")
-                                            println("- Pipeline: ${config.pipeline}")
-                                            println("- Voice: ${config.voice}")
-                                            println("- UI: ${config.ui}")
-                                            println("- Server: ${config.server}")
-                                            println("Full config: ${json.encodeToString(Babelfish.serializer(), config)}")
-                                        } else {
-                                            println("[DEBUG] 'config' message received but 'data' field is missing.")
-                                        }
-                                    } else {
-                                        println("[DEBUG] Ignoring message type: $type")
-                                    }
-                                } else {
-                                    println("[DEBUG] Parsed JSON is not an object: $line")
-                                }
-                            } catch (e: Exception) {
-                                println("[DEBUG] JSON parse failed for line: \"$line\". Error: ${e.message}")
-                                println("[DEBUG] Exception details: ${e.stackTraceToString()}")
-
-                                // Fallback to old format or ignore non-JSON
-                                if (line.startsWith("VAD:")) {
-                                    println("[DEBUG] Processing VAD line: $line")
-                                    val isListening = line.substringAfter("VAD:").trim() == "1"
-                                    _vadState.value = if (isListening) VadState.Listening else VadState.Idle
-                                } else {
-                                    println("[DEBUG] Ignoring unknown message format: $line")
-                                }
+                            if (line.isNotBlank()) {
+                                handleIncomingLine(line)
                             }
                         }
                     }
-                } catch (e: Exception) {
-                    println("[DEBUG] Stream error or closed: ${e.message}")
-                    println("[DEBUG] Exception stack trace:")
-                    e.printStackTrace()
+                } finally {
+                    if (buffer.isNotBlank()) {
+                        handleIncomingLine(buffer)
+                    }
                 }
+            } catch (e: Exception) {
+                println("[DEBUG] Stream error or closed: ${e.message}")
             }
         }
+
+    private fun handleIncomingLine(line: String) {
+        logMessage(MessageDirection.Received, line)
+        try {
+            val element = json.parseToJsonElement(line)
+
+            if (element is JsonObject) {
+                val type = element["type"]?.jsonPrimitive?.contentOrNull
+
+                if (type == "config") {
+                    val configData = element["data"]
+                    if (configData != null) {
+                        val config = json.decodeFromJsonElement<Babelfish>(configData)
+                        _config.value = config
+                    }
+                } else if (type == "status") {
+                    val message = element["message"]?.jsonPrimitive?.contentOrNull
+                    val vadStateStr = element["vad_state"]?.jsonPrimitive?.contentOrNull
+                    val engineState = element["engine_state"]?.jsonPrimitive?.contentOrNull
+
+                    if (vadStateStr == "listening" || vadStateStr == "idle" || engineState == "ready" || message == "Engine Ready!") {
+                        _connectionState.value = ConnectionState.Connected
+                        if (vadStateStr == "listening") {
+                            _vadState.value = VadState.Listening
+                        } else if (vadStateStr == "idle") {
+                            _vadState.value = VadState.Idle
+                        }
+                    } else if (message != null) {
+                        _connectionState.value = ConnectionState.Bootstrapping(message)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            if (line.startsWith("VAD:")) {
+                val isListening = line.substringAfter("VAD:").trim() == "1"
+                _vadState.value = if (isListening) VadState.Listening else VadState.Idle
+            }
+        }
+    }
 
     override fun disconnect() {
         println("Disconnecting from Babelfish...")
@@ -165,21 +175,32 @@ class KwBabelfishClient(
         cleanup()
         _connectionState.value = ConnectionState.Disconnected
         _vadState.value = VadState.Idle
-        println("Disconnected.")
+    }
+
+    private fun logMessage(
+        direction: MessageDirection,
+        content: String,
+    ) {
+        val now = System.currentTimeMillis()
+        val msg =
+            ProtocolMessage(
+                timestamp = now,
+                direction = direction,
+                content = content,
+            )
+        _messages.value = (_messages.value + msg).takeLast(100)
     }
 
     private fun cleanup() {
         try {
             connection?.close()
         } catch (e: Exception) {
-            // Ignore
         }
         connection = null
 
         try {
             endpoint?.close()
         } catch (e: Exception) {
-            // Ignore
         }
         endpoint = null
     }

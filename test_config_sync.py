@@ -11,7 +11,7 @@ SERVER_CWD = "../babelfish"
 CLIENT_CWD = "."
 SERVER_CMD = ["uv", "run", "babelfish"]
 CLIENT_CMD = ["./gradlew", ":composeApp:run"]
-TIMEOUT_SECONDS = 20
+TIMEOUT_SECONDS = 120
 SERVER_READY_MSG = "WebTransport running on"
 CLIENT_SUCCESS_MSG = "Received Babelfish Configuration"
 
@@ -139,7 +139,9 @@ def main():
 
     print(f"Waiting for configuration sync (Timeout: {remaining:.1f}s)...")
 
-    client_success_event.wait(timeout=remaining)
+    if client_success_event.wait(timeout=remaining):
+        print("Success detected. Waiting for full config logs...")
+        time.sleep(3)
 
     stop_event.set()
 

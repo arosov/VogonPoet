@@ -1,6 +1,6 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import net.pwall.json.kotlin.codegen.gradle.JSONSchemaCodegen
 import net.pwall.json.kotlin.codegen.gradle.JSONSchemaCodegenPlugin
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 buildscript {
     dependencies {
@@ -21,15 +21,17 @@ apply<JSONSchemaCodegenPlugin>()
 
 kotlin {
     jvm()
-    
+
     sourceSets {
         commonMain {
             kotlin.srcDir(layout.buildDirectory.dir("generated/sources/json-kotlin"))
             dependencies {
                 implementation(libs.kwtransport)
                 implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.datetime)
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)
+                implementation(libs.compose.material)
                 implementation(libs.compose.material3)
                 implementation(libs.compose.ui)
                 implementation(libs.compose.components.resources)
@@ -50,7 +52,6 @@ kotlin {
     }
 }
 
-
 compose.desktop {
     application {
         mainClass = "ovh.devcraft.vogonpoet.MainKt"
@@ -68,5 +69,10 @@ configure<JSONSchemaCodegen> {
     inputs {
         inputFile(file("src/commonMain/resources/schema"))
     }
-    outputDir.set(layout.buildDirectory.dir("generated/sources/json-kotlin").get().asFile)
+    outputDir.set(
+        layout.buildDirectory
+            .dir("generated/sources/json-kotlin")
+            .get()
+            .asFile,
+    )
 }

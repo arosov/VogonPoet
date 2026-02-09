@@ -14,15 +14,18 @@ fun ApplicationScope.VogonPoetTray(
     vadState: VadState,
     icon: Painter,
     onExit: () -> Unit,
-    onReconnect: () -> Unit
+    onReconnect: () -> Unit,
+    onRestartEngine: () -> Unit,
 ) {
     val trayState = rememberTrayState()
-    val tooltip = when (connectionState) {
-        is ConnectionState.Disconnected -> "VogonPoet: Disconnected"
-        is ConnectionState.Connecting -> "VogonPoet: Connecting..."
-        is ConnectionState.Connected -> if (vadState == VadState.Listening) "VogonPoet: Listening" else "VogonPoet: Connected"
-        is ConnectionState.Error -> "VogonPoet: Connection Error"
-    }
+    val tooltip =
+        when (connectionState) {
+            is ConnectionState.Disconnected -> "VogonPoet: Disconnected"
+            is ConnectionState.Connecting -> "VogonPoet: Connecting..."
+            is ConnectionState.Bootstrapping -> "VogonPoet: Setting Up..."
+            is ConnectionState.Connected -> if (vadState == VadState.Listening) "VogonPoet: Listening" else "VogonPoet: Connected"
+            is ConnectionState.Error -> "VogonPoet: Connection Error"
+        }
 
     Tray(
         state = trayState,
@@ -30,7 +33,8 @@ fun ApplicationScope.VogonPoetTray(
         tooltip = tooltip,
         menu = {
             Item("Reconnect", onClick = onReconnect)
+            Item("Restart Engine", onClick = onRestartEngine)
             Item("Exit", onClick = onExit)
-        }
+        },
     )
 }
