@@ -35,11 +35,14 @@ fun ConfigForm(
     var anchorPreset by remember(config) { mutableStateOf(config.pipeline?.anchor_preset ?: "solid") }
     // Note: anchor_trigger_interval_ms is not in the generated schema yet, using default
     var anchorInterval by remember { mutableStateOf(2000f) }
+    var silenceThreshold by remember(config) { mutableStateOf(config.pipeline?.silence_threshold_ms?.toFloat() ?: 700f) }
     var wakeword by remember(config) { mutableStateOf(config.voice?.wakeword ?: "") }
     var wakewordSensitivity by remember(config) { mutableStateOf(config.voice?.wakeword_sensitivity?.toFloat() ?: 0.5f) }
     var stopWords by remember(config) { mutableStateOf(config.voice?.stop_words?.joinToString(", ") ?: "") }
     var toggleShortcut by remember(config) { mutableStateOf(config.ui?.shortcuts?.toggle_listening ?: "Ctrl+Shift+S") }
     var forceShortcut by remember(config) { mutableStateOf(config.ui?.shortcuts?.force_listen ?: "Ctrl+Shift+L") }
+    var iconOnly by remember(config) { mutableStateOf(config.ui?.activation_detection?.icon_only ?: false) }
+    var overlayMode by remember(config) { mutableStateOf(config.ui?.activation_detection?.overlay_mode ?: false) }
 
     val scrollState = rememberScrollState()
 
@@ -333,7 +336,112 @@ fun ConfigForm(
                 }
             }
 
-            // Panel 4: Shortcuts
+            // Panel 4: Activation Detection Window
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                    CardDefaults.outlinedCardColors(
+                        containerColor = GruvboxBg1.copy(alpha = 0.5f),
+                    ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        text = "Activation Detection Window",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = GruvboxFg0,
+                    )
+
+                    // Silence Threshold
+                    Text(
+                        text = "Silence Threshold: ${silenceThreshold.toInt()}ms",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = GruvboxFg0,
+                    )
+                    Slider(
+                        value = silenceThreshold,
+                        onValueChange = { silenceThreshold = it },
+                        valueRange = 300f..2000f,
+                        steps = 17,
+                        colors =
+                            SliderDefaults.colors(
+                                thumbColor = GruvboxGreenDark,
+                                activeTrackColor = GruvboxGreenDark,
+                            ),
+                    )
+                    Text(
+                        text = "How long to keep listening after voice stops",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = GruvboxFg0.copy(alpha = 0.6f),
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Icon Only Mode
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Icon Only Mode",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = GruvboxFg0,
+                            )
+                            Text(
+                                text = "Show only the microphone icon without text",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = GruvboxFg0.copy(alpha = 0.6f),
+                            )
+                        }
+                        Switch(
+                            checked = iconOnly,
+                            onCheckedChange = { iconOnly = it },
+                            colors =
+                                SwitchDefaults.colors(
+                                    checkedThumbColor = GruvboxGreenDark,
+                                    checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                                ),
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Overlay Mode
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Overlay Mode",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = GruvboxFg0,
+                            )
+                            Text(
+                                text = "Always on top, no decorations, unfocusable",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = GruvboxFg0.copy(alpha = 0.6f),
+                            )
+                        }
+                        Switch(
+                            checked = overlayMode,
+                            onCheckedChange = { overlayMode = it },
+                            colors =
+                                SwitchDefaults.colors(
+                                    checkedThumbColor = GruvboxGreenDark,
+                                    checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                                ),
+                        )
+                    }
+                }
+            }
+
+            // Panel 5: Shortcuts
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
                 colors =
@@ -352,7 +460,7 @@ fun ConfigForm(
                     )
 
                     ShortcutSelector(
-                        label = "Toggle Listening",
+                        label = "Toggle listening / transcribe state",
                         shortcut = toggleShortcut,
                         onShortcutChange = { toggleShortcut = it },
                         modifier = Modifier.fillMaxWidth(),
@@ -383,6 +491,7 @@ fun ConfigForm(
                                     double_pass = doublePass,
                                     ghost_preset = ghostPreset,
                                     anchor_preset = anchorPreset,
+                                    silence_threshold_ms = silenceThreshold.toLong(),
                                 ),
                             voice =
                                 Babelfish.Voice(
@@ -398,6 +507,11 @@ fun ConfigForm(
                                         Babelfish.Shortcuts(
                                             toggle_listening = toggleShortcut,
                                             force_listen = forceShortcut,
+                                        ),
+                                    activation_detection =
+                                        Babelfish.Activation_detection(
+                                            icon_only = iconOnly,
+                                            overlay_mode = overlayMode,
                                         ),
                                 ),
                             server = config.server ?: Babelfish.Server(),

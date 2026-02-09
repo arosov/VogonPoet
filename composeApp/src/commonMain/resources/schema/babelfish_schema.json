@@ -56,6 +56,11 @@
           "default": 2000,
           "title": "Anchor Trigger Interval Ms",
           "type": "integer"
+        },
+        "silence_threshold_ms": {
+          "default": 700,
+          "title": "Silence Threshold Ms",
+          "type": "integer"
         }
       },
       "title": "PipelineConfig",
@@ -126,6 +131,22 @@
               "default": "Ctrl+Shift+L",
               "title": "Push-to-Talk",
               "type": "string"
+            }
+          }
+        },
+        "activation_detection": {
+          "title": "Activation Detection Window",
+          "type": "object",
+          "properties": {
+            "icon_only": {
+              "default": false,
+              "title": "Icon Only Mode",
+              "type": "boolean"
+            },
+            "overlay_mode": {
+              "default": false,
+              "title": "Overlay Mode",
+              "type": "boolean"
             }
           }
         }
