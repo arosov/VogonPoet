@@ -1,7 +1,7 @@
 # /// script
 # dependencies = [
 #   "websockets",
-#   "cryptography",
+#   "huggingface-hub",
 # ]
 # ///
 
@@ -13,7 +13,7 @@ import subprocess
 import shutil
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 import websockets
 
@@ -22,7 +22,10 @@ logger = logging.getLogger(__name__)
 
 # --- Configuration ---
 PORT = 8123
-MIN_VRAM_MB = 6000
+
+# Multilingual Parakeet-TDT v3 (25 languages)
+MODEL_REPO = "istupakov/parakeet-tdt-0.6b-v3-onnx"
+MODEL_DIR_NAME = "nemo-parakeet-tdt-0.6b-v3"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -98,6 +101,10 @@ class BootstrapServer:
             *cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd, env=env
         )
 
+        if process.stdout is None:
+            await process.wait()
+            return process.returncode
+
         while True:
             line = await process.stdout.readline()
             if not line:
@@ -110,11 +117,44 @@ class BootstrapServer:
         await process.wait()
         return process.returncode
 
+    async def _provision_model(
+        self, repo_id: str, dest_dir: Path, allow_patterns: List[str]
+    ):
+        """Provisions a model from Hugging Face."""
+        if dest_dir.exists() and any(dest_dir.glob("*.onnx")):
+            # Check if all requested patterns are present (simplified)
+            return
+
+        from huggingface_hub import snapshot_download
+
+        await self._send_update(f"Provisioning model from {repo_id}...")
+
+        try:
+            # We use snapshot_download to get specific files
+            # Note: This runs synchronously, so we run it in an executor
+            loop = asyncio.get_running_loop()
+
+            def download():
+                return snapshot_download(
+                    repo_id=repo_id,
+                    local_dir=str(dest_dir),
+                    allow_patterns=allow_patterns,
+                )
+
+            await loop.run_in_executor(None, download)
+            await self._send_update("Model provisioning complete.")
+        except Exception as e:
+            logger.error(f"Model provisioning failed: {e}")
+            await self._send_update(f"Error provisioning model: {e}")
+            raise
+
     async def _run_bootstrap(self):
         try:
             await self._send_update("Detecting Hardware...")
 
-            is_nvidia = False
+            hw_mode = "cpu"  # default
+            gpu_desc = "None"
+            extra_to_install = None
 
             if os.environ.get("VOGON_FORCE_CPU"):
                 logger.info("VOGON_FORCE_CPU is set. Ignoring GPU.")
@@ -122,6 +162,7 @@ class BootstrapServer:
                     "Environment variable VOGON_FORCE_CPU set. Forcing CPU mode."
                 )
             else:
+                # 1. Check NVIDIA (Linux/Windows)
                 try:
                     output = subprocess.check_output(
                         [
@@ -139,39 +180,106 @@ class BootstrapServer:
                     ]
 
                     if vram_values:
-                        max_vram = max(vram_values)
-                        logger.info(
-                            f"Detected NVIDIA GPU(s) with VRAM: {vram_values} MiB. Max: {max_vram} MiB"
-                        )
-
-                        if max_vram >= MIN_VRAM_MB:
-                            is_nvidia = True
-                            await self._send_update(
-                                f"Found NVIDIA GPU with {max_vram} MiB VRAM (>= {MIN_VRAM_MB} MiB)."
-                            )
+                        if sys.platform == "win32":
+                            hw_mode = "nvidia_win"
+                            gpu_desc = f"NVIDIA GPU detected"
+                            extra_to_install = "windows-gpu"
                         else:
-                            await self._send_update(
-                                f"Found NVIDIA GPU but VRAM ({max_vram} MiB) is below minimum ({MIN_VRAM_MB} MiB). Falling back to CPU."
+                            hw_mode = "nvidia_linux"
+                            gpu_desc = f"NVIDIA GPU detected"
+                            extra_to_install = "nvidia-linux"
+                except Exception:
+                    pass
+
+                # 2. Check AMD (Linux/ROCm)
+                if hw_mode == "cpu" and sys.platform == "linux":
+                    try:
+                        if shutil.which("rocm-smi") or os.path.exists("/dev/kfd"):
+                            hw_mode = "amd_linux"
+                            gpu_desc = "AMD GPU detected (ROCm)"
+                            extra_to_install = "amd-linux"
+                    except Exception as e:
+                        logger.info(f"AMD/ROCm detection failed: {e}")
+
+                # 3. Check Windows (Unified DirectML for AMD/Intel/NVIDIA)
+                if hw_mode == "cpu" and sys.platform == "win32":
+                    try:
+                        out_names = (
+                            subprocess.check_output(
+                                "wmic path win32_VideoController get name", shell=True
                             )
-                    else:
-                        logger.info("nvidia-smi returned no valid VRAM data.")
-                except Exception as e:
-                    logger.info(f"NVIDIA detection failed or no GPU found: {e}")
+                            .decode()
+                            .strip()
+                            .split("\n")[1:]
+                        )
+                        for name in out_names:
+                            name = name.strip()
+                            if name and (
+                                "AMD" in name or "Radeon" in name or "Intel" in name
+                            ):
+                                hw_mode = "windows_gpu"
+                                gpu_desc = f"{name} detected (DML)"
+                                extra_to_install = "windows-gpu"
+                                break
+                    except Exception as e:
+                        logger.info(f"Windows GPU detection failed: {e}")
 
-            hw_type = "NVIDIA GPU" if is_nvidia else "CPU"
-            await self._send_update(f"Detected {hw_type}. Preparing environment...")
-
+            await self._send_update(
+                f"Detected Hardware: {gpu_desc}. Preparing environment..."
+            )
             await asyncio.sleep(1)
+
+            # --- Model Provisioning ---
+            models_dir = BABELFISH_DIR / "models"
+            models_dir.mkdir(exist_ok=True)
+            model_dest = models_dir / MODEL_DIR_NAME
+
+            # Quantization policy:
+            # CPU: All modes (int8, fp16, fp32)
+            # GPU: Highest only (fp16/fp32)
+            if hw_mode == "cpu":
+                allow_patterns = ["*.onnx", "config.json", "*.txt"]
+            else:
+                # Only high-precision files
+                # Usually model.onnx (fp32) and model_fp16.onnx
+                # We exclude int8
+                allow_patterns = [
+                    "model.onnx",
+                    "model_fp16.onnx",
+                    "config.json",
+                    "*.txt",
+                ]
+
+            await self._provision_model(MODEL_REPO, model_dest, allow_patterns)
 
             await self._send_update(f"Syncing dependencies in {BABELFISH_DIR}...")
 
+            # Build UV sync command
             cmd = [UV_CMD, "sync"]
 
-            if not is_nvidia:
-                cmd.extend(
-                    ["--extra-index-url", "https://download.pytorch.org/whl/cpu"]
+            if extra_to_install:
+                cmd.extend(["--extra", extra_to_install])
+
+            # Override index based on hardware
+            if hw_mode == "amd_linux":
+                await self._send_update("Setting ROCm index for AMD GPU...")
+                os.environ["UV_INDEX_PYTORCH_URL"] = (
+                    "https://download.pytorch.org/whl/rocm6.2"
                 )
-                await self._send_update("No GPU found, using CPU-only index...")
+            elif hw_mode == "cpu":
+                await self._send_update("Using CPU-only index...")
+                os.environ["UV_INDEX_PYTORCH_URL"] = (
+                    "https://download.pytorch.org/whl/cpu"
+                )
+            else:
+                # Default or CUDA index
+                # Note: For ONNX, standard CPU torch is actually fine and smaller.
+                # But if they have NVIDIA, maybe they want CUDA torch for other things?
+                # Actually, the spec says "Standardize base torch to cpu only".
+                # So we always use CPU index for torch to save space.
+                os.environ["UV_INDEX_PYTORCH_URL"] = (
+                    "https://download.pytorch.org/whl/cpu"
+                )
 
             ret = await self._run_command(cmd, cwd=BABELFISH_DIR)
             if ret != 0:
@@ -185,21 +293,37 @@ class BootstrapServer:
                 await self._websocket.close()
 
             # EXEC Babelfish
-            logger.info("Exec-ing Babelfish...")
+            logger.info(f"Exec-ing Babelfish (mode: {hw_mode})...")
             os.chdir(BABELFISH_DIR)
+
+            # Setup environment for ONNX Runtime
+            env = os.environ.copy()
+            if hw_mode != "cpu" and sys.platform == "linux":
+                # Ensure onnxruntime shared libraries are in LD_LIBRARY_PATH for Linux
+                venv_capi = list(
+                    BABELFISH_DIR.glob(
+                        ".venv/lib/python*/site-packages/onnxruntime/capi"
+                    )
+                )
+                if venv_capi:
+                    capi_path = venv_capi[0].resolve()
+                    current_ld = env.get("LD_LIBRARY_PATH", "")
+                    env["LD_LIBRARY_PATH"] = (
+                        f"{capi_path}:{current_ld}" if current_ld else str(capi_path)
+                    )
 
             args = [UV_CMD, "run", "babelfish"]
 
-            if not is_nvidia:
+            if hw_mode == "cpu":
                 args.append("--cpu")
 
             if sys.platform == "win32":
                 logger.info(f"Windows: Running {' '.join(args)} and waiting...")
-                subprocess.call(args)
+                subprocess.call(args, env=env)
                 sys.exit(0)
             else:
                 logger.info(f"Linux: Exec-ing {' '.join(args)}")
-                os.execvp(UV_CMD, args)
+                os.execvpe(UV_CMD, args, env)
 
         except Exception as e:
             logger.error(f"Bootstrap failed: {e}")
@@ -208,6 +332,13 @@ class BootstrapServer:
 
 async def main():
     logger.info(f"BOOTSTRAP SERVER STARTED port={PORT}")
+
+    # Cleanup any existing process on this port
+    if sys.platform != "win32":
+        try:
+            subprocess.run(["fuser", "-k", f"{PORT}/tcp"], stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
 
     server = BootstrapServer(asyncio.get_event_loop())
 

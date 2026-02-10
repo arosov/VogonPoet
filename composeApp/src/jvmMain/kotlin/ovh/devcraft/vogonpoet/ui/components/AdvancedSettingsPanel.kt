@@ -649,7 +649,6 @@ private fun createUpdatedConfig(
         hardware =
             Babelfish.Hardware(
                 device = device,
-                vram_limit_gb = original.hardware?.vram_limit_gb,
                 microphone_index = original.hardware?.microphone_index,
             ),
         pipeline =

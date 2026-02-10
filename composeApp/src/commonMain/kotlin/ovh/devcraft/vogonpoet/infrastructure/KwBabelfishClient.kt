@@ -104,6 +104,7 @@ class KwBabelfishClient(
 
     private fun handleIncomingLine(line: String) {
         if (line.isBlank()) return
+        // println("DEBUG: Received from Babelfish: $line")
         logMessage(MessageDirection.Received, line)
         try {
             val element = json.parseToJsonElement(line)
@@ -138,6 +139,11 @@ class KwBabelfishClient(
                         } else if (message != null) {
                             _connectionState.value = ConnectionState.Bootstrapping(message)
                         }
+                    }
+
+                    "transcription" -> {
+                        // Forward transcription messages to the message log
+                        // and potentially update a transcription flow if we add one
                     }
                 }
             }

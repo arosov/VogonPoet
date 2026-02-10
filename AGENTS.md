@@ -69,6 +69,13 @@ This document outlines the key conventions and architectural guidelines for this
 * **Prioritize Conventions:** Adherence to these architectural and structural rules is paramount, even if it requires more verbose code than a simpler, less structured approach.
 * **Explain Choices:** When making significant architectural decisions (e.g., adding a new module, choosing a specific GCP service), briefly explain the reasoning in the context of these conventions.
 
+## 10. Audio Pipeline & ONNX-ASR
+* **Engine:** Use `onnx-asr` for all ASR tasks, replacing raw `sherpa-onnx` implementations.
+* **Quantization Policy:**
+    * **GPU:** Force highest precision available for the target hardware (typically `fp16` or `fp32`). Low-bit quantizations (like `int8`) must be disabled for GPU execution to ensure stability and accuracy.
+    * **CPU:** All quantization modes (`int8`, `fp16`, `fp32`) are supported and should be made available to the user.
+* **Multi-GPU Capability:** Ensure standard support for NVIDIA (CUDA), AMD/Intel (DirectML), and platform-specific providers like ROCm or OpenVINO.
+
 # Gradle module conventions
 
 The main application is in the `:composeApp` module.

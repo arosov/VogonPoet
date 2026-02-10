@@ -4,7 +4,9 @@ This document provides a comprehensive guide to the VogonPoet (Client) and Babel
 
 ## 1. Overview
 
-The system consists of a Kotlin Multiplatform client (**VogonPoet**) communicating with a local Python STT server (**Babelfish**) via WebSockets. Both projects reside as sibling directories.
+The system consists of a Kotlin Multiplatform client (**VogonPoet**) that internally orchestrates a local Python STT server (**Babelfish**). 
+
+When the **VogonPoet** desktop application starts, it automatically spawns the **Babelfish** server as a background process using the `uv` package manager and a bootstrap script. Communication between the two components happens via WebSockets. Both projects reside as sibling directories in development.
 
 ## 2. Directory Structure
 
@@ -21,6 +23,13 @@ The development environment is structured as follows:
 *   **Technology:** Kotlin Multiplatform (KMP), Gradle.
 *   **Target:** JVM / Desktop.
 *   **Location:** `./` (Current directory)
+
+### Backend Orchestration
+The client uses the `BackendManager` object to manage the lifecycle of the **Babelfish** server. 
+*   **Startup:** On application launch, it searches for the `uv` executable and the `bootstrap.py` script.
+*   **Execution:** It runs `uv run scripts/bootstrap.py` as a sub-process.
+*   **Logs:** Backend logs are captured and prefixed with `[BACKEND]` in the client's standard output.
+*   **Shutdown:** A JVM shutdown hook ensures the backend process is terminated when the client closes.
 
 ### Key Commands (Run from `VogonPoet/`)
 
@@ -52,7 +61,7 @@ The development environment is structured as follows:
 
 ## 4. Babelfish (Server)
 
-*   **Technology:** Python, `uv` package manager, PyTorch, Parakeet-Stream.
+*   **Technology:** Python, `uv` package manager, PyTorch, onnx-asr.
 *   **Location:** `../babelfish`
 
 ### Key Commands (Run from `../babelfish`)
@@ -79,24 +88,9 @@ The development environment is structured as follows:
     uv run python scripts/generate_schema.py --output babelfish_schema.json
     ```
 
-## 5. Integration Testing
-
-A script is provided in the `VogonPoet` root to run both the server and client simultaneously for integration testing.
-
-*   **Script:** `test_config_sync.py`
-*   **Usage:**
-    ```bash
-    python3 test_config_sync.py
-    ```
-    *   Starts `babelfish` server on port 8123.
-    *   Waits for readiness.
-    *   Starts `VogonPoet` client.
-    *   Verifies configuration sync via stdout logs.
-    *   Handles cleanup of processes.
-
 ---
 
-## 6. Message Serialization & Modification Workflow
+## 5. Message Serialization & Modification Workflow
 
 The communication between Client and Server relies on JSON messages sent over WebSockets.
  The structure of these messages (specifically the configuration) is strictly defined by a JSON Schema.
