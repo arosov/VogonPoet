@@ -32,7 +32,7 @@ fun CollapsibleSidePanel(
     content: @Composable () -> Unit,
 ) {
     val panelWidth by animateDpAsState(
-        targetValue = if (isExpanded) 320.dp else 0.dp,
+        targetValue = if (isExpanded) 400.dp else 0.dp,
         animationSpec = tween(durationMillis = 300),
         label = "panel_width",
     )
@@ -54,7 +54,7 @@ fun CollapsibleSidePanel(
                             topEnd = 0.dp,
                             bottomEnd = 0.dp,
                         ),
-                    ).background(GruvboxGreenDark)
+                    ).background(GruvboxYellowDark)
                     .clickable { onToggle() },
             contentAlignment = Alignment.Center,
         ) {

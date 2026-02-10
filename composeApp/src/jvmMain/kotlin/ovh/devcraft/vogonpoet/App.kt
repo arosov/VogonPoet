@@ -45,7 +45,7 @@ fun App(viewModel: MainViewModel) {
                         vadState = vadState,
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     // Interactive Configuration Form
                     ConfigForm(

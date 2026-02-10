@@ -20,23 +20,23 @@ fun OutlinedStatusText(
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.headlineMedium,
 ) {
-    Box(
+    // Use smooth blur shadow for anti-aliased outline effect
+    Text(
+        text = text,
+        style =
+            style.copy(
+                shadow =
+                    androidx.compose.ui.graphics.Shadow(
+                        color = Color.Black.copy(alpha = 0.7f),
+                        offset =
+                            androidx.compose.ui.geometry
+                                .Offset(0f, 0f),
+                        blurRadius = 6f,
+                    ),
+            ),
+        color = GruvboxFg0,
         modifier = modifier,
-        contentAlignment = Alignment.Center,
-    ) {
-        // Outline layer (multiple shadows for outline effect)
-        Text(
-            text = text,
-            style = style,
-            color = GruvboxBg0.copy(alpha = 0.7f),
-        )
-        // Main text
-        Text(
-            text = text,
-            style = style,
-            color = GruvboxFg0,
-        )
-    }
+    )
 }
 
 @Composable
@@ -91,10 +91,13 @@ fun StatusCard(
             modifier =
                 Modifier
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .fillMaxHeight(),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            OutlinedStatusText(modifier = Modifier,
+            OutlinedStatusText(
+                modifier = Modifier,
                 text =
                     when (connectionState) {
                         is ConnectionState.Disconnected -> "Disconnected"

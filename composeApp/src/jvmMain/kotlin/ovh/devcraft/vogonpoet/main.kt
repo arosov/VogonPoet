@@ -35,11 +35,34 @@ fun main() {
         var showProtocolLog by remember { mutableStateOf(false) }
 
         // Settings Window State - compact height to fit content
+        // Add 15dp to account for title bar on Linux (window size includes decorations)
         val settingsWindowState =
             rememberWindowState(
-                width = 400.dp,
-                height = 635.dp,
+                width = 630.dp,
+                height = 670.dp,
             )
+
+        // Enforce window size constraints - reset to bounds if resized outside
+        LaunchedEffect(settingsWindowState.size) {
+            val width = settingsWindowState.size.width
+            val height = settingsWindowState.size.height
+            val minWidth = 629.dp
+            val maxWidth = 731.dp
+            val minHeight = 669.dp
+            val maxHeight = 671.dp
+
+            println("[Window Resize] Settings window: ${width.value.toInt()}dp x ${height.value.toInt()}dp")
+
+            // Clamp size to min/max bounds if it somehow got resized
+            if (width < minWidth || width > maxWidth || height < minHeight || height > maxHeight) {
+                println("[Window Constraint] Size out of bounds, clamping...")
+                settingsWindowState.size =
+                    androidx.compose.ui.unit.DpSize(
+                        width = width.coerceIn(minWidth, maxWidth),
+                        height = height.coerceIn(minHeight, maxHeight),
+                    )
+            }
+        }
 
         // Settings Window (Main Configuration)
         if (showSettings) {
@@ -47,6 +70,7 @@ fun main() {
                 onCloseRequest = { showSettings = false },
                 title = "VogonPoet - Settings",
                 state = settingsWindowState,
+                resizable = false,
             ) {
                 App(viewModel)
             }
