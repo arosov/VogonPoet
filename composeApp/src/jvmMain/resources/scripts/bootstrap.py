@@ -238,7 +238,7 @@ class BootstrapServer:
             # CPU: All modes (int8, fp16, fp32)
             # GPU: Highest only (fp16/fp32)
             if hw_mode == "cpu":
-                allow_patterns = ["*.onnx", "config.json", "*.txt"]
+                allow_patterns = ["*.onnx", "*.onnx.data", "config.json", "*.txt"]
             else:
                 # Only high-precision files
                 # Usually model.onnx (fp32) and model_fp16.onnx
@@ -246,6 +246,7 @@ class BootstrapServer:
                 allow_patterns = [
                     "model.onnx",
                     "model_fp16.onnx",
+                    "model.onnx.data",
                     "config.json",
                     "*.txt",
                 ]
