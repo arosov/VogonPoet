@@ -95,7 +95,7 @@ fun main() {
         VogonPoetTray(
             connectionState = connectionState,
             vadState = vadState,
-            icon = icon,
+            defaultIcon = icon,
             onExit = ::exitApplication,
             onOpenSettings = { showSettings = true },
             onOpenVadWindow = { showVadWindow = true },

@@ -6,8 +6,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -43,13 +47,35 @@ fun VadWindow(
 
     // Determine window properties based on overlay mode
     val windowState =
-        if (iconOnly) {
-            // Small window for icon-only mode
-            WindowState(width = 85.dp, height = 85.dp)
-        } else {
-            // Default size for full mode
-            WindowState(width = 170.dp, height = 200.dp)
+        remember(iconOnly) {
+            if (iconOnly) {
+                // Small window for icon-only mode
+                WindowState(width = 85.dp, height = 85.dp)
+            } else {
+                // Default size for full mode
+                WindowState(width = 170.dp, height = 200.dp)
+            }
         }
+
+    // Enforce exact window size (1px tolerance)
+    LaunchedEffect(windowState.size, iconOnly) {
+        val currentSize = windowState.size
+        val targetWidth = if (iconOnly) 85.dp else 170.dp
+        val targetHeight = if (iconOnly) 85.dp else 200.dp
+
+        // Check if size is more than 1px off from target
+        val widthDiff = kotlin.math.abs(currentSize.width.value - targetWidth.value)
+        val heightDiff = kotlin.math.abs(currentSize.height.value - targetHeight.value)
+
+        if (widthDiff > 1f || heightDiff > 1f) {
+            println(
+                "[VAD Window] Size clamping: ${currentSize.width.value.toInt()}x${currentSize.height.value.toInt()} -> ${targetWidth.value.toInt()}x${targetHeight.value.toInt()}",
+            )
+            windowState.size =
+                androidx.compose.ui.unit
+                    .DpSize(targetWidth, targetHeight)
+        }
+    }
 
     Window(
         onCloseRequest = onCloseRequest,
