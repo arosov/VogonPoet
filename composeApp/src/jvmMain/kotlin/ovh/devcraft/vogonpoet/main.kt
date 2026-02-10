@@ -34,11 +34,11 @@ fun main() {
         var showVadWindow by remember { mutableStateOf(false) }
         var showProtocolLog by remember { mutableStateOf(false) }
 
-        // Settings Window State - narrower and taller
+        // Settings Window State - compact height to fit content
         val settingsWindowState =
             rememberWindowState(
-                width = 420.dp,
-                height = 800.dp,
+                width = 400.dp,
+                height = 635.dp,
             )
 
         // Settings Window (Main Configuration)

@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
@@ -33,20 +34,10 @@ fun ConfigForm(
     }
 
     // Initialize form state with current config or defaults
-    var device by remember(config) { mutableStateOf(config.hardware?.device ?: "cpu") }
-    var doublePass by remember(config) { mutableStateOf(config.pipeline?.double_pass ?: false) }
-    var ghostPreset by remember(config) { mutableStateOf(config.pipeline?.ghost_preset ?: "fast") }
-    var anchorPreset by remember(config) { mutableStateOf(config.pipeline?.anchor_preset ?: "solid") }
-    // Note: anchor_trigger_interval_ms is not in the generated schema yet, using default
-    var anchorInterval by remember { mutableStateOf(2000f) }
-    var silenceThreshold by remember(config) { mutableStateOf(config.pipeline?.silence_threshold_ms?.toFloat() ?: 700f) }
     var wakeword by remember(config) { mutableStateOf(config.voice?.wakeword ?: "") }
     var wakewordSensitivity by remember(config) { mutableStateOf(config.voice?.wakeword_sensitivity?.toFloat() ?: 0.5f) }
     var stopWords by remember(config) { mutableStateOf(config.voice?.stop_words?.joinToString(", ") ?: "") }
     var toggleShortcut by remember(config) { mutableStateOf(config.ui?.shortcuts?.toggle_listening ?: "Ctrl+Shift+S") }
-    var forceShortcut by remember(config) { mutableStateOf(config.ui?.shortcuts?.force_listen ?: "Ctrl+Shift+L") }
-    var iconOnly by remember(config) { mutableStateOf(config.ui?.activation_detection?.icon_only ?: false) }
-    var overlayMode by remember(config) { mutableStateOf(config.ui?.activation_detection?.overlay_mode ?: false) }
     var cacheDir by remember(config) { mutableStateOf(config.cache?.cache_dir ?: "") }
 
     // Microphone state
@@ -65,12 +56,17 @@ fun ConfigForm(
 
     val scrollState = rememberScrollState()
 
-    // Force single pass when CPU mode is selected
-    LaunchedEffect(device) {
-        if (device == "cpu" && doublePass) {
-            doublePass = false
+    // UV default cache path based on platform
+    val defaultUvCacheDir =
+        remember {
+            val home = System.getProperty("user.home")
+            val osName = System.getProperty("os.name").lowercase()
+            when {
+                osName.contains("win") -> System.getenv("LOCALAPPDATA")?.let { "$it\\uv" } ?: "$home\\AppData\\Local\\uv"
+                osName.contains("mac") -> "$home/Library/Caches/uv"
+                else -> "$home/.cache/uv"
+            }
         }
-    }
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
@@ -78,11 +74,11 @@ fun ConfigForm(
                 Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(16.dp)
-                    .padding(end = 12.dp), // Extra padding for scrollbar
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(4.dp)
+                    .padding(end = 8.dp), // Extra padding for scrollbar
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            // Panel 1: Hardware Acceleration
+            // Panel 1: Microphone Selection
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
                 colors =
@@ -91,155 +87,69 @@ fun ConfigForm(
                     ),
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(
-                        text = "Hardware Acceleration",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = GruvboxFg0,
-                    )
-
-                    // GPU Selector (mocked)
-                    var expanded by remember { mutableStateOf(false) }
-                    val gpuOptions = listOf("cpu" to "CPU Only", "cuda" to "NVIDIA GPU (Mock)")
-
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = it },
-                    ) {
-                        OutlinedTextField(
-                            value = gpuOptions.find { it.first == device }?.second ?: device,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Processing Device") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            colors =
-                                OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = GruvboxGreenDark,
-                                    focusedLabelColor = GruvboxGreenDark,
-                                ),
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false },
-                        ) {
-                            gpuOptions.forEach { (value, label) ->
-                                DropdownMenuItem(
-                                    text = { Text(label) },
-                                    onClick = {
-                                        device = value
-                                        if (value == "cpu") {
-                                            doublePass = false
-                                        }
-                                        expanded = false
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    if (device == "cpu") {
-                        Text(
-                            text = "CPU mode detected. Double-pass pipeline will be disabled.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = GruvboxYellowDark,
-                        )
-                    }
-                }
-            }
-
-            // Panel 2: Microphone Selection
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                    CardDefaults.outlinedCardColors(
-                        containerColor = GruvboxBg1.copy(alpha = 0.5f),
-                    ),
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(
-                        text = "Microphone",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = GruvboxFg0,
-                    )
-
-                    // Microphone Selector
+                    // Microphone Selector with Test button inline
                     val currentConnectionState by viewModel.connectionState.collectAsState()
                     val isReady =
                         currentConnectionState is ConnectionState.Connected || currentConnectionState is ConnectionState.Bootstrapping
 
-                    ExposedDropdownMenuBox(
-                        expanded = micExpanded,
-                        onExpandedChange = { if (isReady) micExpanded = it },
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        OutlinedTextField(
-                            value =
-                                microphoneList.find { it.index.toLong() == selectedMicIndex }?.name
-                                    ?: if (selectedMicIndex == -1L) "Default Microphone" else "Microphone $selectedMicIndex",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Input Device") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = micExpanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            enabled = isReady,
-                            colors =
-                                OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = GruvboxGreenDark,
-                                    focusedLabelColor = GruvboxGreenDark,
-                                ),
-                        )
-                        ExposedDropdownMenu(
+                        // Microphone Dropdown
+                        ExposedDropdownMenuBox(
                             expanded = micExpanded,
-                            onDismissRequest = { micExpanded = false },
+                            onExpandedChange = { if (isReady) micExpanded = it },
+                            modifier = Modifier.weight(1f),
                         ) {
-                            // Default option
-                            DropdownMenuItem(
-                                text = { Text("Default Microphone") },
-                                onClick = {
-                                    selectedMicIndex = -1
-                                    micExpanded = false
-                                },
+                            OutlinedTextField(
+                                value =
+                                    microphoneList.find { it.index.toLong() == selectedMicIndex }?.name
+                                        ?: if (selectedMicIndex == -1L) "Default" else "Mic $selectedMicIndex",
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Microphone", style = MaterialTheme.typography.labelSmall) },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = micExpanded) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                enabled = isReady,
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodyMedium,
+                                colors =
+                                    OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = GruvboxGreenDark,
+                                        focusedLabelColor = GruvboxGreenDark,
+                                    ),
                             )
-                            // List available microphones
-                            microphoneList.forEach { mic ->
+                            ExposedDropdownMenu(
+                                expanded = micExpanded,
+                                onDismissRequest = { micExpanded = false },
+                            ) {
+                                // Default option
                                 DropdownMenuItem(
-                                    text = { Text(mic.name + if (mic.isDefault) " (Default)" else "") },
+                                    text = { Text("Default Microphone") },
                                     onClick = {
-                                        selectedMicIndex = mic.index.toLong()
+                                        selectedMicIndex = -1
                                         micExpanded = false
                                     },
                                 )
+                                // List available microphones
+                                microphoneList.forEach { mic ->
+                                    DropdownMenuItem(
+                                        text = { Text(mic.name + if (mic.isDefault) " (Default)" else "") },
+                                        onClick = {
+                                            selectedMicIndex = mic.index.toLong()
+                                            micExpanded = false
+                                        },
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    if (!isReady) {
-                        Text(
-                            text = "Connect to backend to see available microphones",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = GruvboxGray,
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Test Microphone Button
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = if (isMicTesting) "Testing Microphone..." else "Test Microphone",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (isReady) GruvboxFg0 else GruvboxGray,
-                            modifier = Modifier.weight(1f),
-                        )
+                        // Test Button
                         Button(
                             onClick = { viewModel.toggleMicTest(!isMicTesting) },
                             enabled = isReady,
@@ -248,9 +158,19 @@ fun ConfigForm(
                                     containerColor = if (isMicTesting) GruvboxYellowDark else GruvboxGreenDark,
                                     contentColor = GruvboxFg0,
                                 ),
+                            modifier = Modifier.height(48.dp),
                         ) {
-                            Text(if (isMicTesting) "Stop Test" else "Start Test")
+                            Text(if (isMicTesting) "Stop" else "Test", style = MaterialTheme.typography.bodyMedium)
                         }
+                    }
+
+                    // Connection hint when not ready
+                    if (!isReady) {
+                        Text(
+                            text = "Connect to see microphones",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = GruvboxGray,
+                        )
                     }
 
                     // Voice activity indicator during test
@@ -259,7 +179,7 @@ fun ConfigForm(
                         if (vadState == VadState.Listening) {
                             Text(
                                 text = "Voice detected!",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = GruvboxGreenLight,
                             )
                         }
@@ -267,7 +187,7 @@ fun ConfigForm(
                 }
             }
 
-            // Panel 3: Pipeline Strategy
+            // Panel 2: Voice Triggers
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
                 colors =
@@ -276,193 +196,65 @@ fun ConfigForm(
                     ),
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(
-                        text = "Pipeline Strategy",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = GruvboxFg0,
-                    )
-
-                    // Single vs Double Pass
+                    // Wakeword row with sensitivity slider
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        FilterChip(
-                            selected = !doublePass,
-                            onClick = { doublePass = false },
-                            label = { Text("Single Pass") },
-                            enabled = device != "cpu",
-                        )
-                        FilterChip(
-                            selected = doublePass,
-                            onClick = {
-                                if (device != "cpu") doublePass = true
-                            },
-                            label = { Text("Double Pass") },
-                            enabled = device != "cpu",
-                        )
-                    }
-
-                    if (device == "cpu") {
-                        Text(
-                            text = "Double-pass requires GPU acceleration.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = GruvboxGray,
-                        )
-                    }
-
-                    // Ghost Preset
-                    var ghostExpanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = ghostExpanded,
-                        onExpandedChange = { ghostExpanded = it },
-                    ) {
+                        // Wakeword input
                         OutlinedTextField(
-                            value = ghostPreset.replaceFirstChar { it.uppercase() },
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Ghost Preset") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = ghostExpanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            value = wakeword,
+                            onValueChange = { wakeword = it },
+                            label = { Text("Wakeword", style = MaterialTheme.typography.labelSmall) },
+                            placeholder = { Text("Optional", style = MaterialTheme.typography.bodySmall) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium,
                             colors =
                                 OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = GruvboxGreenDark,
                                     focusedLabelColor = GruvboxGreenDark,
                                 ),
                         )
-                        ExposedDropdownMenu(
-                            expanded = ghostExpanded,
-                            onDismissRequest = { ghostExpanded = false },
+
+                        // Sensitivity slider (compact)
+                        Column(
+                            modifier = Modifier.width(120.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            listOf("fast", "balanced", "accurate").forEach { preset ->
-                                DropdownMenuItem(
-                                    text = { Text(preset.replaceFirstChar { it.uppercase() }) },
-                                    onClick = {
-                                        ghostPreset = preset
-                                        ghostExpanded = false
-                                    },
-                                )
-                            }
+                            Text(
+                                text = "${(wakewordSensitivity * 100).toInt()}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = GruvboxFg0,
+                            )
+                            Slider(
+                                value = wakewordSensitivity,
+                                onValueChange = { wakewordSensitivity = it },
+                                valueRange = 0.1f..0.9f,
+                                steps = 8,
+                                modifier = Modifier.height(24.dp),
+                                colors =
+                                    SliderDefaults.colors(
+                                        thumbColor = GruvboxGreenDark,
+                                        activeTrackColor = GruvboxGreenDark,
+                                    ),
+                            )
                         }
                     }
 
-                    // Anchor Preset
-                    var anchorExpanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = anchorExpanded,
-                        onExpandedChange = { anchorExpanded = it },
-                    ) {
-                        OutlinedTextField(
-                            value = anchorPreset.replaceFirstChar { it.uppercase() },
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Anchor Preset") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = anchorExpanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            colors =
-                                OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = GruvboxGreenDark,
-                                    focusedLabelColor = GruvboxGreenDark,
-                                ),
-                        )
-                        ExposedDropdownMenu(
-                            expanded = anchorExpanded,
-                            onDismissRequest = { anchorExpanded = false },
-                        ) {
-                            listOf("fast", "balanced", "solid").forEach { preset ->
-                                DropdownMenuItem(
-                                    text = { Text(preset.replaceFirstChar { it.uppercase() }) },
-                                    onClick = {
-                                        anchorPreset = preset
-                                        anchorExpanded = false
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    // Anchor Trigger Interval (only for double pass)
-                    if (doublePass) {
-                        Text(
-                            text = "Anchor Trigger Interval: ${anchorInterval.toInt()}ms",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = GruvboxFg0,
-                        )
-                        Slider(
-                            value = anchorInterval,
-                            onValueChange = { anchorInterval = it },
-                            valueRange = 500f..5000f,
-                            steps = 9,
-                            colors =
-                                SliderDefaults.colors(
-                                    thumbColor = GruvboxGreenDark,
-                                    activeTrackColor = GruvboxGreenDark,
-                                ),
-                        )
-                    }
-                }
-            }
-
-            // Panel 3: Voice Triggers
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                    CardDefaults.outlinedCardColors(
-                        containerColor = GruvboxBg1.copy(alpha = 0.5f),
-                    ),
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(
-                        text = "Voice Triggers",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = GruvboxFg0,
-                    )
-
-                    // Wakeword (optional)
-                    OutlinedTextField(
-                        value = wakeword,
-                        onValueChange = { wakeword = it },
-                        label = { Text("Wakeword (Optional)") },
-                        placeholder = { Text("e.g., hey_jarvis") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GruvboxGreenDark,
-                                focusedLabelColor = GruvboxGreenDark,
-                            ),
-                    )
-
-                    // Wakeword Sensitivity
-                    Text(
-                        text = "Wakeword Sensitivity: ${(wakewordSensitivity * 100).toInt()}%",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = GruvboxFg0,
-                    )
-                    Slider(
-                        value = wakewordSensitivity,
-                        onValueChange = { wakewordSensitivity = it },
-                        valueRange = 0.1f..0.9f,
-                        steps = 8,
-                        colors =
-                            SliderDefaults.colors(
-                                thumbColor = GruvboxGreenDark,
-                                activeTrackColor = GruvboxGreenDark,
-                            ),
-                    )
-
-                    // Stop Words (optional)
+                    // Stop Words (single line)
                     OutlinedTextField(
                         value = stopWords,
                         onValueChange = { stopWords = it },
-                        label = { Text("Stop Words (Optional, comma-separated)") },
-                        placeholder = { Text("e.g., stop talking, that's enough") },
+                        label = { Text("Stop words", style = MaterialTheme.typography.labelSmall) },
+                        placeholder = { Text("comma, separated, words", style = MaterialTheme.typography.bodySmall) },
                         modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium,
                         colors =
                             OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = GruvboxGreenDark,
@@ -472,7 +264,7 @@ fun ConfigForm(
                 }
             }
 
-            // Panel 4: Activation Detection Window
+            // Panel 3: Shortcuts
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
                 colors =
@@ -481,137 +273,27 @@ fun ConfigForm(
                     ),
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = "Speech Detection",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "Toggle Shortcut",
+                        style = MaterialTheme.typography.labelSmall,
                         color = GruvboxFg0,
                     )
-
-                    // Silence Threshold
-                    Text(
-                        text = "Silence Threshold: ${silenceThreshold.toInt()}ms",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = GruvboxFg0,
-                    )
-                    Slider(
-                        value = silenceThreshold,
-                        onValueChange = { silenceThreshold = it },
-                        valueRange = 300f..2000f,
-                        steps = 17,
-                        colors =
-                            SliderDefaults.colors(
-                                thumbColor = GruvboxGreenDark,
-                                activeTrackColor = GruvboxGreenDark,
-                            ),
-                    )
-                    Text(
-                        text = "How long to keep listening after voice stops",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = GruvboxFg0.copy(alpha = 0.6f),
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Icon Only Mode
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Icon Only Mode",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = GruvboxFg0,
-                            )
-                            Text(
-                                text = "Show only the microphone icon without text",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = GruvboxFg0.copy(alpha = 0.6f),
-                            )
-                        }
-                        Switch(
-                            checked = iconOnly,
-                            onCheckedChange = { iconOnly = it },
-                            colors =
-                                SwitchDefaults.colors(
-                                    checkedThumbColor = GruvboxGreenDark,
-                                    checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
-                                ),
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Overlay Mode
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Overlay Mode",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = GruvboxFg0,
-                            )
-                            Text(
-                                text = "Always on top, no decorations, unfocusable",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = GruvboxFg0.copy(alpha = 0.6f),
-                            )
-                        }
-                        Switch(
-                            checked = overlayMode,
-                            onCheckedChange = { overlayMode = it },
-                            colors =
-                                SwitchDefaults.colors(
-                                    checkedThumbColor = GruvboxGreenDark,
-                                    checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
-                                ),
-                        )
-                    }
-                }
-            }
-
-            // Panel 5: Shortcuts
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                    CardDefaults.outlinedCardColors(
-                        containerColor = GruvboxBg1.copy(alpha = 0.5f),
-                    ),
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(
-                        text = "Keyboard Shortcuts",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = GruvboxFg0,
-                    )
-
                     ShortcutSelector(
-                        label = "Toggle listening / transcribe state",
+                        label = "",
                         shortcut = toggleShortcut,
                         onShortcutChange = { toggleShortcut = it },
                         modifier = Modifier.fillMaxWidth(),
                     )
-
-                    ShortcutSelector(
-                        label = "Push-to-Talk",
-                        shortcut = forceShortcut,
-                        onShortcutChange = { forceShortcut = it },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
                 }
             }
 
-            // Panel 6: Cache Directory
+            // Panel 4: Cache Directory
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
                 colors =
@@ -620,49 +302,29 @@ fun ConfigForm(
                     ),
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    // Display current path on its own line
+                    val displayPath = cacheDir.takeIf { it.isNotBlank() } ?: defaultUvCacheDir
+
                     Text(
-                        text = "Cache Directory",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = GruvboxFg0,
-                    )
-
-                    // UV default cache path based on platform
-                    val defaultUvCacheDir =
-                        remember {
-                            val home = System.getProperty("user.home")
-                            val osName = System.getProperty("os.name").lowercase()
-                            when {
-                                osName.contains("win") -> System.getenv("LOCALAPPDATA")?.let { "$it\\uv" } ?: "$home\\AppData\\Local\\uv"
-                                osName.contains("mac") -> "$home/Library/Caches/uv"
-                                else -> "$home/.cache/uv"
-                            }
-                        }
-
-                    val displayPath = cacheDir.takeIf { it.isNotBlank() } ?: "(default: $defaultUvCacheDir)"
-
-                    // Display current path or default
-                    OutlinedTextField(
-                        value = displayPath,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("UV Cache Location") },
+                        text = "Cache: $displayPath",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (cacheDir.isBlank()) GruvboxGray else GruvboxFg0,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth(),
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GruvboxGreenDark,
-                                focusedLabelColor = GruvboxGreenDark,
-                                disabledTextColor = if (cacheDir.isBlank()) GruvboxGray else GruvboxFg0,
-                            ),
-                        enabled = false,
                     )
 
-                    // Buttons row
+                    // Buttons row below
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         // Browse button
                         Button(
@@ -687,22 +349,22 @@ fun ConfigForm(
                                     containerColor = GruvboxBlueDark,
                                     contentColor = GruvboxFg0,
                                 ),
+                            modifier = Modifier.height(32.dp),
                         ) {
-                            Text("Browse...")
+                            Text("Browse", style = MaterialTheme.typography.bodySmall)
                         }
 
                         // Reset button
-                        Button(
+                        TextButton(
                             onClick = { cacheDir = "" },
                             enabled = cacheDir.isNotBlank(),
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = GruvboxRedDark.copy(alpha = 0.7f),
-                                    contentColor = GruvboxFg0,
-                                    disabledContainerColor = GruvboxGray.copy(alpha = 0.3f),
-                                ),
+                            modifier = Modifier.height(32.dp),
                         ) {
-                            Text("Reset")
+                            Text(
+                                "Reset",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (cacheDir.isNotBlank()) GruvboxRedDark else GruvboxGray,
+                            )
                         }
                     }
                 }
@@ -713,19 +375,13 @@ fun ConfigForm(
                 onClick = {
                     val newConfig =
                         Babelfish(
+                            // Preserve hardware settings (managed by AdvancedSettingsPanel) but update microphone
                             hardware =
-                                Babelfish.Hardware(
-                                    device = device,
-                                    vram_limit_gb = config.hardware?.vram_limit_gb,
+                                config.hardware?.copy(
                                     microphone_index = if (selectedMicIndex >= 0) selectedMicIndex else null,
-                                ),
-                            pipeline =
-                                Babelfish.Pipeline(
-                                    double_pass = doublePass,
-                                    ghost_preset = ghostPreset,
-                                    anchor_preset = anchorPreset,
-                                    silence_threshold_ms = silenceThreshold.toLong(),
-                                ),
+                                ) ?: Babelfish.Hardware(microphone_index = if (selectedMicIndex >= 0) selectedMicIndex else null),
+                            // Preserve pipeline settings (managed by AdvancedSettingsPanel)
+                            pipeline = config.pipeline ?: Babelfish.Pipeline(),
                             voice =
                                 Babelfish.Voice(
                                     wakeword = wakeword.takeIf { it.isNotBlank() },
@@ -739,13 +395,9 @@ fun ConfigForm(
                                     shortcuts =
                                         Babelfish.Shortcuts(
                                             toggle_listening = toggleShortcut,
-                                            force_listen = forceShortcut,
                                         ),
-                                    activation_detection =
-                                        Babelfish.Activation_detection(
-                                            icon_only = iconOnly,
-                                            overlay_mode = overlayMode,
-                                        ),
+                                    // Preserve activation detection settings (managed by AdvancedSettingsPanel)
+                                    activation_detection = config.ui?.activation_detection ?: Babelfish.Activation_detection(),
                                 ),
                             server = config.server ?: Babelfish.Server(),
                             cache =

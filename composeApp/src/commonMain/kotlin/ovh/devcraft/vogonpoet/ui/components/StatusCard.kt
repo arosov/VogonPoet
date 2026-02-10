@@ -8,10 +8,36 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
 import ovh.devcraft.vogonpoet.ui.theme.*
+
+@Composable
+fun OutlinedStatusText(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = MaterialTheme.typography.headlineMedium,
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) {
+        // Outline layer (multiple shadows for outline effect)
+        Text(
+            text = text,
+            style = style,
+            color = GruvboxBg0.copy(alpha = 0.7f),
+        )
+        // Main text
+        Text(
+            text = text,
+            style = style,
+            color = GruvboxFg0,
+        )
+    }
+}
 
 @Composable
 fun StatusCard(
@@ -52,8 +78,9 @@ fun StatusCard(
     Card(
         modifier =
             modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+                .fillMaxWidth(0.85f)
+                .height(120.dp)
+                .padding(8.dp),
         colors =
             CardDefaults.cardColors(
                 containerColor = color.copy(alpha = alpha),
@@ -63,11 +90,11 @@ fun StatusCard(
         Column(
             modifier =
                 Modifier
-                    .padding(24.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
                     .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
+            OutlinedStatusText(modifier = Modifier,
                 text =
                     when (connectionState) {
                         is ConnectionState.Disconnected -> "Disconnected"
@@ -77,7 +104,6 @@ fun StatusCard(
                         is ConnectionState.Error -> "Connection Error"
                     },
                 style = MaterialTheme.typography.headlineMedium,
-                color = GruvboxFg0,
             )
 
             if (connectionState is ConnectionState.Error) {
