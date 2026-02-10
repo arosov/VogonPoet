@@ -8,7 +8,7 @@
 
 ## Concurrency & Networking
 - **Asynchronous Programming:** Kotlinx Coroutines 1.10.2
-- **Communication Protocol:** WebTransport via **kwtransport** (for low-latency backend streaming)
+- **Communication Protocol:** WebSockets via **Ktor** (for low-latency backend streaming)
 
 ## Build System & Infrastructure
 - **Build Tool:** Gradle (Kotlin DSL)

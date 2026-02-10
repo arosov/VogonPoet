@@ -1,5 +1,6 @@
 [versions]
 androidx-lifecycle = "2.9.6"
+koin = "4.0.0"
 composeHotReload = "1.0.0"
 composeMultiplatform = "1.10.0"
 junit = "4.13.2"
@@ -10,12 +11,13 @@ kotlinx-serialization = "1.10.0"
 json-kotlin-gradle = "0.121"
 json-kotlin-schema-codegen = "0.123"
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
-kwtransport = "0.0.5-SNAPSHOT"
+ktor = "3.1.1"
 material3 = "1.10.0-alpha05"
 
 [libraries]
-kwtransport = { module = "io.github.arosov:kwtransport", version.ref = "kwtransport" }
-kwtransport-linux-x64 = { module = "io.github.arosov:kwtransport-jvm-linux-x64", version.ref = "kwtransport" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+ktor-client-websockets = { module = "io.ktor:ktor-client-websockets", version.ref = "ktor" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -31,6 +33,9 @@ compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-previ
 kotlinx-coroutinesSwing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
+koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
 json-kotlin-gradle = { module = "net.pwall.json:json-kotlin-gradle", version.ref = "json-kotlin-gradle" }
 json-kotlin-schema-codegen = { module = "net.pwall.json:json-kotlin-schema-codegen", version.ref = "json-kotlin-schema-codegen" }
 

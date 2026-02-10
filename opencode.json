@@ -20,21 +20,19 @@
     "agent": {
         "plan": {
             "mode": "primary",
-            "model": "google/gemini-3-pro-preview",
-            "tools": {
-                "write": false,
-                "edit": false,
-                "bash": false
-            }
+            "model": "google/gemini-3-flash-preview"
         },
         "build": {
             "mode": "primary",
-            "model": "google/gemini-3-flash-preview",
-            "tools": {
-                "write": true,
-                "edit": true,
-                "bash": true
-            }
+            "model": "google/gemini-3-flash-preview"
+        },
+        "explore": {
+            "mode": "subagent",
+            "model": "google/gemini-3-flash-preview"
+        },
+        "general": {
+            "mode": "subagent",
+            "model": "google/gemini-3-flash-preview"
         }
     },
     "provider": {

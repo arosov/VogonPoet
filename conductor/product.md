@@ -1,6 +1,6 @@
 # Initial Concept
 The name of this project is VogonPoet. It aims to provide a minimalist frontend to babelfish a modern STT server.
-Communication with babelfish happens over webtransport to battletest kwtransport.
+Communication with babelfish happens over websockets.
 
 # Product Definition - VogonPoet
 
@@ -18,7 +18,7 @@ VogonPoet is a minimalist, high-performance desktop frontend for the Babelfish S
 - **Visual Status Indicators:** Provides clear, real-time visual signals for the backend state, including:
     - **VAD State:** Visual cues when the system is actively "listening."
     - **Wake-Word Detection:** Confirmation when the backend has been triggered by a wake-word.
-    - **Connectivity Status:** Immediate feedback on the WebTransport connection to the Babelfish server.
+    - **Connectivity Status:** Immediate feedback on the WebSocket connection to the Babelfish server.
 - **Backend Management:**
     - **Always-on Status Overlay:** A persistent, minimal indicator of the system's current state.
     - **Configuration Dashboard:** A dedicated interface to toggle backend modes (e.g., Two-Pass refinement, Wake-word activation) and manage hardware/audio device selection.

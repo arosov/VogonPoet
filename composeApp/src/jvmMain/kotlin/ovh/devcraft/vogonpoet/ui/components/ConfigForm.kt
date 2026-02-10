@@ -42,10 +42,12 @@ fun ConfigForm(
     var micExpanded by remember { mutableStateOf(false) }
     var selectedMicIndex by remember(config) { mutableStateOf(config.hardware?.microphone_index ?: -1L) }
 
-    // Load microphones when connected or bootstrapping
+    // Load microphones and hardware when connected
     LaunchedEffect(connectionState) {
         if (connectionState is ConnectionState.Connected || connectionState is ConnectionState.Bootstrapping) {
             viewModel.loadMicrophones()
+            viewModel.loadHardware()
+            viewModel.loadWakewords()
         }
     }
 
@@ -184,20 +186,50 @@ fun ConfigForm(
                         color = GruvboxGreenDark,
                     )
 
-                    // Wakeword input
-                    OutlinedTextField(
-                        value = wakeword,
-                        onValueChange = { wakeword = it },
-                        label = { Text("Wakeword") },
-                        placeholder = { Text("Optional") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GruvboxGreenDark,
-                                focusedLabelColor = GruvboxGreenDark,
-                            ),
-                    )
+                    // Wakeword selection
+                    var wakewordExpanded by remember { mutableStateOf(false) }
+                    val wakewordList by viewModel.wakewordList.collectAsState()
+
+                    ExposedDropdownMenuBox(
+                        expanded = wakewordExpanded,
+                        onExpandedChange = { if (isReady) wakewordExpanded = it },
+                    ) {
+                        OutlinedTextField(
+                            value = wakeword.takeIf { it.isNotBlank() } ?: "None",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Wakeword") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = wakewordExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            enabled = isReady,
+                            colors =
+                                OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = GruvboxGreenDark,
+                                    focusedLabelColor = GruvboxGreenDark,
+                                ),
+                        )
+                        ExposedDropdownMenu(
+                            expanded = wakewordExpanded,
+                            onDismissRequest = { wakewordExpanded = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("None") },
+                                onClick = {
+                                    wakeword = ""
+                                    wakewordExpanded = false
+                                },
+                            )
+                            wakewordList.forEach { word ->
+                                DropdownMenuItem(
+                                    text = { Text(word.replace("_", " ").replaceFirstChar { it.uppercase() }) },
+                                    onClick = {
+                                        wakeword = word
+                                        wakewordExpanded = false
+                                    },
+                                )
+                            }
+                        }
+                    }
 
                     // Sensitivity
                     Column {

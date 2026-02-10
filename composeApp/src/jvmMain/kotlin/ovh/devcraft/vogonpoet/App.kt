@@ -19,6 +19,7 @@ fun App(viewModel: MainViewModel) {
     val connectionState by viewModel.connectionState.collectAsState()
     val vadState by viewModel.vadState.collectAsState()
     val config by viewModel.config.collectAsState()
+    val draftConfig by viewModel.draftConfig.collectAsState()
     var isPanelExpanded by remember { mutableStateOf(false) }
 
     MaterialTheme(
@@ -50,9 +51,10 @@ fun App(viewModel: MainViewModel) {
                     // Interactive Configuration Form
                     ConfigForm(
                         viewModel = viewModel,
-                        config = config,
+                        config = draftConfig,
                         onSave = { newConfig ->
-                            viewModel.saveConfig(newConfig)
+                            viewModel.updateDraft(newConfig)
+                            viewModel.saveConfig()
                         },
                         modifier = Modifier.weight(1f),
                     )
@@ -80,9 +82,9 @@ fun App(viewModel: MainViewModel) {
                     ) {
                         AdvancedSettingsPanel(
                             viewModel = viewModel,
-                            config = config,
+                            config = draftConfig,
                             onConfigChange = { newConfig ->
-                                viewModel.saveConfig(newConfig)
+                                viewModel.updateDraft(newConfig)
                             },
                         )
                     }

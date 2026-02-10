@@ -1,0 +1,101 @@
+Generation complete
+BackendManager: Current working directory: /home/arosovsky/dev/VogonPoet/VogonPoet/composeApp
+BackendManager: Using uv at uv
+BackendManager: Using bootstrap at /home/arosovsky/dev/VogonPoet/VogonPoet/composeApp/src/jvmMain/resources/scripts/bootstrap.py
+BackendManager: Backend process started (PID: 370312)
+[BACKEND] INFO:__main__:Prod babelfish dir not found, searching for dev location...
+[BACKEND] INFO:__main__:Found dev babelfish dir at: /home/arosovsky/dev/VogonPoet/babelfish
+[BACKEND] INFO:__main__:Loading existing certificate from /home/arosovsky/dev/VogonPoet/VogonPoet/composeApp/src/jvmMain/resources/scripts/bootstrap_server.crt
+[BACKEND] INFO:__main__:BOOTSTRAP SERVER STARTED port=8123
+[BACKEND] Traceback (most recent call last):
+[BACKEND]   File "/home/arosovsky/dev/VogonPoet/VogonPoet/composeApp/src/jvmMain/resources/scripts/bootstrap.py", line 388, in <module>
+[BACKEND]     asyncio.run(main())
+[BACKEND]   File "/home/arosovsky/.local/share/uv/python/cpython-3.12.10-linux-x86_64-gnu/lib/python3.12/asyncio/runners.py", line 195, in run
+[BACKEND]     return runner.run(main)
+[BACKEND]            ^^^^^^^^^^^^^^^^
+[BACKEND]   File "/home/arosovsky/.local/share/uv/python/cpython-3.12.10-linux-x86_64-gnu/lib/python3.12/asyncio/runners.py", line 118, in run
+[BACKEND]     return self._loop.run_until_complete(task)
+[BACKEND]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[BACKEND]   File "/home/arosovsky/.local/share/uv/python/cpython-3.12.10-linux-x86_64-gnu/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+[BACKEND]     return future.result()
+[BACKEND]            ^^^^^^^^^^^^^^^
+[BACKEND]   File "/home/arosovsky/dev/VogonPoet/VogonPoet/composeApp/src/jvmMain/resources/scripts/bootstrap.py", line 375, in main
+[BACKEND]     await serve(
+[BACKEND]   File "/home/arosovsky/.cache/uv/environments-v2/bootstrap-70dfba4d081a444c/lib/python3.12/site-packages/aioquic/asyncio/server.py", line 207, in serve
+[BACKEND]     _, protocol = await loop.create_datagram_endpoint(
+[BACKEND]                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[BACKEND]   File "/home/arosovsky/.local/share/uv/python/cpython-3.12.10-linux-x86_64-gnu/lib/python3.12/asyncio/base_events.py", line 1433, in create_datagram_endpoint
+[BACKEND]     raise exceptions[0]
+[BACKEND]   File "/home/arosovsky/.local/share/uv/python/cpython-3.12.10-linux-x86_64-gnu/lib/python3.12/asyncio/base_events.py", line 1417, in create_datagram_endpoint
+[BACKEND]     sock.bind(local_address)
+[BACKEND] OSError: [Errno 98] Address already in use
+Attempting to connect to Babelfish at https://127.0.0.1:8123/config...
+NativeLoader: Attempting to load native library for platform=linux-x64 from resource=/native/libkwtransport_ffi-linux-x64.so
+Applying transport config: [100, 100, 104857600, 10485760, 10485760, 10485760, -1, -1, -1]
+Applied max_concurrent_bidi_streams: 100
+Applied max_concurrent_uni_streams: 100
+Applied receive_window (connection): 104857600
+Applied stream_receive_window (all types): 10485760
+[DEBUG-TRANSPORT] Connecting to https://127.0.0.1:8123/config ...
+Successfully connected to Babelfish.
+[DEBUG] Opening bidirectional stream for control/status...
+[DEBUG-TRANSPORT] Opening BiStream...
+[DEBUG] Bidirectional stream established.
+[DEBUG] Sending HELLO to trigger server response...
+[DEBUG-TRANSPORT] Writing 17 bytes to stream
+[DEBUG] Connection Stats: RTT=1ms, maxData=0, maxStreamData=0
+[DEBUG-TRANSPORT] Creating chunks flow (size=8192)
+[DEBUG-TRANSPORT] Flow emitted chunk: 569 bytes
+[DEBUG-TRANSPORT] Opening BiStream...
+[DEBUG-TRANSPORT] Writing 27 bytes to stream
+[DEBUG-TRANSPORT] Closing SendStream
+Requesting microphone list...
+[DEBUG-TRANSPORT] Creating chunks flow (size=8192)
+[DEBUG-TRANSPORT] Flow emitted chunk: 569 bytes
+Failed to list microphones: Unexpected JSON token at offset 78: Expected EOF after parsing, but had { instead at path: $
+JSON input: .....vad_state": "bootstrapping"}
+{"type": "config", "data": {"ha.....
+Failed to load microphones: Unexpected JSON token at offset 78: Expected EOF after parsing, but had { instead at path: $
+JSON input: .....vad_state": "bootstrapping"}
+{"type": "config", "data": {"ha.....
+AsyncRegistry: Received unknown error type from Rust: 'IO_EXCEPTION' with message: 'not connected'
+[DEBUG] Stream error or closed: not connected
+Connection session ended. Cleaning up and retrying...
+[DEBUG-TRANSPORT] Closing connection
+[DEBUG-TRANSPORT] Closing Endpoint
+Attempting to connect to Babelfish at https://127.0.0.1:8123/config...
+Applying transport config: [100, 100, 104857600, 10485760, 10485760, 10485760, -1, -1, -1]
+Applied max_concurrent_bidi_streams: 100
+Applied max_concurrent_uni_streams: 100
+Applied receive_window (connection): 104857600
+Applied stream_receive_window (all types): 10485760
+[DEBUG-TRANSPORT] Connecting to https://127.0.0.1:8123/config ...
+Connection failed or lost: Timed out. Retrying in 1000ms...
+[DEBUG-TRANSPORT] Closing Endpoint
+Attempting to connect to Babelfish at https://127.0.0.1:8123/config...
+Applying transport config: [100, 100, 104857600, 10485760, 10485760, 10485760, -1, -1, -1]
+Applied max_concurrent_bidi_streams: 100
+Applied max_concurrent_uni_streams: 100
+Applied receive_window (connection): 104857600
+Applied stream_receive_window (all types): 10485760
+[DEBUG-TRANSPORT] Connecting to https://127.0.0.1:8123/config ...
+Connection failed or lost: Timed out. Retrying in 2000ms...
+[DEBUG-TRANSPORT] Closing Endpoint
+Attempting to connect to Babelfish at https://127.0.0.1:8123/config...
+Applying transport config: [100, 100, 104857600, 10485760, 10485760, 10485760, -1, -1, -1]
+Applied max_concurrent_bidi_streams: 100
+Applied max_concurrent_uni_streams: 100
+Applied receive_window (connection): 104857600
+Applied stream_receive_window (all types): 10485760
+[DEBUG-TRANSPORT] Connecting to https://127.0.0.1:8123/config ...
+Connection failed or lost: Timed out. Retrying in 4000ms...
+[DEBUG-TRANSPORT] Closing Endpoint
+Attempting to connect to Babelfish at https://127.0.0.1:8123/config...
+Applying transport config: [100, 100, 104857600, 10485760, 10485760, 10485760, -1, -1, -1]
+Applied max_concurrent_bidi_streams: 100
+Applied max_concurrent_uni_streams: 100
+Applied receive_window (connection): 104857600
+Applied stream_receive_window (all types): 10485760
+[DEBUG-TRANSPORT] Connecting to https://127.0.0.1:8123/config ...
+Connection failed or lost: Timed out. Retrying in 8000ms...
+[DEBUG-TRANSPORT] Closing Endpoint

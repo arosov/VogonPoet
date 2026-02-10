@@ -4,7 +4,7 @@ This document provides a comprehensive guide to the VogonPoet (Client) and Babel
 
 ## 1. Overview
 
-The system consists of a Kotlin Multiplatform client (**VogonPoet**) communicating with a local Python STT server (**Babelfish**) via WebTransport. Both projects reside as sibling directories along with a shared dependency (**pywebtransport**).
+The system consists of a Kotlin Multiplatform client (**VogonPoet**) communicating with a local Python STT server (**Babelfish**) via WebSockets. Both projects reside as sibling directories.
 
 ## 2. Directory Structure
 
@@ -13,8 +13,7 @@ The development environment is structured as follows:
 ```
 /home/arosovsky/dev/VogonPoet/
 ├── VogonPoet/          # Client (Kotlin Multiplatform) - Current Directory
-├── babelfish/          # Server (Python/UV)
-└── pywebtransport/     # Python WebTransport Dependency (Local Path Dependency)
+└── babelfish/          # Server (Python/UV)
 ```
 
 ## 3. VogonPoet (Client)
@@ -99,7 +98,8 @@ A script is provided in the `VogonPoet` root to run both the server and client s
 
 ## 6. Message Serialization & Modification Workflow
 
-The communication between Client and Server relies on JSON messages sent over WebTransport streams. The structure of these messages (specifically the configuration) is strictly defined by a JSON Schema.
+The communication between Client and Server relies on JSON messages sent over WebSockets.
+ The structure of these messages (specifically the configuration) is strictly defined by a JSON Schema.
 
 ### Architecture
 
@@ -109,8 +109,8 @@ The communication between Client and Server relies on JSON messages sent over We
 
 ### Protocol Basics
 
-*   **Transport:** WebTransport Bidirectional Streams.
-*   **Format:** Newline-delimited JSON (NDJSON).
+*   **Transport:** WebSockets.
+*   **Format:** JSON.
 *   **Message Structure:**
     ```json
     {
@@ -118,7 +118,7 @@ The communication between Client and Server relies on JSON messages sent over We
       "data": { ... configuration object ... }
     }
     ```
-    *   `type`: Identifies the message purpose (e.g., `config`, `update_config`, `hello`).
+    *   `type`: Identifies the message purpose (e.g., `config`, `update_config`, `hello`, `microphones_list`).
     *   `data`: The payload, often conforming to the `BabelfishConfig` schema.
 
 ### Workflow: How to Modify Messages

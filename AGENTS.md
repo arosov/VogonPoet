@@ -104,7 +104,7 @@ with `./gradlew :features:logging:build`.
 This project specifically is named VogonPoet. It aims to provide a minimalist
 frontend to babelfish a modern STT server.
 
-Communication with babelfish happens over webtransport to battletest kwtransport.
+Communication with babelfish happens over websockets.
 
 When dealing with jvmTest, always use the target cleanJvmTest before running the tests with jvmTest,
 otherwise the test results won't be recomputed.

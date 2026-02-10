@@ -20,6 +20,10 @@ interface BabelfishClient {
 
     suspend fun listMicrophones(): List<Microphone>
 
+    suspend fun listHardware(): List<HardwareDevice>
+
+    suspend fun listWakewords(): List<String>
+
     suspend fun setMicTest(enabled: Boolean)
 }
 
@@ -27,4 +31,9 @@ data class Microphone(
     val index: Int,
     val name: String,
     val isDefault: Boolean,
+)
+
+data class HardwareDevice(
+    val id: String,
+    val name: String,
 )
