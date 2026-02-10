@@ -50,7 +50,7 @@ fun StatusCard(
             is ConnectionState.Disconnected -> GruvboxGray
             is ConnectionState.Connecting -> GruvboxBlueDark
             is ConnectionState.Bootstrapping -> GruvboxYellowDark
-            is ConnectionState.Connected -> if (vadState == VadState.Listening) GruvboxGreenLight else GruvboxGreenDark
+            is ConnectionState.Connected -> if (vadState == VadState.Listening) GruvboxGreenLight else GruvboxGreenDarker
             is ConnectionState.Error -> GruvboxRedDark
         }
 
