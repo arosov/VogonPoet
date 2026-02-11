@@ -12,8 +12,8 @@
 - [x] Task: Regenerate Kotlin data classes to match the new schema 56da589
 - [x] Task: Conductor - User Manual Verification 'Protocol Sync' (Protocol in workflow.md) 56da589
 
-## Phase 3: Frontend UI Components
-- [~] Task: Update `StatusCard` to display active hardware subtext
-- [ ] Task: Implement `VramUsageBar` component in `AdvancedSettingsPanel`
-- [ ] Task: Integrate VRAM visualization into the settings layout with graceful hiding
-- [ ] Task: Conductor - User Manual Verification 'Frontend UI' (Protocol in workflow.md)
+## Phase 3: Frontend UI Components [checkpoint: aec25ba]
+- [x] Task: Update `StatusCard` to display active hardware subtext 56da589
+- [x] Task: Implement `VramUsageBar` component in `AdvancedSettingsPanel` 56da589
+- [x] Task: Integrate VRAM visualization into the settings layout with graceful hiding 56da589
+- [x] Task: Conductor - User Manual Verification 'Frontend UI' (Protocol in workflow.md) aec25ba
