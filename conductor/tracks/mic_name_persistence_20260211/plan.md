@@ -10,5 +10,5 @@
 ## Phase 2: Protocol & Frontend
 - [x] Task: Regenerate JSON schema and Kotlin models
 - [x] Task: Update `ConfigForm.kt` UI to bind to `microphone_name`
-- [ ] Task: Final verification of persistent selection after index shift
-- [ ] Task: Conductor - User Manual Verification 'Frontend Mic Logic'
+- [x] Task: Final verification of persistent selection after index shift
+- [x] Task: Conductor - User Manual Verification 'Frontend Mic Logic'
