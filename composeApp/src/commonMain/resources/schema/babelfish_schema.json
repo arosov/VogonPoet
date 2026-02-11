@@ -101,6 +101,18 @@
           "default": null,
           "title": "Active Device"
         },
+        "active_device_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Active Device Name"
+        },
         "vram_total_gb": {
           "title": "Vram Total Gb",
           "type": "number"

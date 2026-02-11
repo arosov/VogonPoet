@@ -118,7 +118,8 @@ fun StatusCard(
             )
 
             if (connectionState is ConnectionState.Connected && vadState != VadState.Listening) {
-                config?.hardware?.active_device?.let { device ->
+                val deviceName = config?.hardware?.active_device_name ?: config?.hardware?.active_device
+                deviceName?.let { device ->
                     OutlinedStatusText(
                         text = "Running on ${device.uppercase()}",
                         style = MaterialTheme.typography.labelMedium,
