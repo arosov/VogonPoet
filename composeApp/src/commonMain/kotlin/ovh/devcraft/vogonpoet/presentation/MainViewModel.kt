@@ -67,6 +67,7 @@ class MainViewModel(
     }
 
     fun restartBackend() {
+        babelfishClient.notifyBootstrap()
         BackendController.restart()
     }
 

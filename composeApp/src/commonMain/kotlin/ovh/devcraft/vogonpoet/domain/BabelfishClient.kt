@@ -25,6 +25,8 @@ interface BabelfishClient {
     suspend fun listWakewords(): List<String>
 
     suspend fun setMicTest(enabled: Boolean)
+
+    fun notifyBootstrap()
 }
 
 data class Microphone(

@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
@@ -47,8 +48,8 @@ fun StatusCard(
 ) {
     val baseColor =
         when (connectionState) {
-            is ConnectionState.Disconnected -> GruvboxGray
-            is ConnectionState.Connecting -> GruvboxBlueDark
+            is ConnectionState.Disconnected -> GruvboxBg1
+            is ConnectionState.Connecting -> GruvboxBg1
             is ConnectionState.Bootstrapping -> GruvboxYellowDark
             is ConnectionState.Connected -> if (vadState == VadState.Listening) GruvboxGreenLight else GruvboxGreenDarker
             is ConnectionState.Error -> GruvboxRedDark
@@ -100,9 +101,9 @@ fun StatusCard(
                 modifier = Modifier,
                 text =
                     when (connectionState) {
-                        is ConnectionState.Disconnected -> "Disconnected"
-                        is ConnectionState.Connecting -> "Connecting..."
-                        is ConnectionState.Bootstrapping -> "Setting Up..."
+                        is ConnectionState.Disconnected -> "VogonPoet"
+                        is ConnectionState.Connecting -> "VogonPoet"
+                        is ConnectionState.Bootstrapping -> "Preparing Recital"
                         is ConnectionState.Connected -> if (vadState == VadState.Listening) "Listening" else "Ready"
                         is ConnectionState.Error -> "Connection Error"
                     },
@@ -121,7 +122,7 @@ fun StatusCard(
             if (connectionState is ConnectionState.Bootstrapping) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = connectionState.message,
+                    text = "System is initializing components...",
                     style = MaterialTheme.typography.bodySmall,
                     color = GruvboxFg1.copy(alpha = 0.9f),
                 )

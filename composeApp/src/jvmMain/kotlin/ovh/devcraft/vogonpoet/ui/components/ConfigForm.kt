@@ -9,9 +9,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
+import ovh.devcraft.vogonpoet.infrastructure.SettingsRepository
 import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.theme.*
+import ovh.devcraft.vogonpoet.ui.utils.SystemFilePicker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,12 +30,18 @@ fun ConfigForm(
         return
     }
 
+    val settings = remember { SettingsRepository.load() }
+
     // Initialize form state with current config or defaults
     var wakeword by remember(config) { mutableStateOf(config.voice?.wakeword ?: "") }
     var wakewordSensitivity by remember(config) { mutableStateOf(config.voice?.wakeword_sensitivity?.toFloat() ?: 0.5f) }
     var stopWords by remember(config) { mutableStateOf(config.voice?.stop_words?.joinToString(", ") ?: "") }
     var toggleShortcut by remember(config) { mutableStateOf(config.ui?.shortcuts?.toggle_listening ?: "Ctrl+Shift+S") }
-    var cacheDir by remember(config) { mutableStateOf(config.cache?.cache_dir ?: "") }
+
+    // Storage dir derived from uvCacheDir parent
+    var storageDir by remember(settings) {
+        mutableStateOf(settings.uvCacheDir?.let { java.io.File(it).parent } ?: "")
+    }
 
     // Microphone state
     val microphoneList by viewModel.microphoneList.collectAsState()
@@ -50,18 +58,6 @@ fun ConfigForm(
             viewModel.loadWakewords()
         }
     }
-
-    // UV default cache path based on platform
-    val defaultUvCacheDir =
-        remember {
-            val home = System.getProperty("user.home")
-            val osName = System.getProperty("os.name").lowercase()
-            when {
-                osName.contains("win") -> System.getenv("LOCALAPPDATA")?.let { "$it\\uv" } ?: "$home\\AppData\\Local\\uv"
-                osName.contains("mac") -> "$home/Library/Caches/uv"
-                else -> "$home/.cache/uv"
-            }
-        }
 
     val currentConnectionState by viewModel.connectionState.collectAsState()
     val isReady = currentConnectionState is ConnectionState.Connected || currentConnectionState is ConnectionState.Bootstrapping
@@ -332,16 +328,36 @@ fun ConfigForm(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = "Cache Directory",
+                    text = "Data Storage Directory",
                     style = MaterialTheme.typography.titleSmall,
                     color = GruvboxGreenDark,
                 )
 
-                val displayPath = cacheDir.takeIf { it.isNotBlank() } ?: defaultUvCacheDir
+                val defaultStorageDir =
+                    remember {
+                        val home = System.getProperty("user.home")
+                        val osName = System.getProperty("os.name").lowercase()
+                        when {
+                            osName.contains("win") -> {
+                                System.getenv("LOCALAPPDATA")?.let { "$it\\VogonPoet" }
+                                    ?: "$home\\AppData\\Local\\VogonPoet"
+                            }
+
+                            osName.contains("mac") -> {
+                                "$home/Library/Application Support/VogonPoet"
+                            }
+
+                            else -> {
+                                "$home/.local/share/vogonpoet"
+                            }
+                        }
+                    }
+
+                val displayPath = storageDir.takeIf { it.isNotBlank() } ?: defaultStorageDir
                 Text(
                     text = displayPath,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (cacheDir.isBlank()) GruvboxGray else GruvboxFg0,
+                    color = if (storageDir.isBlank()) GruvboxGray else GruvboxFg0,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth(),
@@ -353,20 +369,13 @@ fun ConfigForm(
                 ) {
                     Button(
                         onClick = {
-                            val chooser =
-                                javax.swing.JFileChooser().apply {
-                                    fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
-                                    dialogTitle = "Select UV Cache Directory"
-                                    if (cacheDir.isNotBlank()) {
-                                        currentDirectory = java.io.File(cacheDir)
-                                    } else {
-                                        currentDirectory = java.io.File(defaultUvCacheDir)
-                                    }
+                            SystemFilePicker
+                                .selectFolder(
+                                    "Select Storage Directory",
+                                    storageDir.takeIf { it.isNotBlank() } ?: defaultStorageDir,
+                                )?.let {
+                                    storageDir = it
                                 }
-                            val result = chooser.showOpenDialog(null)
-                            if (result == javax.swing.JFileChooser.APPROVE_OPTION) {
-                                cacheDir = chooser.selectedFile.absolutePath
-                            }
                         },
                         colors =
                             ButtonDefaults.buttonColors(
@@ -379,14 +388,14 @@ fun ConfigForm(
                     }
 
                     TextButton(
-                        onClick = { cacheDir = "" },
-                        enabled = cacheDir.isNotBlank(),
+                        onClick = { storageDir = "" },
+                        enabled = storageDir.isNotBlank() && storageDir != defaultStorageDir,
                         modifier = Modifier.wrapContentWidth(),
                     ) {
                         Text(
                             "Reset",
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (cacheDir.isNotBlank()) GruvboxRedDark else GruvboxGray,
+                            color = if (storageDir.isNotBlank() && storageDir != defaultStorageDir) GruvboxRedDark else GruvboxGray,
                         )
                     }
                 }
@@ -398,6 +407,27 @@ fun ConfigForm(
         // Save Button
         Button(
             onClick = {
+                val finalStorageDir = storageDir.takeIf { it.isNotBlank() }
+                val (uvDir, modDir) =
+                    if (finalStorageDir != null) {
+                        val baseFile = java.io.File(finalStorageDir)
+                        val u = java.io.File(baseFile, "uv")
+                        val m = java.io.File(baseFile, "models")
+                        if (!u.exists()) u.mkdirs()
+                        if (!m.exists()) m.mkdirs()
+                        u.absolutePath to m.absolutePath
+                    } else {
+                        null to null
+                    }
+
+                // Update persistent settings
+                SettingsRepository.save(
+                    settings.copy(
+                        uvCacheDir = uvDir,
+                        modelsDir = modDir,
+                    ),
+                )
+
                 val newConfig =
                     Babelfish(
                         hardware =
@@ -424,7 +454,7 @@ fun ConfigForm(
                         server = config.server ?: Babelfish.Server(),
                         cache =
                             Babelfish.Cache(
-                                cache_dir = cacheDir.takeIf { it.isNotBlank() },
+                                cache_dir = uvDir,
                             ),
                     )
                 onSave(newConfig)

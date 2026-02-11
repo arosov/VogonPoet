@@ -59,11 +59,27 @@ object BackendManager {
         println("BackendManager: Using uv at $uvPath")
         println("BackendManager: Using bootstrap at ${bootstrapPath!!.absolutePath}")
 
+        val settings = SettingsRepository.load()
+
         // --- Execute ---
         try {
-            val pb = ProcessBuilder(uvPath, "run", bootstrapPath!!.absolutePath)
+            val cmd = mutableListOf(uvPath, "run", bootstrapPath!!.absolutePath)
+            settings.modelsDir?.let {
+                cmd.add("--models-dir")
+                cmd.add(it)
+            }
+
+            val pb = ProcessBuilder(cmd)
             pb.directory(workingDir) // Run in app root so relative paths work
             pb.redirectErrorStream(true)
+
+            // Pass custom UV cache dir if set
+            settings.uvCacheDir?.let {
+                pb.environment()["UV_CACHE_DIR"] = it
+            }
+
+            // Ensure Python output is not buffered so we see logs in real-time
+            pb.environment()["PYTHONUNBUFFERED"] = "1"
 
             process = pb.start()
             println("BackendManager: Backend process started (PID: ${process!!.pid()})")

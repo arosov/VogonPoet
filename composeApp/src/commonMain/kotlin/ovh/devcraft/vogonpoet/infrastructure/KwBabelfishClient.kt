@@ -49,6 +49,8 @@ class KwBabelfishClient(
     private val _config = MutableStateFlow<Babelfish?>(null)
     override val config: StateFlow<Babelfish?> = _config.asStateFlow()
 
+    private var isBootstrapping = true
+
     private var session: DefaultClientWebSocketSession? = null
     private var connectionJob: Job? = null
 
@@ -64,13 +66,26 @@ class KwBabelfishClient(
                 var retryDelay = 1000L
                 val maxDelay = 30000L
 
+                // Initial delay during bootstrap to let the server start binding
+                if (isBootstrapping) {
+                    _connectionState.value = ConnectionState.Bootstrapping("Initializing...")
+                    delay(2000)
+                }
+
                 while (isActive) {
-                    _connectionState.value = ConnectionState.Connecting
+                    if (isBootstrapping) {
+                        _connectionState.value = ConnectionState.Bootstrapping("Initializing...")
+                    } else {
+                        _connectionState.value = ConnectionState.Connecting
+                    }
                     println("Attempting to connect to Babelfish at $SERVER_URL...")
                     try {
                         client.webSocket(SERVER_URL) {
                             session = this
-                            _connectionState.value = ConnectionState.Connected
+                            // Don't immediately set Connected if we are still bootstrapping
+                            if (!isBootstrapping) {
+                                _connectionState.value = ConnectionState.Connected
+                            }
                             println("Successfully connected to Babelfish.")
 
                             // Send HELLO
@@ -92,7 +107,8 @@ class KwBabelfishClient(
                         println("Connection session ended. Cleaning up and retrying...")
                     } catch (e: Exception) {
                         println("Connection failed or lost: ${e.message}. Retrying in ${retryDelay}ms...")
-                        _connectionState.value = ConnectionState.Error(e.message ?: "Unknown error")
+                        isBootstrapping = true
+                        _connectionState.value = ConnectionState.Bootstrapping("Reconnecting...")
                     } finally {
                         session = null
                         delay(retryDelay)
@@ -130,6 +146,7 @@ class KwBabelfishClient(
                         val engineState = element["engine_state"]?.jsonPrimitive?.contentOrNull
 
                         if (vadStateStr == "listening" || vadStateStr == "idle" || engineState == "ready" || message == "Engine Ready!") {
+                            isBootstrapping = false
                             _connectionState.value = ConnectionState.Connected
                             if (vadStateStr == "listening") {
                                 _vadState.value = VadState.Listening
@@ -137,6 +154,7 @@ class KwBabelfishClient(
                                 _vadState.value = VadState.Idle
                             }
                         } else if (message != null) {
+                            isBootstrapping = true
                             _connectionState.value = ConnectionState.Bootstrapping(message)
                         }
                     }
@@ -227,6 +245,11 @@ class KwBabelfishClient(
         val message = """{"type":"set_mic_test","enabled":$enabled}"""
         currentSession.send(message)
         logMessage(MessageDirection.Sent, message)
+    }
+
+    override fun notifyBootstrap() {
+        isBootstrapping = true
+        _connectionState.value = ConnectionState.Bootstrapping("Initializing...")
     }
 
     private fun logMessage(
