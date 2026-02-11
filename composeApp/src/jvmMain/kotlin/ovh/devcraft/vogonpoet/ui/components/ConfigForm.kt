@@ -1,26 +1,27 @@
 package ovh.devcraft.vogonpoet.ui.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
-import ovh.devcraft.vogonpoet.infrastructure.SettingsRepository
 import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.theme.*
-import ovh.devcraft.vogonpoet.ui.utils.SystemFilePicker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfigForm(
     viewModel: MainViewModel,
     config: Babelfish?,
-    onSave: (Babelfish) -> Unit,
+    onConfigChange: (Babelfish) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (config == null) {
@@ -30,29 +31,19 @@ fun ConfigForm(
         return
     }
 
-    val settings = remember { SettingsRepository.load() }
-
-    // Initialize form state with current config or defaults
-    var wakeword by remember(config) { mutableStateOf(config.voice?.wakeword ?: "") }
-    var wakewordSensitivity by remember(config) { mutableStateOf(config.voice?.wakeword_sensitivity?.toFloat() ?: 0.5f) }
-    var stopWords by remember(config) { mutableStateOf(config.voice?.stop_words?.joinToString(", ") ?: "") }
-    var toggleShortcut by remember(config) { mutableStateOf(config.ui?.shortcuts?.toggle_listening ?: "Ctrl+Shift+S") }
-
-    // Storage dir derived from uvCacheDir parent
-    var storageDir by remember(settings) {
-        mutableStateOf(settings.uvCacheDir?.let { java.io.File(it).parent } ?: "")
-    }
-
     // Microphone state
     val microphoneList by viewModel.microphoneList.collectAsState()
     val isMicTesting by viewModel.isMicTesting.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
     var micExpanded by remember { mutableStateOf(false) }
-    var selectedMicIndex by remember(config) { mutableStateOf(config.hardware?.microphone_index ?: -1L) }
+
+    // We don't need local state for mic index, we can just use config directly,
+    // unless we want to avoid jitter during selection animation? No, dropdown closes instantly.
+    val selectedMicIndex = config.hardware?.microphone_index ?: -1L
 
     // Load microphones and hardware when connected
     LaunchedEffect(connectionState) {
-        if (connectionState is ConnectionState.Connected || connectionState is ConnectionState.Bootstrapping) {
+        if (connectionState is ConnectionState.Connected) {
             viewModel.loadMicrophones()
             viewModel.loadHardware()
             viewModel.loadWakewords()
@@ -120,16 +111,28 @@ fun ConfigForm(
                             DropdownMenuItem(
                                 text = { Text("Default Microphone") },
                                 onClick = {
-                                    selectedMicIndex = -1
                                     micExpanded = false
+                                    onConfigChange(
+                                        config.copy(
+                                            hardware =
+                                                config.hardware?.copy(microphone_index = null)
+                                                    ?: Babelfish.Hardware(microphone_index = null),
+                                        ),
+                                    )
                                 },
                             )
                             microphoneList.forEach { mic ->
                                 DropdownMenuItem(
                                     text = { Text(mic.name + if (mic.isDefault) " (Default)" else "") },
                                     onClick = {
-                                        selectedMicIndex = mic.index.toLong()
                                         micExpanded = false
+                                        onConfigChange(
+                                            config.copy(
+                                                hardware =
+                                                    config.hardware?.copy(microphone_index = mic.index.toLong())
+                                                        ?: Babelfish.Hardware(microphone_index = mic.index.toLong()),
+                                            ),
+                                        )
                                     },
                                 )
                             }
@@ -185,13 +188,14 @@ fun ConfigForm(
                     // Wakeword selection
                     var wakewordExpanded by remember { mutableStateOf(false) }
                     val wakewordList by viewModel.wakewordList.collectAsState()
+                    val currentWakeword = config.voice?.wakeword ?: ""
 
                     ExposedDropdownMenuBox(
                         expanded = wakewordExpanded,
                         onExpandedChange = { if (isReady) wakewordExpanded = it },
                     ) {
                         OutlinedTextField(
-                            value = wakeword.takeIf { it.isNotBlank() } ?: "None",
+                            value = currentWakeword.takeIf { it.isNotBlank() } ?: "None",
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Wakeword") },
@@ -211,16 +215,24 @@ fun ConfigForm(
                             DropdownMenuItem(
                                 text = { Text("None") },
                                 onClick = {
-                                    wakeword = ""
                                     wakewordExpanded = false
+                                    onConfigChange(
+                                        config.copy(
+                                            voice = config.voice?.copy(wakeword = null) ?: Babelfish.Voice(wakeword = null),
+                                        ),
+                                    )
                                 },
                             )
                             wakewordList.forEach { word ->
                                 DropdownMenuItem(
                                     text = { Text(word.replace("_", " ").replaceFirstChar { it.uppercase() }) },
                                     onClick = {
-                                        wakeword = word
                                         wakewordExpanded = false
+                                        onConfigChange(
+                                            config.copy(
+                                                voice = config.voice?.copy(wakeword = word) ?: Babelfish.Voice(wakeword = word),
+                                            ),
+                                        )
                                     },
                                 )
                             }
@@ -228,15 +240,27 @@ fun ConfigForm(
                     }
 
                     // Sensitivity
+                    val sensitivity = config.voice?.wakeword_sensitivity?.toFloat() ?: 0.5f
+                    var localSensitivity by remember(sensitivity) { mutableStateOf(sensitivity) }
+
                     Column {
                         Text(
-                            text = "Sensitivity: ${(wakewordSensitivity * 100).toInt()}%",
+                            text = "Sensitivity: ${(localSensitivity * 100).toInt()}%",
                             style = MaterialTheme.typography.bodySmall,
                             color = GruvboxFg0,
                         )
                         Slider(
-                            value = wakewordSensitivity,
-                            onValueChange = { wakewordSensitivity = it },
+                            value = localSensitivity,
+                            onValueChange = { localSensitivity = it },
+                            onValueChangeFinished = {
+                                onConfigChange(
+                                    config.copy(
+                                        voice =
+                                            config.voice?.copy(wakeword_sensitivity = localSensitivity.toDouble())
+                                                ?: Babelfish.Voice(wakeword_sensitivity = localSensitivity.toDouble()),
+                                    ),
+                                )
+                            },
                             valueRange = 0.1f..0.9f,
                             steps = 8,
                             colors =
@@ -272,10 +296,29 @@ fun ConfigForm(
                         style = MaterialTheme.typography.titleSmall,
                         color = GruvboxGreenDark,
                     )
+
+                    val currentShortcut = config.ui?.shortcuts?.toggle_listening ?: "Ctrl+Shift+S"
+                    var localShortcut by remember(currentShortcut) { mutableStateOf(currentShortcut) }
+
+                    // ShortcutSelector component handles its own state internally usually?
+                    // Let's check ShortcutSelector.kt. Assuming it exposes onShortcutChange.
+                    // We need it to be live.
                     ShortcutSelector(
                         label = "Toggle Listening",
-                        shortcut = toggleShortcut,
-                        onShortcutChange = { toggleShortcut = it },
+                        shortcut = localShortcut,
+                        onShortcutChange = {
+                            localShortcut = it
+                            onConfigChange(
+                                config.copy(
+                                    ui =
+                                        config.ui?.copy(
+                                            shortcuts =
+                                                config.ui?.shortcuts?.copy(toggle_listening = it)
+                                                    ?: Babelfish.Shortcuts(toggle_listening = it),
+                                        ) ?: Babelfish.Ui(shortcuts = Babelfish.Shortcuts(toggle_listening = it)),
+                                ),
+                            )
+                        },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -298,13 +341,46 @@ fun ConfigForm(
                         style = MaterialTheme.typography.titleSmall,
                         color = GruvboxGreenDark,
                     )
+
+                    val stopWordsList = config.voice?.stop_words ?: emptyList()
+                    val stopWordsString = stopWordsList.joinToString(", ")
+                    var localStopWords by remember(stopWordsString) { mutableStateOf(stopWordsString) }
+
                     OutlinedTextField(
-                        value = stopWords,
-                        onValueChange = { stopWords = it },
+                        value = localStopWords,
+                        onValueChange = { localStopWords = it },
                         label = { Text("Words that stop listening") },
                         placeholder = { Text("comma, separated, words") },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { focusState ->
+                                    if (!focusState.isFocused && localStopWords != stopWordsString) {
+                                        val newList = localStopWords.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                                        onConfigChange(
+                                            config.copy(
+                                                voice =
+                                                    config.voice?.copy(stop_words = newList)
+                                                        ?: Babelfish.Voice(stop_words = newList),
+                                            ),
+                                        )
+                                    }
+                                },
                         singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions =
+                            KeyboardActions(
+                                onDone = {
+                                    val newList = localStopWords.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                                    onConfigChange(
+                                        config.copy(
+                                            voice =
+                                                config.voice?.copy(stop_words = newList)
+                                                    ?: Babelfish.Voice(stop_words = newList),
+                                        ),
+                                    )
+                                },
+                            ),
                         colors =
                             OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = GruvboxGreenDark,
@@ -315,158 +391,6 @@ fun ConfigForm(
             }
         }
 
-        // Row 3: Cache Directory (Full Width)
-        OutlinedCard(
-            modifier = Modifier.fillMaxWidth(),
-            colors =
-                CardDefaults.outlinedCardColors(
-                    containerColor = GruvboxBg1.copy(alpha = 0.5f),
-                ),
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = "Data Storage Directory",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = GruvboxGreenDark,
-                )
-
-                val defaultStorageDir =
-                    remember {
-                        val home = System.getProperty("user.home")
-                        val osName = System.getProperty("os.name").lowercase()
-                        when {
-                            osName.contains("win") -> {
-                                System.getenv("LOCALAPPDATA")?.let { "$it\\VogonPoet" }
-                                    ?: "$home\\AppData\\Local\\VogonPoet"
-                            }
-
-                            osName.contains("mac") -> {
-                                "$home/Library/Application Support/VogonPoet"
-                            }
-
-                            else -> {
-                                "$home/.local/share/vogonpoet"
-                            }
-                        }
-                    }
-
-                val displayPath = storageDir.takeIf { it.isNotBlank() } ?: defaultStorageDir
-                Text(
-                    text = displayPath,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (storageDir.isBlank()) GruvboxGray else GruvboxFg0,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Button(
-                        onClick = {
-                            SystemFilePicker
-                                .selectFolder(
-                                    "Select Storage Directory",
-                                    storageDir.takeIf { it.isNotBlank() } ?: defaultStorageDir,
-                                )?.let {
-                                    storageDir = it
-                                }
-                        },
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = GruvboxBlueDark,
-                                contentColor = GruvboxFg0,
-                            ),
-                        modifier = Modifier.wrapContentWidth(),
-                    ) {
-                        Text("Browse", style = MaterialTheme.typography.bodySmall)
-                    }
-
-                    TextButton(
-                        onClick = { storageDir = "" },
-                        enabled = storageDir.isNotBlank() && storageDir != defaultStorageDir,
-                        modifier = Modifier.wrapContentWidth(),
-                    ) {
-                        Text(
-                            "Reset",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (storageDir.isNotBlank() && storageDir != defaultStorageDir) GruvboxRedDark else GruvboxGray,
-                        )
-                    }
-                }
-            }
-        }
-
         Spacer(modifier = Modifier.weight(1f))
-
-        // Save Button
-        Button(
-            onClick = {
-                val finalStorageDir = storageDir.takeIf { it.isNotBlank() }
-                val (uvDir, modDir) =
-                    if (finalStorageDir != null) {
-                        val baseFile = java.io.File(finalStorageDir)
-                        val u = java.io.File(baseFile, "uv")
-                        val m = java.io.File(baseFile, "models")
-                        if (!u.exists()) u.mkdirs()
-                        if (!m.exists()) m.mkdirs()
-                        u.absolutePath to m.absolutePath
-                    } else {
-                        null to null
-                    }
-
-                // Update persistent settings
-                SettingsRepository.save(
-                    settings.copy(
-                        uvCacheDir = uvDir,
-                        modelsDir = modDir,
-                    ),
-                )
-
-                val newConfig =
-                    Babelfish(
-                        hardware =
-                            config.hardware?.copy(
-                                microphone_index = if (selectedMicIndex >= 0) selectedMicIndex else null,
-                            ) ?: Babelfish.Hardware(microphone_index = if (selectedMicIndex >= 0) selectedMicIndex else null),
-                        pipeline = config.pipeline ?: Babelfish.Pipeline(),
-                        voice =
-                            Babelfish.Voice(
-                                wakeword = wakeword.takeIf { it.isNotBlank() },
-                                wakeword_sensitivity = wakewordSensitivity.toDouble(),
-                                stop_words = stopWords.split(",").map { it.trim() }.filter { it.isNotBlank() },
-                            ),
-                        ui =
-                            Babelfish.Ui(
-                                verbose = config.ui?.verbose ?: false,
-                                show_timestamps = config.ui?.show_timestamps ?: true,
-                                shortcuts =
-                                    Babelfish.Shortcuts(
-                                        toggle_listening = toggleShortcut,
-                                    ),
-                                activation_detection = config.ui?.activation_detection ?: Babelfish.Activation_detection(),
-                            ),
-                        server = config.server ?: Babelfish.Server(),
-                        cache =
-                            Babelfish.Cache(
-                                cache_dir = uvDir,
-                            ),
-                    )
-                onSave(newConfig)
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors =
-                ButtonDefaults.buttonColors(
-                    containerColor = GruvboxGreenDark,
-                    contentColor = GruvboxFg0,
-                ),
-        ) {
-            Text("Save Configuration")
-        }
     }
 }

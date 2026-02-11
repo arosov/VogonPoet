@@ -9,7 +9,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
@@ -44,13 +43,15 @@ fun OutlinedStatusText(
 fun StatusCard(
     connectionState: ConnectionState,
     vadState: VadState,
+    transcribingText: String = "Transcribing...",
     modifier: Modifier = Modifier,
 ) {
     val baseColor =
         when (connectionState) {
-            is ConnectionState.Disconnected -> GruvboxBg1
-            is ConnectionState.Connecting -> GruvboxBg1
-            is ConnectionState.Bootstrapping -> GruvboxYellowDark
+            is ConnectionState.Disconnected -> GruvboxBlueDark
+            is ConnectionState.Connecting -> GruvboxBlueDark
+            is ConnectionState.BabelfishRestarting -> GruvboxBlueDark
+            is ConnectionState.Bootstrapping -> GruvboxBlueDark
             is ConnectionState.Connected -> if (vadState == VadState.Listening) GruvboxGreenLight else GruvboxGreenDarker
             is ConnectionState.Error -> GruvboxRedDark
         }
@@ -60,7 +61,9 @@ fun StatusCard(
     // Pulsing animation for Listening state
     val infiniteTransition = rememberInfiniteTransition()
     val animatedAlpha =
-        if (connectionState is ConnectionState.Connected && vadState == VadState.Listening) {
+        if ((connectionState is ConnectionState.Connected && vadState == VadState.Listening) ||
+            connectionState is ConnectionState.Bootstrapping
+        ) {
             infiniteTransition.animateFloat(
                 initialValue = 0.7f,
                 targetValue = 1f,
@@ -101,10 +104,11 @@ fun StatusCard(
                 modifier = Modifier,
                 text =
                     when (connectionState) {
-                        is ConnectionState.Disconnected -> "VogonPoet"
-                        is ConnectionState.Connecting -> "VogonPoet"
-                        is ConnectionState.Bootstrapping -> "Preparing Recital"
-                        is ConnectionState.Connected -> if (vadState == VadState.Listening) "Listening" else "Ready"
+                        is ConnectionState.Disconnected -> "Bootstrap"
+                        is ConnectionState.Connecting -> "Starting..."
+                        is ConnectionState.BabelfishRestarting -> "Starting..."
+                        is ConnectionState.Bootstrapping -> "Starting..."
+                        is ConnectionState.Connected -> if (vadState == VadState.Listening) transcribingText else "Ready"
                         is ConnectionState.Error -> "Connection Error"
                     },
                 style = MaterialTheme.typography.headlineMedium,
@@ -119,10 +123,15 @@ fun StatusCard(
                 )
             }
 
-            if (connectionState is ConnectionState.Bootstrapping) {
+            if (connectionState is ConnectionState.Bootstrapping || connectionState is ConnectionState.BabelfishRestarting) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "System is initializing components...",
+                    text =
+                        if (connectionState is ConnectionState.Bootstrapping) {
+                            connectionState.message
+                        } else {
+                            "Waiting for server to initialize..."
+                        },
                     style = MaterialTheme.typography.bodySmall,
                     color = GruvboxFg1.copy(alpha = 0.9f),
                 )

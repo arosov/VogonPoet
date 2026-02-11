@@ -9,9 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -22,6 +20,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
+import ovh.devcraft.vogonpoet.infrastructure.VogonLogger
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.theme.GruvboxBg1
 import ovh.devcraft.vogonpoet.ui.theme.GruvboxDarkColorScheme
@@ -36,7 +35,7 @@ fun VadWindow(
 ) {
     val vadState by viewModel.vadState.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
-    val config by viewModel.config.collectAsState()
+    val config by viewModel.draftConfig.collectAsState()
 
     // Get activation detection settings
     val iconOnly = config?.ui?.activation_detection?.icon_only ?: false
@@ -68,7 +67,7 @@ fun VadWindow(
         val heightDiff = kotlin.math.abs(currentSize.height.value - targetHeight.value)
 
         if (widthDiff > 1f || heightDiff > 1f) {
-            println(
+            VogonLogger.i(
                 "[VAD Window] Size clamping: ${currentSize.width.value.toInt()}x${currentSize.height.value.toInt()} -> ${targetWidth.value.toInt()}x${targetHeight.value.toInt()}",
             )
             windowState.size =

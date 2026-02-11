@@ -347,7 +347,7 @@ class BootstrapServer:
                 await self._send_update("Error: Dependency sync failed. Check logs.")
                 await asyncio.sleep(5)
 
-            await self._send_update("Starting Engine...")
+            await self._send_update("Starting Babelfish...")
             await asyncio.sleep(0.5)
 
             if self._websocket:
@@ -408,7 +408,6 @@ async def main():
     parser.add_argument("--models-dir", type=str, help="Directory to store AI models")
     args = parser.parse_args()
 
-    logger.info(f"BOOTSTRAP SERVER STARTED port={PORT}")
     models_dir = Path(args.models_dir) if args.models_dir else None
 
     if sys.platform != "win32":
@@ -419,6 +418,7 @@ async def main():
 
     server = BootstrapServer(asyncio.get_event_loop(), models_dir=models_dir)
     async with websockets.serve(server.handle_connection, "127.0.0.1", PORT):
+        logger.info(f"BOOTSTRAP SERVER STARTED port={PORT}")
         await asyncio.Future()
 
 

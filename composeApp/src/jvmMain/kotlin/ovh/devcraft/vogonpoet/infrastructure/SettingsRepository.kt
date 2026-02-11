@@ -11,8 +11,8 @@ actual object SettingsRepository {
             ignoreUnknownKeys = true
         }
 
-    private val settingsFile: File by lazy {
-        val appDataDir =
+    val appDataDir: File by lazy {
+        val dir =
             when {
                 System.getProperty("os.name").lowercase().contains("win") -> {
                     File(System.getenv("APPDATA"), "VogonPoet")
@@ -26,10 +26,14 @@ actual object SettingsRepository {
                     File(System.getProperty("user.home"), ".config/vogonpoet")
                 }
             }
-        if (!appDataDir.exists()) {
-            appDataDir.mkdirs()
+        if (!dir.exists()) {
+            dir.mkdirs()
         }
-        File(appDataDir, "settings.json")
+        dir
+    }
+
+    private val settingsFile: File by lazy {
+        File(appDataDir, "vogon.config.json")
     }
 
     actual fun load(): VogonSettings =
@@ -41,7 +45,7 @@ actual object SettingsRepository {
                 VogonSettings()
             }
         } catch (e: Exception) {
-            println("Error loading settings: ${e.message}")
+            VogonLogger.e("Error loading settings", e)
             VogonSettings()
         }
 
@@ -50,7 +54,7 @@ actual object SettingsRepository {
             val content = json.encodeToString(VogonSettings.serializer(), settings)
             settingsFile.writeText(content)
         } catch (e: Exception) {
-            println("Error saving settings: ${e.message}")
+            VogonLogger.e("Error saving settings", e)
         }
     }
 }

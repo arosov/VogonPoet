@@ -5,6 +5,8 @@ sealed class ConnectionState {
 
     data object Connecting : ConnectionState()
 
+    data object BabelfishRestarting : ConnectionState()
+
     data class Bootstrapping(
         val message: String,
     ) : ConnectionState()

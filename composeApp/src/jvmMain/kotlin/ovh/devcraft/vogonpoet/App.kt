@@ -18,6 +18,7 @@ import ovh.devcraft.vogonpoet.ui.theme.*
 fun App(viewModel: MainViewModel) {
     val connectionState by viewModel.connectionState.collectAsState()
     val vadState by viewModel.vadState.collectAsState()
+    val transcribingText by viewModel.transcribingText.collectAsState()
     val config by viewModel.config.collectAsState()
     val draftConfig by viewModel.draftConfig.collectAsState()
     var isPanelExpanded by remember { mutableStateOf(false) }
@@ -44,6 +45,7 @@ fun App(viewModel: MainViewModel) {
                     StatusCard(
                         connectionState = connectionState,
                         vadState = vadState,
+                        transcribingText = transcribingText,
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -52,9 +54,9 @@ fun App(viewModel: MainViewModel) {
                     ConfigForm(
                         viewModel = viewModel,
                         config = draftConfig,
-                        onSave = { newConfig ->
+                        onConfigChange = { newConfig ->
                             viewModel.updateDraft(newConfig)
-                            viewModel.saveConfig()
+                            viewModel.saveConfig(newConfig)
                         },
                         modifier = Modifier.weight(1f),
                     )
@@ -85,6 +87,7 @@ fun App(viewModel: MainViewModel) {
                             config = draftConfig,
                             onConfigChange = { newConfig ->
                                 viewModel.updateDraft(newConfig)
+                                viewModel.saveConfig(newConfig)
                             },
                         )
                     }

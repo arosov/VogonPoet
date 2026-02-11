@@ -25,6 +25,7 @@ import vogonpoet.composeapp.generated.resources.tray_listening
 fun ApplicationScope.VogonPoetTray(
     connectionState: ConnectionState,
     vadState: VadState,
+    transcribingText: String = "Transcribing...",
     defaultIcon: Painter,
     onExit: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -54,6 +55,10 @@ fun ApplicationScope.VogonPoetTray(
                     idleIcon
                 }
 
+                is ConnectionState.BabelfishRestarting -> {
+                    idleIcon
+                }
+
                 is ConnectionState.Bootstrapping -> {
                     idleIcon
                 }
@@ -70,10 +75,11 @@ fun ApplicationScope.VogonPoetTray(
 
     val tooltip =
         when (connectionState) {
-            is ConnectionState.Disconnected -> "VogonPoet: Disconnected"
-            is ConnectionState.Connecting -> "VogonPoet: Connecting..."
-            is ConnectionState.Bootstrapping -> "VogonPoet: Setting Up..."
-            is ConnectionState.Connected -> if (vadState == VadState.Listening) "VogonPoet: Listening" else "VogonPoet: Connected"
+            is ConnectionState.Disconnected -> "VogonPoet: Starting..."
+            is ConnectionState.Connecting -> "VogonPoet: Starting..."
+            is ConnectionState.BabelfishRestarting -> "VogonPoet: Starting..."
+            is ConnectionState.Bootstrapping -> "VogonPoet: Bootstrap"
+            is ConnectionState.Connected -> if (vadState == VadState.Listening) "VogonPoet: $transcribingText" else "VogonPoet: Ready"
             is ConnectionState.Error -> "VogonPoet: Connection Error"
         }
 

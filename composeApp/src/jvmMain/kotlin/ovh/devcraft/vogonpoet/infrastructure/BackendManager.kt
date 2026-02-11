@@ -1,27 +1,101 @@
 package ovh.devcraft.vogonpoet.infrastructure
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
+import java.io.PrintWriter
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 object BackendManager {
     private var process: Process? = null
 
+    private val _serverStatus = MutableStateFlow(ServerStatus.STOPPED)
+    val serverStatus: StateFlow<ServerStatus> = _serverStatus.asStateFlow()
+
+    private var vogonLog: PrintWriter? = null
+    private var babelLog: PrintWriter? = null
+    private var mixedLog: PrintWriter? = null
+
+    private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
+    private val dirFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")
+
+    private fun initLogging() {
+        val now = LocalDateTime.now()
+        val logsRoot = File(SettingsRepository.appDataDir, "logs")
+        if (!logsRoot.exists()) {
+            logsRoot.mkdirs()
+        }
+
+        val logDir = File(logsRoot, now.format(dirFormatter))
+        logDir.mkdirs()
+
+        // Cleanup old logs: Keep the last 10 runs
+        val allLogDirs =
+            logsRoot
+                .listFiles { file -> file.isDirectory }
+                ?.sortedByDescending { it.name } ?: emptyList()
+
+        if (allLogDirs.size > 10) {
+            allLogDirs.drop(10).forEach { oldDir ->
+                oldDir.deleteRecursively()
+            }
+        }
+
+        vogonLog = PrintWriter(File(logDir, "vogon.log").bufferedWriter(), true)
+        babelLog = PrintWriter(File(logDir, "babelfish.log").bufferedWriter(), true)
+        mixedLog = PrintWriter(File(logDir, "mixed.log").bufferedWriter(), true)
+
+        logVogon("Logging initialized in ${logDir.absolutePath}")
+        if (allLogDirs.size > 10) {
+            logVogon("Cleaned up ${allLogDirs.size - 10} old log directories.")
+        }
+    }
+
+    private fun log(
+        tag: String,
+        message: String,
+        writer: PrintWriter?,
+    ) {
+        val timestamp = LocalDateTime.now().format(timeFormatter)
+        val formatted = "[$timestamp] [$tag] $message"
+
+        // Write to specific log
+        writer?.println(formatted)
+
+        // Write to mixed log
+        mixedLog?.println(formatted)
+
+        // Write to stdout
+        println(formatted)
+    }
+
+    fun logVogon(message: String) {
+        log("VOGON", message, vogonLog)
+    }
+
+    private fun logBabel(message: String) {
+        log("BABEL", message, babelLog)
+    }
+
     fun startBackend() {
         if (process != null && process!!.isAlive) {
-            println("Backend already running.")
+            logVogon("Backend already running.")
             return
         }
 
+        if (vogonLog == null) {
+            initLogging()
+        }
+
         val workingDir = File(System.getProperty("user.dir"))
-        println("BackendManager: Current working directory: ${workingDir.absolutePath}")
+        logVogon("Current working directory: ${workingDir.absolutePath}")
 
         // --- Locate UV ---
-        // 1. Check bundled bin/uv (Prod)
-        // 2. Check system PATH (Dev)
-        var uvPath = "uv" // Default to system PATH
+        var uvPath = "uv"
         val bundledUv = File(workingDir, "bin/uv")
         val bundledUvExe = File(workingDir, "bin/uv.exe")
 
@@ -32,96 +106,111 @@ object BackendManager {
         }
 
         // --- Locate Bootstrap Script ---
-        // 1. Check scripts/bootstrap.py (Prod)
-        // 2. Check src/jvmMain/resources/scripts/bootstrap.py (Dev - fragile but works for now)
-        // 3. Fallback: Copy from resource stream to temp file?
-
         var bootstrapPath: File? = File(workingDir, "scripts/bootstrap.py")
         if (!bootstrapPath!!.exists()) {
-            // Try dev path relative to composeApp
             val devPath = File("src/jvmMain/resources/scripts/bootstrap.py")
             if (devPath.exists()) {
                 bootstrapPath = devPath
             } else {
-                // Try looking up one level (if CWD is inside something deep)
                 val devPathUp = File("../composeApp/src/jvmMain/resources/scripts/bootstrap.py")
                 if (devPathUp.exists()) {
                     bootstrapPath = devPathUp
                 } else {
-                    // Last resort: Extract from resources
-                    // For now, we assume dev setup is correct or prod file layout is correct.
-                    println("BackendManager Error: Could not find bootstrap.py")
+                    logVogon("Error: Could not find bootstrap.py")
                     return
                 }
             }
         }
 
-        println("BackendManager: Using uv at $uvPath")
-        println("BackendManager: Using bootstrap at ${bootstrapPath!!.absolutePath}")
+        logVogon("Using uv at $uvPath")
+        logVogon("Using bootstrap at ${bootstrapPath.absolutePath}")
 
         val settings = SettingsRepository.load()
 
-        // --- Execute ---
+        _serverStatus.value = ServerStatus.INITIALIZING
+
         try {
-            val cmd = mutableListOf(uvPath, "run", bootstrapPath!!.absolutePath)
+            val cmd = mutableListOf(uvPath, "run", bootstrapPath.absolutePath)
             settings.modelsDir?.let {
                 cmd.add("--models-dir")
                 cmd.add(it)
             }
 
             val pb = ProcessBuilder(cmd)
-            pb.directory(workingDir) // Run in app root so relative paths work
+            pb.directory(workingDir)
             pb.redirectErrorStream(true)
 
-            // Pass custom UV cache dir if set
             settings.uvCacheDir?.let {
                 pb.environment()["UV_CACHE_DIR"] = it
             }
 
-            // Ensure Python output is not buffered so we see logs in real-time
             pb.environment()["PYTHONUNBUFFERED"] = "1"
+            pb.environment()["VOGON_APP_DATA_DIR"] = SettingsRepository.appDataDir.absolutePath
 
             process = pb.start()
-            println("BackendManager: Backend process started (PID: ${process!!.pid()})")
+            logVogon("Backend process started (PID: ${process!!.pid()})")
 
-            // Determine stdout handling
-            // We can pipe it to stdout for debugging
             thread(start = true, isDaemon = true) {
                 process!!.inputStream.bufferedReader().use { reader ->
                     reader.forEachLine { line ->
-                        println("[BACKEND] $line")
+                        logBabel(line)
+
+                        // Parse for status
+                        if (line.contains("Starting Babelfish...")) {
+                            _serverStatus.value = ServerStatus.STARTING
+                        }
+
+                        if (line.contains("BOOTSTRAP SERVER STARTED")) {
+                            _serverStatus.value = ServerStatus.BOOTSTRAPPING
+                        }
+
+                        if (line.contains("SERVER: WebSockets running on") || line.contains("server listening on 127.0.0.1:8123")) {
+                            // If we see this and we're NOT in bootstrap, it's the real server
+                            if (_serverStatus.value != ServerStatus.BOOTSTRAPPING) {
+                                _serverStatus.value = ServerStatus.READY
+                            }
+                        }
+
+                        if (line.contains("SERVER: WebSockets running on") || line.contains("server listening on 127.0.0.1:8123")) {
+                            // Only set to READY if we are not in the middle of a transition
+                            if (!line.contains("BOOTSTRAP SERVER STARTED")) {
+                                _serverStatus.value = ServerStatus.READY
+                            }
+                        }
                     }
                 }
+                _serverStatus.value = ServerStatus.STOPPED
+                logVogon("Backend process exited.")
             }
 
-            // Add shutdown hook
             Runtime.getRuntime().addShutdownHook(
                 Thread {
                     stopBackend()
                 },
             )
         } catch (e: Exception) {
-            println("BackendManager Error: Failed to start backend: ${e.message}")
-            e.printStackTrace()
+            logVogon("Error: Failed to start backend: ${e.message}")
+            _serverStatus.value = ServerStatus.STOPPED
         }
     }
 
     fun stopBackend() {
         process?.let {
             if (it.isAlive) {
-                println("BackendManager: Stopping backend...")
+                logVogon("Stopping backend...")
                 it.destroy()
                 if (!it.waitFor(5, TimeUnit.SECONDS)) {
-                    println("BackendManager: Backend did not stop, forcing...")
+                    logVogon("Backend did not stop, forcing...")
                     it.destroyForcibly()
                 }
             }
         }
         process = null
+        _serverStatus.value = ServerStatus.STOPPED
     }
 
     fun restartBackend() {
-        println("BackendManager: Restarting backend...")
+        logVogon("Restarting backend...")
         stopBackend()
         startBackend()
     }

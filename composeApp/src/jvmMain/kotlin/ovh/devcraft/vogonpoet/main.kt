@@ -16,6 +16,7 @@ import org.koin.core.context.startKoin
 import ovh.devcraft.vogonpoet.di.appModule
 import ovh.devcraft.vogonpoet.infrastructure.BackendManager
 import ovh.devcraft.vogonpoet.infrastructure.SettingsRepository
+import ovh.devcraft.vogonpoet.infrastructure.VogonLogger
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.VogonPoetTray
 import ovh.devcraft.vogonpoet.ui.screens.FirstBootScreen
@@ -64,6 +65,7 @@ fun main() {
 
                     val connectionState by viewModel.connectionState.collectAsState()
                     val vadState by viewModel.vadState.collectAsState()
+                    val transcribingText by viewModel.transcribingText.collectAsState()
                     val icon = painterResource(Res.drawable.compose_multiplatform)
 
                     var showSettings by remember { mutableStateOf(true) }
@@ -87,11 +89,11 @@ fun main() {
                         val minHeight = 669.dp
                         val maxHeight = 671.dp
 
-                        println("[Window Resize] Settings window: ${width.value.toInt()}dp x ${height.value.toInt()}dp")
+                        VogonLogger.i("[Window Resize] Settings window: ${width.value.toInt()}dp x ${height.value.toInt()}dp")
 
                         // Clamp size to min/max bounds if it somehow got resized
                         if (width < minWidth || width > maxWidth || height < minHeight || height > maxHeight) {
-                            println("[Window Constraint] Size out of bounds, clamping...")
+                            VogonLogger.i("[Window Constraint] Size out of bounds, clamping...")
                             settingsWindowState.size =
                                 androidx.compose.ui.unit.DpSize(
                                     width = width.coerceIn(minWidth, maxWidth),
@@ -131,6 +133,7 @@ fun main() {
                     VogonPoetTray(
                         connectionState = connectionState,
                         vadState = vadState,
+                        transcribingText = transcribingText,
                         defaultIcon = icon,
                         onExit = ::exitApplication,
                         onOpenSettings = { showSettings = true },

@@ -9,6 +9,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.serialization.json.*
 import ovh.devcraft.vogonpoet.domain.BabelfishClient
 import ovh.devcraft.vogonpoet.domain.HardwareDevice
@@ -49,8 +50,6 @@ class KwBabelfishClient(
     private val _config = MutableStateFlow<Babelfish?>(null)
     override val config: StateFlow<Babelfish?> = _config.asStateFlow()
 
-    private var isBootstrapping = true
-
     private var session: DefaultClientWebSocketSession? = null
     private var connectionJob: Job? = null
 
@@ -63,30 +62,58 @@ class KwBabelfishClient(
 
         connectionJob =
             scope.launch {
-                var retryDelay = 1000L
-                val maxDelay = 30000L
+                // Monitor server status
+                launch {
+                    BackendController.serverStatus.collectLatest { status ->
+                        when (status) {
+                            ServerStatus.INITIALIZING -> {
+                                _connectionState.value = ConnectionState.Disconnected
+                            }
 
-                // Initial delay during bootstrap to let the server start binding
-                if (isBootstrapping) {
-                    _connectionState.value = ConnectionState.Bootstrapping("Initializing...")
-                    delay(2000)
+                            ServerStatus.BOOTSTRAPPING -> {
+                                // Connection loop will handle connecting to bootstrap server
+                            }
+
+                            ServerStatus.STARTING -> {
+                                _connectionState.value = ConnectionState.BabelfishRestarting
+                            }
+
+                            ServerStatus.STOPPED -> {
+                                if (_connectionState.value !is ConnectionState.Error) {
+                                    _connectionState.value = ConnectionState.Disconnected
+                                }
+                            }
+
+                            ServerStatus.READY -> {
+                                // Handled by the connection loop
+                            }
+                        }
+                    }
                 }
 
                 while (isActive) {
-                    if (isBootstrapping) {
-                        _connectionState.value = ConnectionState.Bootstrapping("Initializing...")
-                    } else {
-                        _connectionState.value = ConnectionState.Connecting
+                    val currentStatus = BackendController.serverStatus.value
+
+                    if (currentStatus != ServerStatus.READY && currentStatus != ServerStatus.BOOTSTRAPPING) {
+                        delay(500)
+                        continue
                     }
-                    println("Attempting to connect to Babelfish at $SERVER_URL...")
+
+                    _connectionState.value = ConnectionState.Connecting
+                    VogonLogger.i("Attempting to connect to Babelfish at $SERVER_URL...")
+
                     try {
                         client.webSocket(SERVER_URL) {
                             session = this
-                            // Don't immediately set Connected if we are still bootstrapping
-                            if (!isBootstrapping) {
+
+                            val status = BackendController.serverStatus.value
+                            if (status == ServerStatus.READY) {
                                 _connectionState.value = ConnectionState.Connected
+                                VogonLogger.i("Successfully connected to Babelfish.")
+                            } else {
+                                _connectionState.value = ConnectionState.Bootstrapping("Connected to bootstrap...")
+                                VogonLogger.i("Successfully connected to Bootstrap Server.")
                             }
-                            println("Successfully connected to Babelfish.")
 
                             // Send HELLO
                             val helloMsg = "{\"type\":\"hello\"}"
@@ -104,15 +131,12 @@ class KwBabelfishClient(
                                 }
                             }
                         }
-                        println("Connection session ended. Cleaning up and retrying...")
+                        VogonLogger.i("Connection session ended.")
                     } catch (e: Exception) {
-                        println("Connection failed or lost: ${e.message}. Retrying in ${retryDelay}ms...")
-                        isBootstrapping = true
-                        _connectionState.value = ConnectionState.Bootstrapping("Reconnecting...")
+                        VogonLogger.e("Connection failed or lost", e)
                     } finally {
                         session = null
-                        delay(retryDelay)
-                        retryDelay = (retryDelay * 2).coerceAtMost(maxDelay)
+                        delay(1000) // Fixed retry delay
                     }
                 }
             }
@@ -120,15 +144,12 @@ class KwBabelfishClient(
 
     private fun handleIncomingLine(line: String) {
         if (line.isBlank()) return
-        // println("DEBUG: Received from Babelfish: $line")
         logMessage(MessageDirection.Received, line)
         try {
             val element = json.parseToJsonElement(line)
             if (element is JsonObject) {
                 val type = element["type"]?.jsonPrimitive?.contentOrNull ?: return
 
-                // Check if any pending deferred is waiting for this type of response
-                // For simplicity, we match by response type (e.g., microphones_list)
                 responseHandlers[type]?.complete(element)
 
                 when (type) {
@@ -146,7 +167,6 @@ class KwBabelfishClient(
                         val engineState = element["engine_state"]?.jsonPrimitive?.contentOrNull
 
                         if (vadStateStr == "listening" || vadStateStr == "idle" || engineState == "ready" || message == "Engine Ready!") {
-                            isBootstrapping = false
                             _connectionState.value = ConnectionState.Connected
                             if (vadStateStr == "listening") {
                                 _vadState.value = VadState.Listening
@@ -154,24 +174,26 @@ class KwBabelfishClient(
                                 _vadState.value = VadState.Idle
                             }
                         } else if (message != null) {
-                            isBootstrapping = true
                             _connectionState.value = ConnectionState.Bootstrapping(message)
-                        }
-                    }
 
-                    "transcription" -> {
-                        // Forward transcription messages to the message log
-                        // and potentially update a transcription flow if we add one
+                            // If we receive "Starting Babelfish...", it means the bootstrap server is about to close.
+                            // We should stop the current session and wait for the real server.
+                            if (message.contains("Starting Babelfish...")) {
+                                scope.launch {
+                                    session?.close(CloseReason(CloseReason.Codes.NORMAL, "Bootstrap completed"))
+                                }
+                            }
+                        }
                     }
                 }
             }
         } catch (e: Exception) {
-            println("Error parsing message: ${e.message}")
+            VogonLogger.e("Error parsing message", e)
         }
     }
 
     override fun disconnect() {
-        println("Disconnecting from Babelfish...")
+        VogonLogger.i("Disconnecting from Babelfish...")
         connectionJob?.cancel()
         connectionJob = null
         _connectionState.value = ConnectionState.Disconnected
@@ -248,8 +270,7 @@ class KwBabelfishClient(
     }
 
     override fun notifyBootstrap() {
-        isBootstrapping = true
-        _connectionState.value = ConnectionState.Bootstrapping("Initializing...")
+        // No longer strictly needed as we watch BackendController.serverStatus
     }
 
     private fun logMessage(

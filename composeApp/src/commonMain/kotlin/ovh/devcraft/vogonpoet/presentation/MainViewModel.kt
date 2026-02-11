@@ -2,6 +2,7 @@ package ovh.devcraft.vogonpoet.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +17,11 @@ import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.ProtocolMessage
 import ovh.devcraft.vogonpoet.domain.model.VadState
 import ovh.devcraft.vogonpoet.infrastructure.BackendController
+import ovh.devcraft.vogonpoet.infrastructure.ServerStatus
+import ovh.devcraft.vogonpoet.infrastructure.VogonLogger
 import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
+import ovh.devcraft.vogonpoet.ui.constants.vogonLoadingStrings
+import kotlin.random.Random
 
 class MainViewModel(
     private val babelfishClient: BabelfishClient,
@@ -28,6 +33,12 @@ class MainViewModel(
 
     private val _draftConfig = MutableStateFlow<Babelfish?>(null)
     val draftConfig: StateFlow<Babelfish?> = _draftConfig.asStateFlow()
+
+    private var activationCount = 0
+    private val _transcribingText = MutableStateFlow("Transcribing...")
+    val transcribingText: StateFlow<String> = _transcribingText.asStateFlow()
+
+    private val allPossibleStates = vogonLoadingStrings + "Transcribing..."
 
     // Microphone test state
     private val _microphoneList = MutableStateFlow<List<Microphone>>(emptyList())
@@ -54,6 +65,28 @@ class MainViewModel(
                 }
             }
         }
+
+        viewModelScope.launch {
+            BackendController.serverStatus.collectLatest { status ->
+                if (status == ServerStatus.INITIALIZING) {
+                    activationCount = 0
+                    _transcribingText.value = "Transcribing..."
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            vadState.collectLatest { state ->
+                if (state == VadState.Listening) {
+                    activationCount++
+                    if (activationCount > 10) {
+                        _transcribingText.value = allPossibleStates[Random.nextInt(allPossibleStates.size)]
+                    } else {
+                        _transcribingText.value = "Transcribing..."
+                    }
+                }
+            }
+        }
     }
 
     fun updateDraft(newConfig: Babelfish) {
@@ -77,9 +110,9 @@ class MainViewModel(
             try {
                 babelfishClient.saveConfig(configToSave)
                 // Once saved, the remote config will eventually update and we'll sync back
-                println("Configuration saved successfully")
+                VogonLogger.i("Configuration saved successfully")
             } catch (e: Exception) {
-                println("Failed to save configuration: ${e.message}")
+                VogonLogger.e("Failed to save configuration", e)
             }
         }
     }
@@ -89,9 +122,9 @@ class MainViewModel(
             try {
                 val mics = babelfishClient.listMicrophones()
                 _microphoneList.value = mics
-                println("Loaded ${mics.size} microphones")
+                VogonLogger.i("Loaded ${mics.size} microphones")
             } catch (e: Exception) {
-                println("Failed to load microphones: ${e.message}")
+                VogonLogger.e("Failed to load microphones", e)
             }
         }
     }
@@ -101,9 +134,9 @@ class MainViewModel(
             try {
                 val hardware = babelfishClient.listHardware()
                 _hardwareList.value = hardware
-                println("Loaded ${hardware.size} hardware devices")
+                VogonLogger.i("Loaded ${hardware.size} hardware devices")
             } catch (e: Exception) {
-                println("Failed to load hardware: ${e.message}")
+                VogonLogger.e("Failed to load hardware", e)
             }
         }
     }
@@ -113,9 +146,9 @@ class MainViewModel(
             try {
                 val words = babelfishClient.listWakewords()
                 _wakewordList.value = words
-                println("Loaded ${words.size} wakewords")
+                VogonLogger.i("Loaded ${words.size} wakewords")
             } catch (e: Exception) {
-                println("Failed to load wakewords: ${e.message}")
+                VogonLogger.e("Failed to load wakewords", e)
             }
         }
     }
@@ -125,10 +158,27 @@ class MainViewModel(
             try {
                 babelfishClient.setMicTest(enabled)
                 _isMicTesting.value = enabled
-                println("Microphone test mode: $enabled")
+                VogonLogger.i("Microphone test mode: $enabled")
             } catch (e: Exception) {
-                println("Failed to toggle mic test: ${e.message}")
+                VogonLogger.e("Failed to toggle mic test", e)
             }
+        }
+    }
+
+    fun saveAndRestart(config: Babelfish) {
+        viewModelScope.launch {
+            VogonLogger.i("Saving config and restarting backend...")
+            _draftConfig.value = config
+            try {
+                // Save first
+                babelfishClient.saveConfig(config)
+                // Give it a moment to flush the websocket frame before killing the process
+                delay(500)
+            } catch (e: Exception) {
+                VogonLogger.e("Failed to save config before restart", e)
+            }
+            // Then restart
+            restartBackend()
         }
     }
 }
