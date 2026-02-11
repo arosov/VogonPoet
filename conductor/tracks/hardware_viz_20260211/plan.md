@@ -7,13 +7,13 @@
 - [x] Task: Refine `BabelfishServer.reconfigure` to prevent restarts when the active hardware hasn't changed deea16b
 - [x] Task: Conductor - User Manual Verification 'Backend Logic' (Protocol in workflow.md) 1d4feec
 
-## Phase 2: Protocol Synchronization
-- [~] Task: Regenerate JSON schema from Pydantic models and propagate to client resources
-- [ ] Task: Regenerate Kotlin data classes to match the new schema
-- [ ] Task: Conductor - User Manual Verification 'Protocol Sync' (Protocol in workflow.md)
+## Phase 2: Protocol Synchronization [checkpoint: 56da589]
+- [x] Task: Regenerate JSON schema from Pydantic models and propagate to client resources 56da589
+- [x] Task: Regenerate Kotlin data classes to match the new schema 56da589
+- [x] Task: Conductor - User Manual Verification 'Protocol Sync' (Protocol in workflow.md) 56da589
 
 ## Phase 3: Frontend UI Components
-- [ ] Task: Update `StatusCard` to display active hardware subtext
+- [~] Task: Update `StatusCard` to display active hardware subtext
 - [ ] Task: Implement `VramUsageBar` component in `AdvancedSettingsPanel`
 - [ ] Task: Integrate VRAM visualization into the settings layout with graceful hiding
 - [ ] Task: Conductor - User Manual Verification 'Frontend UI' (Protocol in workflow.md)
