@@ -88,9 +88,57 @@
           ],
           "default": null,
           "title": "Quantization"
+        },
+        "active_device": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Active Device"
+        },
+        "vram_total_gb": {
+          "title": "Vram Total Gb",
+          "type": "number"
+        },
+        "vram_used_baseline_gb": {
+          "title": "Vram Used Baseline Gb",
+          "type": "number"
+        },
+        "vram_used_model_gb": {
+          "title": "Vram Used Model Gb",
+          "type": "number"
         }
       },
       "title": "HardwareConfig",
+      "type": "object"
+    },
+    "PerformanceProfile": {
+      "properties": {
+        "ghost_throttle_ms": {
+          "default": 100,
+          "title": "Ghost Throttle Ms",
+          "type": "integer"
+        },
+        "ghost_window_s": {
+          "title": "Ghost Window S",
+          "type": "number"
+        },
+        "min_padding_s": {
+          "title": "Min Padding S",
+          "type": "number"
+        },
+        "tier": {
+          "default": "auto",
+          "title": "Tier",
+          "type": "string"
+        }
+      },
+      "title": "PerformanceProfile",
       "type": "object"
     },
     "PipelineConfig": {
@@ -104,6 +152,9 @@
           "default": 100,
           "title": "Update Interval Ms",
           "type": "integer"
+        },
+        "performance": {
+          "$ref": "#/$defs/PerformanceProfile"
         }
       },
       "title": "PipelineConfig",

@@ -256,12 +256,31 @@ class BootstrapServer:
 
             all_gpu_names = get_all_gpus()
 
-            if os.environ.get("VOGON_FORCE_CPU"):
-                logger.info("VOGON_FORCE_CPU is set. Forcing CPU mode.")
+            # Check for config file to see if CPU is explicitly requested
+            config_forces_cpu = False
+            app_data_dir = os.environ.get("VOGON_APP_DATA_DIR")
+            if app_data_dir:
+                config_path = Path(app_data_dir) / "babelfish.config.json"
+                if config_path.exists():
+                    try:
+                        with open(config_path, "r") as f:
+                            data = json.load(f)
+                            if data.get("hardware", {}).get("device") == "cpu":
+                                config_forces_cpu = True
+                    except Exception as e:
+                        logger.warning(f"Failed to read config for bootstrap: {e}")
+
+            if os.environ.get("VOGON_FORCE_CPU") or config_forces_cpu:
+                logger.info("CPU mode requested via config or env. Forcing CPU mode.")
                 gpu_desc = "CPU (Forced)"
+                hw_mode = "cpu"
+                extra_to_install = "cpu"
             else:
                 # Selection logic (Priority: NVIDIA > AMD > Metal > DML)
                 if "NVIDIA" in detected_caps:
+                    logger.info(
+                        "NVIDIA GPU detected, selecting nvidia_linux/nvidia_win mode"
+                    )
                     if sys.platform == "win32":
                         hw_mode = "nvidia_win"
                         extra_to_install = "windows-gpu"
@@ -269,25 +288,35 @@ class BootstrapServer:
                         hw_mode = "nvidia_linux"
                         extra_to_install = "nvidia-linux"
                 elif "AMD (ROCm)" in detected_caps:
+                    logger.info("AMD GPU detected, selecting amd_linux mode")
                     hw_mode = "amd_linux"
                     extra_to_install = "amd-linux"
                 elif "Apple Metal" in detected_caps:
+                    logger.info("Apple Silicon detected, selecting metal mode")
                     hw_mode = "metal"
                     extra_to_install = "cpu"
                 elif sys.platform == "win32" and all_gpu_names:
+                    logger.info(
+                        "Generic Windows GPU detected, selecting windows_gpu mode"
+                    )
                     hw_mode = "windows_gpu"
                     extra_to_install = "windows-gpu"
+                else:
+                    logger.info("No GPU detected, staying in CPU mode")
+                    hw_mode = "cpu"
+                    extra_to_install = "cpu"
 
                 # Build descriptive string
-                if not all_gpu_names and not detected_caps:
+                if hw_mode == "cpu":
                     gpu_desc = "CPU"
                 else:
                     gpu_desc = " + ".join(
                         all_gpu_names if all_gpu_names else detected_caps
                     )
 
+            logger.info(f"Final Decision: hw_mode={hw_mode}, extra={extra_to_install}")
             await self._send_update(
-                f"Detected Hardware: {gpu_desc}. Preparing environment..."
+                f"Detected Hardware: {gpu_desc}. Preparing environment for {hw_mode}..."
             )
             await asyncio.sleep(1)
 
@@ -314,23 +343,40 @@ class BootstrapServer:
             await self._send_update(f"Syncing dependencies in {BABELFISH_DIR}...")
 
             # --- Conflict Resolution ---
-            # If we are installing a GPU extra, we MUST remove the base onnxruntime first
-            if extra_to_install != "cpu":
-                try:
-                    logger.info(
-                        "GPU mode detected, ensuring base onnxruntime is removed..."
-                    )
-                    await self._run_command(
-                        [UV_CMD, "pip", "uninstall", "onnxruntime"],
-                        cwd=BABELFISH_DIR,
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to uninstall base onnxruntime: {e}")
+            # All onnxruntime variants (cpu, gpu, directml, etc.) provide the same 'onnxruntime'
+            # python package and conflict. uv sync sometimes leaves broken files when switching.
+            # We force a clean state by uninstalling all variants before sync.
+            ort_variants = [
+                "onnxruntime",
+                "onnxruntime-gpu",
+                "onnxruntime-directml",
+                "onnxruntime-rocm",
+                "onnxruntime-openvino",
+            ]
+            try:
+                logger.info("Ensuring clean onnxruntime state...")
+                await self._run_command(
+                    [UV_CMD, "pip", "uninstall", *ort_variants],
+                    cwd=BABELFISH_DIR,
+                )
+            except Exception as e:
+                logger.debug(f"Conflict resolution cleanup note: {e}")
 
             # Build UV sync command
             cmd = [UV_CMD, "sync"]
             if extra_to_install:
                 cmd.extend(["--extra", extra_to_install])
+
+            # Force reinstall of the specific ORT package to prevent "broken" installs
+            # where the package directory exists but is empty or wrong.
+            if extra_to_install == "cpu":
+                cmd.extend(["--reinstall-package", "onnxruntime"])
+            elif extra_to_install == "nvidia-linux":
+                cmd.extend(["--reinstall-package", "onnxruntime-gpu"])
+            elif extra_to_install == "amd-linux":
+                cmd.extend(["--reinstall-package", "onnxruntime-rocm"])
+            elif extra_to_install == "windows-gpu":
+                cmd.extend(["--reinstall-package", "onnxruntime-directml"])
 
             # Index override
             if hw_mode == "amd_linux":

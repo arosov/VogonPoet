@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -139,8 +140,8 @@ fun AdvancedSettingsPanel(
 
                 // Combine dynamic hardware with auto and cpu options
                 val hardwareOptions =
-                    listOf("auto" to "Auto Detect", "cpu" to "CPU Only") +
-                        hardwareList.filter { it.id != "cpu" }.map { it.id to it.name }
+                    listOf("auto" to "Auto Detect (Recommended)", "cpu" to "CPU Only") +
+                        hardwareList.filter { it.id != "cpu" && it.id != "auto" }.map { it.id to it.name }
 
                 // Safe current device selection:
                 // If the config has a value (e.g. "cuda") that is no longer in the list (because we use "cuda:0"),
@@ -193,6 +194,18 @@ fun AdvancedSettingsPanel(
                                 },
                             )
                         }
+                    }
+                }
+
+                config.hardware?.vram_total_gb?.let { total ->
+                    if (total > 0) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        VramUsageBar(
+                            total = total,
+                            baseline = config.hardware.vram_used_baseline_gb ?: 0.0,
+                            model = config.hardware.vram_used_model_gb ?: 0.0,
+                            modifier = Modifier.padding(vertical = 4.dp),
+                        )
                     }
                 }
 
@@ -548,5 +561,67 @@ private fun AdvancedSection(
             color = GruvboxGreenDark,
         )
         content()
+    }
+}
+
+@Composable
+fun VramUsageBar(
+    total: Double,
+    baseline: Double,
+    model: Double,
+    modifier: Modifier = Modifier,
+) {
+    if (total <= 0) return
+
+    val free = (total - model).coerceAtLeast(0.0)
+    val modelOnly = (model - baseline).coerceAtLeast(0.0)
+
+    // Normalize weights for the progress bar
+    val baselineWeight = (baseline / total).toFloat().coerceIn(0.01f, 1f)
+    val modelWeight = (modelOnly / total).toFloat().coerceIn(0.01f, 1f)
+    val freeWeight = (free / total).toFloat().coerceIn(0.01f, 1f)
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("VRAM Usage", style = MaterialTheme.typography.labelMedium, color = GruvboxFg0)
+            Text("${model.format(1)} / ${total.format(1)} GB", style = MaterialTheme.typography.labelSmall, color = GruvboxFg0)
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(12.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(GruvboxBg0),
+        ) {
+            if (baselineWeight > 0) {
+                Box(Modifier.fillMaxHeight().weight(baselineWeight).background(GruvboxBlueDark))
+            }
+            if (modelWeight > 0) {
+                Box(Modifier.fillMaxHeight().weight(modelWeight).background(GruvboxYellowDark))
+            }
+            if (freeWeight > 0) {
+                Box(Modifier.fillMaxHeight().weight(freeWeight).background(GruvboxGray.copy(alpha = 0.2f)))
+            }
+        }
+        Row(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            LegendItem("System", GruvboxBlueDark)
+            LegendItem("Babelfish", GruvboxYellowDark)
+        }
+    }
+}
+
+private fun Double.format(digits: Int) = "%.${digits}f".format(this)
+
+@Composable
+fun LegendItem(
+    label: String,
+    color: Color,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(8.dp).background(color, shape = RoundedCornerShape(2.dp)))
+        Spacer(Modifier.width(4.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = GruvboxFg0.copy(alpha = 0.6f))
     }
 }

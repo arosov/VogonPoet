@@ -46,6 +46,7 @@ fun App(viewModel: MainViewModel) {
                         connectionState = connectionState,
                         vadState = vadState,
                         transcribingText = transcribingText,
+                        config = config,
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))

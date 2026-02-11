@@ -12,6 +12,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
+import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import ovh.devcraft.vogonpoet.ui.theme.*
 
 @Composable
@@ -19,6 +20,7 @@ fun OutlinedStatusText(
     text: String,
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.headlineMedium,
+    color: Color = GruvboxFg0,
 ) {
     // Use smooth blur shadow for anti-aliased outline effect
     Text(
@@ -34,7 +36,7 @@ fun OutlinedStatusText(
                         blurRadius = 6f,
                     ),
             ),
-        color = GruvboxFg0,
+        color = color,
         modifier = modifier,
     )
 }
@@ -45,6 +47,7 @@ fun StatusCard(
     vadState: VadState,
     transcribingText: String = "Transcribing...",
     modifier: Modifier = Modifier,
+    config: Babelfish? = null,
 ) {
     val baseColor =
         when (connectionState) {
@@ -114,6 +117,17 @@ fun StatusCard(
                 style = MaterialTheme.typography.headlineMedium,
             )
 
+            if (connectionState is ConnectionState.Connected && vadState != VadState.Listening) {
+                config?.hardware?.active_device?.let { device ->
+                    OutlinedStatusText(
+                        text = "Running on ${device.uppercase()}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = GruvboxFg0.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+
             if (connectionState is ConnectionState.Error) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -123,14 +137,17 @@ fun StatusCard(
                 )
             }
 
-            if (connectionState is ConnectionState.Bootstrapping || connectionState is ConnectionState.BabelfishRestarting) {
+            if (connectionState is ConnectionState.Bootstrapping ||
+                connectionState is ConnectionState.BabelfishRestarting ||
+                connectionState is ConnectionState.Connecting
+            ) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text =
-                        if (connectionState is ConnectionState.Bootstrapping) {
-                            connectionState.message
-                        } else {
-                            "Waiting for server to initialize..."
+                        when (connectionState) {
+                            is ConnectionState.Bootstrapping -> connectionState.message
+                            is ConnectionState.Connecting -> "Connecting to server..."
+                            else -> "Waiting for server to initialize..."
                         },
                     style = MaterialTheme.typography.bodySmall,
                     color = GruvboxFg1.copy(alpha = 0.9f),
