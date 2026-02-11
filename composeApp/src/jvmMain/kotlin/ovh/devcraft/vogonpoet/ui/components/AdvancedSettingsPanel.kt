@@ -210,16 +210,6 @@ fun AdvancedSettingsPanel(
                     style = MaterialTheme.typography.bodySmall,
                     color = GruvboxFg0.copy(alpha = 0.6f),
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Note: Feedback interval is now automatically calibrated by the system
-                // based on hardware capabilities and real-time performance.
-                Text(
-                    text = "ℹ️ Feedback rate is auto-optimized for your hardware",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = GruvboxGreenDark.copy(alpha = 0.8f),
-                )
             }
 
             // Interface Settings
