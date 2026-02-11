@@ -1,0 +1,8 @@
+{
+  "track_id": "mic_name_persistence_20260211",
+  "type": "refactor",
+  "status": "in_progress",
+  "created_at": "2026-02-11T23:55:00Z",
+  "updated_at": "2026-02-11T23:55:00Z",
+  "description": "Migrate microphone selection from transient indices to persistent names."
+}

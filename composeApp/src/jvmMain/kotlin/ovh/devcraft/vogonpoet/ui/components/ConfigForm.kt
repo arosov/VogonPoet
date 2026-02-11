@@ -37,9 +37,9 @@ fun ConfigForm(
     val connectionState by viewModel.connectionState.collectAsState()
     var micExpanded by remember { mutableStateOf(false) }
 
-    // We don't need local state for mic index, we can just use config directly,
+    // We don't need local state for mic name, we can just use config directly,
     // unless we want to avoid jitter during selection animation? No, dropdown closes instantly.
-    val selectedMicIndex = config.hardware?.microphone_index ?: -1L
+    val selectedMicName = config.hardware?.microphone_name ?: ""
 
     // Load microphones and hardware when connected
     LaunchedEffect(connectionState) {
@@ -90,8 +90,8 @@ fun ConfigForm(
                     ) {
                         OutlinedTextField(
                             value =
-                                microphoneList.find { it.index.toLong() == selectedMicIndex }?.name
-                                    ?: if (selectedMicIndex == -1L) "Default" else "Mic $selectedMicIndex",
+                                microphoneList.find { it.name == selectedMicName }?.name
+                                    ?: if (selectedMicName.isBlank()) "Default" else selectedMicName,
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Select Device") },
@@ -115,8 +115,8 @@ fun ConfigForm(
                                     onConfigChange(
                                         config.copy(
                                             hardware =
-                                                config.hardware?.copy(microphone_index = null)
-                                                    ?: Babelfish.Hardware(microphone_index = null),
+                                                config.hardware?.copy(microphone_name = null)
+                                                    ?: Babelfish.Hardware(microphone_name = null),
                                         ),
                                     )
                                 },
@@ -129,8 +129,8 @@ fun ConfigForm(
                                         onConfigChange(
                                             config.copy(
                                                 hardware =
-                                                    config.hardware?.copy(microphone_index = mic.index.toLong())
-                                                        ?: Babelfish.Hardware(microphone_index = mic.index.toLong()),
+                                                    config.hardware?.copy(microphone_name = mic.name)
+                                                        ?: Babelfish.Hardware(microphone_name = mic.name),
                                             ),
                                         )
                                     },
