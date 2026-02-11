@@ -95,34 +95,14 @@
     },
     "PipelineConfig": {
       "properties": {
-        "double_pass": {
-          "default": false,
-          "title": "Double Pass",
-          "type": "boolean"
-        },
-        "preset": {
-          "default": "balanced",
-          "title": "Preset",
-          "type": "string"
-        },
-        "ghost_preset": {
-          "default": "fast",
-          "title": "Ghost Preset",
-          "type": "string"
-        },
-        "anchor_preset": {
-          "default": "solid",
-          "title": "Anchor Preset",
-          "type": "string"
-        },
-        "anchor_trigger_interval_ms": {
-          "default": 2000,
-          "title": "Anchor Trigger Interval Ms",
+        "silence_threshold_ms": {
+          "default": 400,
+          "title": "Silence Threshold Ms",
           "type": "integer"
         },
-        "silence_threshold_ms": {
-          "default": 700,
-          "title": "Silence Threshold Ms",
+        "update_interval_ms": {
+          "default": 100,
+          "title": "Update Interval Ms",
           "type": "integer"
         }
       },

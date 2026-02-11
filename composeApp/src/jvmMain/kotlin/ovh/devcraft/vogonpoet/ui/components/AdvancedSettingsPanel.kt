@@ -95,26 +95,15 @@ fun AdvancedSettingsPanel(
     val hardwareList by viewModel.hardwareList.collectAsState()
 
     // Form states
-    var device by remember(config) { mutableStateOf(config.hardware?.device ?: "cpu") }
-    var doublePass by remember(config) { mutableStateOf(config.pipeline?.double_pass ?: false) }
-    var singlePreset by remember(config) { mutableStateOf(config.pipeline?.preset ?: "balanced") }
-    var ghostPreset by remember(config) { mutableStateOf(config.pipeline?.ghost_preset ?: "fast") }
-    var anchorPreset by remember(config) { mutableStateOf(config.pipeline?.anchor_preset ?: "solid") }
-    var anchorInterval by remember(config) {
-        mutableStateOf(config.pipeline?.anchor_trigger_interval_ms?.toFloat() ?: 2000f)
-    }
+    var device by remember(config) { mutableStateOf(config.hardware?.device ?: "auto") }
     var silenceThreshold by remember(config) {
-        mutableStateOf(config.pipeline?.silence_threshold_ms?.toFloat() ?: 700f)
+        mutableStateOf(config.pipeline?.silence_threshold_ms?.toFloat() ?: 400f)
+    }
+    var updateInterval by remember(config) {
+        mutableStateOf(config.pipeline?.update_interval_ms?.toFloat() ?: 100f)
     }
     var iconOnly by remember(config) { mutableStateOf(config.ui?.activation_detection?.icon_only ?: false) }
     var overlayMode by remember(config) { mutableStateOf(config.ui?.activation_detection?.overlay_mode ?: false) }
-
-    // Force single pass when CPU mode is selected
-    LaunchedEffect(device) {
-        if (device == "cpu" && doublePass) {
-            doublePass = false
-        }
-    }
 
     val scrollState = rememberScrollState()
 
@@ -141,9 +130,9 @@ fun AdvancedSettingsPanel(
             AdvancedSection(title = "Hardware Acceleration") {
                 var expanded by remember { mutableStateOf(false) }
 
-                // Combine dynamic hardware with mandatory CPU option
+                // Combine dynamic hardware with auto and cpu options
                 val hardwareOptions =
-                    listOf("cpu" to "CPU Only") +
+                    listOf("auto" to "Auto Detect", "cpu" to "CPU Only") +
                         hardwareList.filter { it.id != "cpu" }.map { it.id to it.name }
 
                 ExposedDropdownMenuBox(
@@ -172,20 +161,13 @@ fun AdvancedSettingsPanel(
                                 text = { Text(label) },
                                 onClick = {
                                     device = value
-                                    if (value == "cpu") {
-                                        doublePass = false
-                                    }
                                     expanded = false
                                     onConfigChange(
                                         createUpdatedConfig(
                                             config,
                                             device,
-                                            doublePass,
-                                            singlePreset,
-                                            ghostPreset,
-                                            anchorPreset,
-                                            anchorInterval,
                                             silenceThreshold,
+                                            updateInterval,
                                             iconOnly,
                                             overlayMode,
                                         ),
@@ -195,272 +177,10 @@ fun AdvancedSettingsPanel(
                         }
                     }
                 }
-
-                if (device == "cpu") {
-                    Text(
-                        text = "CPU mode disables double-pass pipeline",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = GruvboxYellowDark,
-                    )
-                }
             }
 
-            // Pipeline Strategy
-            AdvancedSection(title = "Pipeline Strategy") {
-                if (device == "cpu") {
-                    // Single Preset for CPU
-                    var expanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = it },
-                    ) {
-                        OutlinedTextField(
-                            value = singlePreset.replaceFirstChar { it.uppercase() },
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Performance Preset") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            colors =
-                                OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = GruvboxGreenDark,
-                                    focusedLabelColor = GruvboxGreenDark,
-                                ),
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false },
-                        ) {
-                            listOf("fast", "balanced", "accurate").forEach { preset ->
-                                DropdownMenuItem(
-                                    text = { Text(preset.replaceFirstChar { it.uppercase() }) },
-                                    onClick = {
-                                        singlePreset = preset
-                                        expanded = false
-                                        onConfigChange(
-                                            createUpdatedConfig(
-                                                config,
-                                                device,
-                                                doublePass,
-                                                singlePreset,
-                                                ghostPreset,
-                                                anchorPreset,
-                                                anchorInterval,
-                                                silenceThreshold,
-                                                iconOnly,
-                                                overlayMode,
-                                            ),
-                                        )
-                                    },
-                                )
-                            }
-                        }
-                    }
-                    Text(
-                        text = "CPU mode uses a single-pass optimized pipeline",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = GruvboxGray,
-                    )
-                } else {
-                    // Single vs Double Pass
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        FilterChip(
-                            selected = !doublePass,
-                            onClick = {
-                                doublePass = false
-                                onConfigChange(
-                                    createUpdatedConfig(
-                                        config,
-                                        device,
-                                        doublePass,
-                                        singlePreset,
-                                        ghostPreset,
-                                        anchorPreset,
-                                        anchorInterval,
-                                        silenceThreshold,
-                                        iconOnly,
-                                        overlayMode,
-                                    ),
-                                )
-                            },
-                            label = { Text("Single Pass") },
-                            enabled = device != "cpu",
-                        )
-                        FilterChip(
-                            selected = doublePass,
-                            onClick = {
-                                if (device != "cpu") {
-                                    doublePass = true
-                                    onConfigChange(
-                                        createUpdatedConfig(
-                                            config,
-                                            device,
-                                            doublePass,
-                                            singlePreset,
-                                            ghostPreset,
-                                            anchorPreset,
-                                            anchorInterval,
-                                            silenceThreshold,
-                                            iconOnly,
-                                            overlayMode,
-                                        ),
-                                    )
-                                }
-                            },
-                            label = { Text("Double Pass") },
-                            enabled = device != "cpu",
-                        )
-                    }
-
-                    if (device == "cpu") {
-                        Text(
-                            text = "Double-pass requires GPU acceleration",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = GruvboxGray,
-                        )
-                    }
-
-                    // Ghost Preset
-                    var ghostExpanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = ghostExpanded,
-                        onExpandedChange = { ghostExpanded = it },
-                    ) {
-                        OutlinedTextField(
-                            value = ghostPreset.replaceFirstChar { it.uppercase() },
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Ghost Preset") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = ghostExpanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            colors =
-                                OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = GruvboxGreenDark,
-                                    focusedLabelColor = GruvboxGreenDark,
-                                ),
-                        )
-                        ExposedDropdownMenu(
-                            expanded = ghostExpanded,
-                            onDismissRequest = { ghostExpanded = false },
-                        ) {
-                            listOf("fast", "balanced", "accurate").forEach { preset ->
-                                DropdownMenuItem(
-                                    text = { Text(preset.replaceFirstChar { it.uppercase() }) },
-                                    onClick = {
-                                        ghostPreset = preset
-                                        ghostExpanded = false
-                                        onConfigChange(
-                                            createUpdatedConfig(
-                                                config,
-                                                device,
-                                                doublePass,
-                                                singlePreset,
-                                                ghostPreset,
-                                                anchorPreset,
-                                                anchorInterval,
-                                                silenceThreshold,
-                                                iconOnly,
-                                                overlayMode,
-                                            ),
-                                        )
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    // Anchor Preset
-                    var anchorExpanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = anchorExpanded,
-                        onExpandedChange = { anchorExpanded = it },
-                    ) {
-                        OutlinedTextField(
-                            value = anchorPreset.replaceFirstChar { it.uppercase() },
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Anchor Preset") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = anchorExpanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            colors =
-                                OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = GruvboxGreenDark,
-                                    focusedLabelColor = GruvboxGreenDark,
-                                ),
-                        )
-                        ExposedDropdownMenu(
-                            expanded = anchorExpanded,
-                            onDismissRequest = { anchorExpanded = false },
-                        ) {
-                            listOf("fast", "balanced", "solid").forEach { preset ->
-                                DropdownMenuItem(
-                                    text = { Text(preset.replaceFirstChar { it.uppercase() }) },
-                                    onClick = {
-                                        anchorPreset = preset
-                                        anchorExpanded = false
-                                        onConfigChange(
-                                            createUpdatedConfig(
-                                                config,
-                                                device,
-                                                doublePass,
-                                                singlePreset,
-                                                ghostPreset,
-                                                anchorPreset,
-                                                anchorInterval,
-                                                silenceThreshold,
-                                                iconOnly,
-                                                overlayMode,
-                                            ),
-                                        )
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    // Anchor Trigger Interval (only for double pass)
-                    if (doublePass) {
-                        Text(
-                            text = "Anchor Interval: ${anchorInterval.toInt()}ms",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = GruvboxFg0,
-                        )
-                        Slider(
-                            value = anchorInterval,
-                            onValueChange = {
-                                anchorInterval = it
-                                onConfigChange(
-                                    createUpdatedConfig(
-                                        config,
-                                        device,
-                                        doublePass,
-                                        singlePreset,
-                                        ghostPreset,
-                                        anchorPreset,
-                                        anchorInterval,
-                                        silenceThreshold,
-                                        iconOnly,
-                                        overlayMode,
-                                    ),
-                                )
-                            },
-                            valueRange = 500f..5000f,
-                            steps = 9,
-                            colors =
-                                SliderDefaults.colors(
-                                    thumbColor = GruvboxGreenDark,
-                                    activeTrackColor = GruvboxGreenDark,
-                                ),
-                        )
-                    }
-                }
-            }
-
-            // Speech Detection
-            AdvancedSection(title = "Speech Detection") {
+            // Pipeline Optimization
+            AdvancedSection(title = "Pipeline Performance") {
                 // Silence Threshold
                 Text(
                     text = "Silence Threshold: ${silenceThreshold.toInt()}ms",
@@ -475,19 +195,15 @@ fun AdvancedSettingsPanel(
                             createUpdatedConfig(
                                 config,
                                 device,
-                                doublePass,
-                                singlePreset,
-                                ghostPreset,
-                                anchorPreset,
-                                anchorInterval,
                                 silenceThreshold,
+                                updateInterval,
                                 iconOnly,
                                 overlayMode,
                             ),
                         )
                     },
-                    valueRange = 300f..2000f,
-                    steps = 17,
+                    valueRange = 200f..1500f,
+                    steps = 12,
                     colors =
                         SliderDefaults.colors(
                             thumbColor = GruvboxGreenDark,
@@ -495,13 +211,51 @@ fun AdvancedSettingsPanel(
                         ),
                 )
                 Text(
-                    text = "How long to keep listening after voice stops",
+                    text = "How long to wait after voice stops before finalizing",
                     style = MaterialTheme.typography.bodySmall,
                     color = GruvboxFg0.copy(alpha = 0.6f),
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Update Interval
+                Text(
+                    text = "Feedback Interval: ${updateInterval.toInt()}ms",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = GruvboxFg0,
+                )
+                Slider(
+                    value = updateInterval,
+                    onValueChange = {
+                        updateInterval = it
+                        onConfigChange(
+                            createUpdatedConfig(
+                                config,
+                                device,
+                                silenceThreshold,
+                                updateInterval,
+                                iconOnly,
+                                overlayMode,
+                            ),
+                        )
+                    },
+                    valueRange = 50f..500f,
+                    steps = 8,
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = GruvboxBlueDark,
+                            activeTrackColor = GruvboxBlueDark,
+                        ),
+                )
+                Text(
+                    text = "Frequency of intermediate 'ghost' text updates",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GruvboxFg0.copy(alpha = 0.6f),
+                )
+            }
+
+            // Interface Settings
+            AdvancedSection(title = "Interface") {
                 // Icon Only Mode
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -515,7 +269,7 @@ fun AdvancedSettingsPanel(
                             color = GruvboxFg0,
                         )
                         Text(
-                            text = "Show only microphone icon",
+                            text = "Show only microphone icon in status area",
                             style = MaterialTheme.typography.bodySmall,
                             color = GruvboxFg0.copy(alpha = 0.6f),
                         )
@@ -528,12 +282,8 @@ fun AdvancedSettingsPanel(
                                 createUpdatedConfig(
                                     config,
                                     device,
-                                    doublePass,
-                                    singlePreset,
-                                    ghostPreset,
-                                    anchorPreset,
-                                    anchorInterval,
                                     silenceThreshold,
+                                    updateInterval,
                                     iconOnly,
                                     overlayMode,
                                 ),
@@ -562,7 +312,7 @@ fun AdvancedSettingsPanel(
                             color = GruvboxFg0,
                         )
                         Text(
-                            text = "Always on top, no decorations",
+                            text = "Floating window without decorations",
                             style = MaterialTheme.typography.bodySmall,
                             color = GruvboxFg0.copy(alpha = 0.6f),
                         )
@@ -575,12 +325,8 @@ fun AdvancedSettingsPanel(
                                 createUpdatedConfig(
                                     config,
                                     device,
-                                    doublePass,
-                                    singlePreset,
-                                    ghostPreset,
-                                    anchorPreset,
-                                    anchorInterval,
                                     silenceThreshold,
+                                    updateInterval,
                                     iconOnly,
                                     overlayMode,
                                 ),
@@ -636,12 +382,8 @@ private fun AdvancedSection(
 private fun createUpdatedConfig(
     original: Babelfish,
     device: String,
-    doublePass: Boolean,
-    preset: String,
-    ghostPreset: String,
-    anchorPreset: String,
-    anchorInterval: Float,
     silenceThreshold: Float,
+    updateInterval: Float,
     iconOnly: Boolean,
     overlayMode: Boolean,
 ): Babelfish =
@@ -653,12 +395,8 @@ private fun createUpdatedConfig(
             ),
         pipeline =
             Babelfish.Pipeline(
-                double_pass = doublePass,
-                preset = preset,
-                ghost_preset = ghostPreset,
-                anchor_preset = anchorPreset,
-                anchor_trigger_interval_ms = anchorInterval.toLong(),
                 silence_threshold_ms = silenceThreshold.toLong(),
+                update_interval_ms = updateInterval.toLong(),
             ),
         voice = original.voice ?: Babelfish.Voice(),
         ui =
