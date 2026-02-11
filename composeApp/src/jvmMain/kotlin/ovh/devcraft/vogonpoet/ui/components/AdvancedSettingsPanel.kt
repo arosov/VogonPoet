@@ -99,9 +99,6 @@ fun AdvancedSettingsPanel(
     var silenceThreshold by remember(config) {
         mutableStateOf(config.pipeline?.silence_threshold_ms?.toFloat() ?: 400f)
     }
-    var updateInterval by remember(config) {
-        mutableStateOf(config.pipeline?.update_interval_ms?.toFloat() ?: 100f)
-    }
     var iconOnly by remember(config) { mutableStateOf(config.ui?.activation_detection?.icon_only ?: false) }
     var overlayMode by remember(config) { mutableStateOf(config.ui?.activation_detection?.overlay_mode ?: false) }
 
@@ -167,7 +164,6 @@ fun AdvancedSettingsPanel(
                                             config,
                                             device,
                                             silenceThreshold,
-                                            updateInterval,
                                             iconOnly,
                                             overlayMode,
                                         ),
@@ -196,7 +192,6 @@ fun AdvancedSettingsPanel(
                                 config,
                                 device,
                                 silenceThreshold,
-                                updateInterval,
                                 iconOnly,
                                 overlayMode,
                             ),
@@ -218,39 +213,12 @@ fun AdvancedSettingsPanel(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Update Interval
+                // Note: Feedback interval is now automatically calibrated by the system
+                // based on hardware capabilities and real-time performance.
                 Text(
-                    text = "Feedback Interval: ${updateInterval.toInt()}ms",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = GruvboxFg0,
-                )
-                Slider(
-                    value = updateInterval,
-                    onValueChange = {
-                        updateInterval = it
-                        onConfigChange(
-                            createUpdatedConfig(
-                                config,
-                                device,
-                                silenceThreshold,
-                                updateInterval,
-                                iconOnly,
-                                overlayMode,
-                            ),
-                        )
-                    },
-                    valueRange = 50f..500f,
-                    steps = 8,
-                    colors =
-                        SliderDefaults.colors(
-                            thumbColor = GruvboxBlueDark,
-                            activeTrackColor = GruvboxBlueDark,
-                        ),
-                )
-                Text(
-                    text = "Frequency of intermediate 'ghost' text updates",
+                    text = "ℹ️ Feedback rate is auto-optimized for your hardware",
                     style = MaterialTheme.typography.bodySmall,
-                    color = GruvboxFg0.copy(alpha = 0.6f),
+                    color = GruvboxGreenDark.copy(alpha = 0.8f),
                 )
             }
 
@@ -283,7 +251,6 @@ fun AdvancedSettingsPanel(
                                     config,
                                     device,
                                     silenceThreshold,
-                                    updateInterval,
                                     iconOnly,
                                     overlayMode,
                                 ),
@@ -326,7 +293,6 @@ fun AdvancedSettingsPanel(
                                     config,
                                     device,
                                     silenceThreshold,
-                                    updateInterval,
                                     iconOnly,
                                     overlayMode,
                                 ),
@@ -383,7 +349,6 @@ private fun createUpdatedConfig(
     original: Babelfish,
     device: String,
     silenceThreshold: Float,
-    updateInterval: Float,
     iconOnly: Boolean,
     overlayMode: Boolean,
 ): Babelfish =
@@ -396,7 +361,7 @@ private fun createUpdatedConfig(
         pipeline =
             Babelfish.Pipeline(
                 silence_threshold_ms = silenceThreshold.toLong(),
-                update_interval_ms = updateInterval.toLong(),
+                // update_interval_ms is auto-calibrated by the backend
             ),
         voice = original.voice ?: Babelfish.Voice(),
         ui =
