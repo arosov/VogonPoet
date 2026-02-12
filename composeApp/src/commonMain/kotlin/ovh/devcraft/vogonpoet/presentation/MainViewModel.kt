@@ -71,6 +71,7 @@ class MainViewModel(
                 if (status == ServerStatus.INITIALIZING) {
                     activationCount = 0
                     _transcribingText.value = "Transcribing..."
+                    _draftConfig.value = null // Clear draft to sync with new server state
                 }
             }
         }
