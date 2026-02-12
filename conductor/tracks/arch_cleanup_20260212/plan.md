@@ -1,12 +1,12 @@
 # Plan: Architectural Cleanup and Stability Improvements
 
-## Phase 1: Domain Layer Refactoring
+## Phase 1: Domain Layer Refactoring [checkpoint: c6c917b]
 *Goal: Establish clean domain boundaries and models.*
 
 - [x] Task: Create `VogonConfig` domain model and related entities in `ovh.devcraft.vogonpoet.domain.model` (30c18f4)
 - [x] Task: Define `BackendRepository` interface in `ovh.devcraft.vogonpoet.domain` (99ac129)
 - [x] Task: Update `BabelfishClient` domain interface to use `VogonConfig` instead of the infrastructure model (c927539)
-- [~] Task: Conductor - User Manual Verification 'Phase 1: Domain Layer Refactoring' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Domain Layer Refactoring' (Protocol in workflow.md)
 
 ## Phase 2: Infrastructure Layer Refactoring
 *Goal: Implement repositories and mapping logic.*
