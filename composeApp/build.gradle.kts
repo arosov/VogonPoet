@@ -1,6 +1,9 @@
 import net.pwall.json.kotlin.codegen.gradle.JSONSchemaCodegen
 import net.pwall.json.kotlin.codegen.gradle.JSONSchemaCodegenPlugin
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 buildscript {
     dependencies {
@@ -18,6 +21,92 @@ plugins {
 }
 
 apply<JSONSchemaCodegenPlugin>()
+
+// --- Babelfish Bundling Task ---
+tasks.register("bundleBabelfish") {
+    group = "vogonpoet"
+    description = "Zips the babelfish backend for distribution"
+
+    val babelfishDir = file("../../babelfish")
+    val outputDir = file("src/jvmMain/resources")
+    val outputFile = file("$outputDir/babelfish.zip")
+
+    inputs.dir(babelfishDir)
+    outputs.file(outputFile)
+
+    doLast {
+        if (!babelfishDir.exists()) {
+            throw GradleException("Babelfish directory not found at ${babelfishDir.absolutePath}")
+        }
+        if (!outputDir.exists()) {
+            outputDir.mkdirs()
+        }
+
+        println("Bundling Babelfish from ${babelfishDir.absolutePath}...")
+
+        var totalUncompressedSize: Long = 0
+        val zipOut = ZipOutputStream(outputFile.outputStream())
+        var version = "0.0.0"
+
+        // 1. Zip the backend source
+        babelfishDir.walkTopDown().forEach { file ->
+            val relativePath = file.relativeTo(babelfishDir).path
+
+            if (relativePath == "pyproject.toml") {
+                val versionLine = file.readLines().find { it.trim().startsWith("version =") }
+                version = versionLine
+                    ?.split("=")
+                    ?.get(1)
+                    ?.trim()
+                    ?.removeSurrounding("\"")
+                    ?.removeSurrounding("'") ?: "0.0.0"
+            }
+
+            // Exclude heavy/unnecessary dirs
+            val isExcluded =
+                relativePath.startsWith(".venv") ||
+                    relativePath.startsWith("models") ||
+                    relativePath.startsWith("tmp_extraction") ||
+                    relativePath.startsWith(".git") ||
+                    relativePath.contains("__pycache__") ||
+                    relativePath.startsWith("tests") ||
+                    relativePath.endsWith(".log") ||
+                    relativePath.isEmpty()
+
+            if (!isExcluded && file.isFile) {
+                totalUncompressedSize += file.length()
+                zipOut.putNextEntry(ZipEntry(relativePath))
+                file.inputStream().use { it.copyTo(zipOut) }
+                zipOut.closeEntry()
+            }
+        }
+
+        // 2. Also include the bootstrap script into the zip at scripts/bootstrap.py
+        val bootstrapFile = file("src/jvmMain/resources/scripts/bootstrap.py")
+        if (bootstrapFile.exists()) {
+            totalUncompressedSize += bootstrapFile.length()
+            zipOut.putNextEntry(ZipEntry("scripts/bootstrap.py"))
+            bootstrapFile.inputStream().use { it.copyTo(zipOut) }
+            zipOut.closeEntry()
+        }
+
+        zipOut.close()
+
+        file("$outputDir/babelfish_version.txt").writeText(version)
+
+        val compressedSize = outputFile.length()
+        println("Babelfish bundled successfully (v$version):")
+        println("  - Compressed size: ${compressedSize / 1024} KB")
+        println("  - Uncompressed size: ${totalUncompressedSize / 1024} KB")
+    }
+}
+
+// Ensure bundleBabelfish runs before resources are processed
+tasks.configureEach {
+    if (name == "jvmProcessResources") {
+        dependsOn("bundleBabelfish")
+    }
+}
 
 kotlin {
     jvm()

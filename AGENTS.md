@@ -111,6 +111,14 @@ with `./gradlew :features:logging:build`.
 This project specifically is named VogonPoet. It aims to provide a minimalist
 frontend to babelfish a modern STT server.
 
+### Backend Packaging (Babelfish)
+
+The `babelfish` backend is packaged into the `VogonPoet` application as a ZIP resource. 
+
+*   **Bundling:** The Gradle task `:composeApp:bundleBabelfish` zips the backend source and includes it in `jvmMain/resources`.
+*   **Deployment:** At runtime, the application extracts this ZIP into the system's cache directory (e.g., `~/.cache/vogonpoet/babelfish`).
+*   **Dev Mode:** If a `babelfish` directory is found in the parent directory of the current working directory, the application will use that source instead of the bundled ZIP.
+
 Communication with babelfish happens over websockets.
 
 When dealing with jvmTest, always use the target cleanJvmTest before running the tests with jvmTest,

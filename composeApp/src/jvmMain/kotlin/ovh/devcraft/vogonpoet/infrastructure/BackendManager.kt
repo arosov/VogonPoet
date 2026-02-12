@@ -8,6 +8,7 @@ import java.io.PrintWriter
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
+import java.util.zip.ZipInputStream
 import kotlin.concurrent.thread
 
 object BackendManager {
@@ -81,6 +82,103 @@ object BackendManager {
         log("BABEL", message, babelLog)
     }
 
+    private fun getVersionFromPyProject(file: File): String? {
+        if (!file.exists()) return null
+        return file.useLines { lines ->
+            lines
+                .find { it.trim().startsWith("version =") }
+                ?.split("=")
+                ?.get(1)
+                ?.trim()
+                ?.removeSurrounding("\"")
+                ?.removeSurrounding("'")
+        }
+    }
+
+    private fun getBundledVersion(): String =
+        javaClass
+            .getResourceAsStream("/babelfish_version.txt")
+            ?.bufferedReader()
+            ?.use { it.readText().trim() } ?: "0.0.0"
+
+    private fun extractBabelfish(destDir: File) {
+        val zipStream = javaClass.getResourceAsStream("/babelfish.zip")
+        if (zipStream == null) {
+            logVogon("Error: Could not find babelfish.zip in resources.")
+            return
+        }
+
+        logVogon("Preparing Babelfish installation (v${getBundledVersion()})...")
+
+        // We preserve the models directory if it exists
+        val tempDir = File(destDir.parentFile, "babelfish_temp")
+        if (tempDir.exists()) tempDir.deleteRecursively()
+        tempDir.mkdirs()
+
+        var totalSize: Long = 0
+        ZipInputStream(zipStream).use { zis ->
+            var entry = zis.nextEntry
+            while (entry != null) {
+                if (!entry.isDirectory) {
+                    val outFile = File(tempDir, entry.name)
+                    outFile.parentFile.mkdirs()
+                    outFile.outputStream().use { zis.copyTo(it) }
+                    totalSize += entry.size
+                }
+                entry = zis.nextEntry
+            }
+        }
+
+        logVogon("Extraction complete:")
+        logVogon("  - Uncompressed size: ${totalSize / 1024} KB")
+
+        // Atomic swap (except for models)
+        if (destDir.exists()) {
+            destDir.listFiles()?.forEach { file ->
+                if (file.name != "models") file.deleteRecursively()
+            }
+        } else {
+            destDir.mkdirs()
+        }
+
+        tempDir.listFiles()?.forEach { file ->
+            file.renameTo(File(destDir, file.name))
+        }
+        tempDir.deleteRecursively()
+
+        logVogon("Babelfish installed to ${destDir.absolutePath}")
+    }
+
+    private fun findDevBackend(workingDir: File): File? {
+        var current: File? = workingDir
+        for (i in 0..3) {
+            if (current == null) break
+            // Check if babelfish is a sibling of the current directory
+            val candidate = File(current.parentFile, "babelfish")
+            if (candidate.exists() && File(candidate, "pyproject.toml").exists()) {
+                return candidate
+            }
+            current = current.parentFile
+        }
+        return null
+    }
+
+    private fun findDevBootstrap(workingDir: File): File? {
+        var current: File? = workingDir
+        for (i in 0..3) {
+            if (current == null) break
+            // Check typical locations in the source tree
+            val candidates =
+                listOf(
+                    File(current, "src/jvmMain/resources/scripts/bootstrap.py"),
+                    File(current, "composeApp/src/jvmMain/resources/scripts/bootstrap.py"),
+                )
+            candidates.find { it.exists() }?.let { return it }
+            current = current.parentFile
+        }
+        return null
+    }
+
     fun startBackend() {
         if (process != null && process!!.isAlive) {
             logVogon("Backend already running.")
@@ -94,6 +192,46 @@ object BackendManager {
         val workingDir = File(System.getProperty("user.dir"))
         logVogon("Current working directory: ${workingDir.absolutePath}")
 
+        // --- Locate Backend & Bootstrap ---
+        var backendDir: File? = null
+        var actualBootstrap: File? = null
+
+        // 1. Try Dev Mode
+        val devBackend = findDevBackend(workingDir)
+        if (devBackend != null) {
+            val devBootstrap = findDevBootstrap(workingDir)
+            if (devBootstrap != null) {
+                logVogon("Dev environment detected.")
+                logVogon("  - Backend: ${devBackend.absolutePath}")
+                logVogon("  - Bootstrap: ${devBootstrap.absolutePath}")
+                backendDir = devBackend
+                actualBootstrap = devBootstrap
+            }
+        }
+
+        // 2. Prod Mode fallback
+        if (backendDir == null) {
+            val prodBackend = File(SettingsRepository.appCacheDir, "babelfish")
+            val installedPyProject = File(prodBackend, "pyproject.toml")
+
+            val bundledVersion = getBundledVersion()
+            val installedVersion = getVersionFromPyProject(installedPyProject)
+
+            if (installedVersion != bundledVersion) {
+                if (installedVersion != null) {
+                    logVogon("Update detected: $installedVersion -> $bundledVersion")
+                }
+                extractBabelfish(prodBackend)
+            }
+            backendDir = prodBackend
+            actualBootstrap = File(prodBackend, "scripts/bootstrap.py")
+        }
+
+        if (actualBootstrap == null || !actualBootstrap.exists()) {
+            logVogon("Error: Could not find bootstrap.py")
+            return
+        }
+
         // --- Locate UV ---
         var uvPath = "uv"
         val bundledUv = File(workingDir, "bin/uv")
@@ -105,39 +243,22 @@ object BackendManager {
             uvPath = bundledUvExe.absolutePath
         }
 
-        // --- Locate Bootstrap Script ---
-        var bootstrapPath: File? = File(workingDir, "scripts/bootstrap.py")
-        if (!bootstrapPath!!.exists()) {
-            val devPath = File("src/jvmMain/resources/scripts/bootstrap.py")
-            if (devPath.exists()) {
-                bootstrapPath = devPath
-            } else {
-                val devPathUp = File("../composeApp/src/jvmMain/resources/scripts/bootstrap.py")
-                if (devPathUp.exists()) {
-                    bootstrapPath = devPathUp
-                } else {
-                    logVogon("Error: Could not find bootstrap.py")
-                    return
-                }
-            }
-        }
-
         logVogon("Using uv at $uvPath")
-        logVogon("Using bootstrap at ${bootstrapPath.absolutePath}")
+        logVogon("Using backend at ${backendDir.absolutePath}")
 
         val settings = SettingsRepository.load()
 
         _serverStatus.value = ServerStatus.INITIALIZING
 
         try {
-            val cmd = mutableListOf(uvPath, "run", bootstrapPath.absolutePath)
+            val cmd = mutableListOf(uvPath, "run", actualBootstrap.absolutePath)
             settings.modelsDir?.let {
                 cmd.add("--models-dir")
                 cmd.add(it)
             }
 
             val pb = ProcessBuilder(cmd)
-            pb.directory(workingDir)
+            pb.directory(backendDir) // Run from backend dir
             pb.redirectErrorStream(true)
 
             settings.uvCacheDir?.let {

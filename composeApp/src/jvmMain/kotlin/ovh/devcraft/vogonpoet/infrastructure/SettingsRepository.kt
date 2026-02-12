@@ -33,6 +33,32 @@ actual object SettingsRepository {
         dir
     }
 
+    val appCacheDir: File by lazy {
+        val dir =
+            when {
+                System.getProperty("os.name").lowercase().contains("win") -> {
+                    File(System.getenv("LOCALAPPDATA"), "VogonPoet/Cache")
+                }
+
+                System.getProperty("os.name").lowercase().contains("mac") -> {
+                    File(System.getProperty("user.home"), "Library/Caches/VogonPoet")
+                }
+
+                else -> {
+                    val xdgCache = System.getenv("XDG_CACHE_HOME")
+                    if (xdgCache != null) {
+                        File(xdgCache, "vogonpoet")
+                    } else {
+                        File(System.getProperty("user.home"), ".cache/vogonpoet")
+                    }
+                }
+            }
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
+        dir
+    }
+
     private val settingsFile: File by lazy {
         File(appDataDir, "vogon.config.json")
     }
