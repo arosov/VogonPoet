@@ -22,6 +22,26 @@ in your IDE’s toolbar or run it directly from the terminal:
   .\gradlew.bat :composeApp:run
   ```
 
+### Packaging and Releases
+
+This project uses [Hydraulic Conveyor](https://www.hydraulic.software/) for cross-platform packaging and distribution.
+
+#### Local Packaging
+If you have Conveyor installed, you can build packages locally:
+- **Windows (EXE/MSI)**: `conveyor make windows-msi`
+- **Linux (AppImage)**: `conveyor make linux-app-image`
+
+The configuration is located in `conveyor.conf`.
+
+#### GitHub Actions Releases
+Releases are automatically built and packaged via GitHub Actions when a tag starting with `v` is pushed:
+1. Create a new tag: `git tag v1.0.0`
+2. Push the tag: `git push origin v1.0.0`
+
+The workflow in `.github/workflows/release.yml` will handle the build, packaging with Conveyor, and upload the artifacts to the workflow run.
+
+---
+
 ---
 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
