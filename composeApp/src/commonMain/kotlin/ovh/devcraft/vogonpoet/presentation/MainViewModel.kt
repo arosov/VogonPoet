@@ -15,9 +15,9 @@ import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.EngineEvent
 import ovh.devcraft.vogonpoet.domain.model.EngineMode
 import ovh.devcraft.vogonpoet.domain.model.ProtocolMessage
+import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 import ovh.devcraft.vogonpoet.domain.model.VadState
 import ovh.devcraft.vogonpoet.infrastructure.BackendController
-import ovh.devcraft.vogonpoet.infrastructure.ServerStatus
 import ovh.devcraft.vogonpoet.infrastructure.VogonLogger
 import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import ovh.devcraft.vogonpoet.ui.constants.vogonLoadingStrings

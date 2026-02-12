@@ -21,5 +21,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [x] Track: Unified Hardware Memory Visualization and Smart Restart Logic
-*Link: [./conductor/tracks/hardware_viz_20260211/](./conductor/tracks/hardware_viz_20260211/)*
+
+---
+
+## [~] Track: Architectural Cleanup and Stability Improvements
+*Link: [./conductor/tracks/arch_cleanup_20260212/](./conductor/tracks/arch_cleanup_20260212/)*

@@ -1,11 +1,14 @@
-package ovh.devcraft.vogonpoet.infrastructure
+package ovh.devcraft.vogonpoet.domain
 
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 
-expect object BackendController {
+interface BackendRepository {
     val serverStatus: StateFlow<ServerStatus>
+
+    fun start()
+
+    fun stop()
 
     fun restart()
 }

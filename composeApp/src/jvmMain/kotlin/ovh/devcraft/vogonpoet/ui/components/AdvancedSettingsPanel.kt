@@ -21,8 +21,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
+import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 import ovh.devcraft.vogonpoet.infrastructure.BackendController
-import ovh.devcraft.vogonpoet.infrastructure.ServerStatus
 import ovh.devcraft.vogonpoet.infrastructure.SettingsRepository
 import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
