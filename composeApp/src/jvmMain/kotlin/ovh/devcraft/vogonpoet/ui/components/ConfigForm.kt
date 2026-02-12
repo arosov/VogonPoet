@@ -226,6 +226,13 @@ fun ConfigForm(
                         },
                         modifier = Modifier.fillMaxWidth(),
                     )
+
+                    Text(
+                        text = "Releasing will only stop listening after the current utterance.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = GruvboxFg0.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(start = 4.dp),
+                    )
                 }
             }
         }
