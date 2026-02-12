@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.runBlocking
 import ovh.devcraft.vogonpoet.domain.VogonSettings
 import ovh.devcraft.vogonpoet.infrastructure.SettingsRepository
 import ovh.devcraft.vogonpoet.ui.theme.*
@@ -132,13 +133,15 @@ fun FirstBootScreen(onFinished: () -> Unit) {
                         if (!uvDir.exists()) uvDir.mkdirs()
                         if (!modelsDir.exists()) modelsDir.mkdirs()
 
-                        SettingsRepository.save(
-                            VogonSettings(
-                                isFirstBoot = false,
-                                uvCacheDir = uvDir.absolutePath,
-                                modelsDir = modelsDir.absolutePath,
-                            ),
-                        )
+                        runBlocking {
+                            SettingsRepository.save(
+                                VogonSettings(
+                                    isFirstBoot = false,
+                                    uvCacheDir = uvDir.absolutePath,
+                                    modelsDir = modelsDir.absolutePath,
+                                ),
+                            )
+                        }
                         onFinished()
                     },
                     modifier = Modifier.fillMaxWidth(0.5f).height(56.dp),

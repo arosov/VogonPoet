@@ -1,5 +1,7 @@
 package ovh.devcraft.vogonpoet.infrastructure
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import ovh.devcraft.vogonpoet.domain.VogonSettings
 import java.io.File
@@ -63,25 +65,29 @@ actual object SettingsRepository {
         File(appDataDir, "vogon.config.json")
     }
 
-    actual fun load(): VogonSettings =
-        try {
-            if (settingsFile.exists()) {
-                val content = settingsFile.readText()
-                json.decodeFromString<VogonSettings>(content)
-            } else {
+    actual suspend fun load(): VogonSettings =
+        withContext(Dispatchers.IO) {
+            try {
+                if (settingsFile.exists()) {
+                    val content = settingsFile.readText()
+                    json.decodeFromString<VogonSettings>(content)
+                } else {
+                    VogonSettings()
+                }
+            } catch (e: Exception) {
+                VogonLogger.e("Error loading settings", e)
                 VogonSettings()
             }
-        } catch (e: Exception) {
-            VogonLogger.e("Error loading settings", e)
-            VogonSettings()
         }
 
-    actual fun save(settings: VogonSettings) {
-        try {
-            val content = json.encodeToString(VogonSettings.serializer(), settings)
-            settingsFile.writeText(content)
-        } catch (e: Exception) {
-            VogonLogger.e("Error saving settings", e)
+    actual suspend fun save(settings: VogonSettings) {
+        withContext(Dispatchers.IO) {
+            try {
+                val content = json.encodeToString(VogonSettings.serializer(), settings)
+                settingsFile.writeText(content)
+            } catch (e: Exception) {
+                VogonLogger.e("Error saving settings", e)
+            }
         }
     }
 }

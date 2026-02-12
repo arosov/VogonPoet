@@ -3,6 +3,7 @@ package ovh.devcraft.vogonpoet.infrastructure
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.runBlocking
 import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 import java.io.File
 import java.io.PrintWriter
@@ -247,7 +248,7 @@ object BackendManager {
         logVogon("Using uv at $uvPath")
         logVogon("Using backend at ${backendDir.absolutePath}")
 
-        val settings = SettingsRepository.load()
+        val settings = runBlocking { SettingsRepository.load() }
 
         _serverStatus.value = ServerStatus.INITIALIZING
 

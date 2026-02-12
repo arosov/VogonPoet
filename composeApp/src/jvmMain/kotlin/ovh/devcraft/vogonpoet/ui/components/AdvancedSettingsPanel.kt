@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.runBlocking
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 import ovh.devcraft.vogonpoet.domain.model.VogonConfig
@@ -100,7 +101,7 @@ fun AdvancedSettingsPanel(
     val hardwareList by viewModel.hardwareList.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
     val isReady = connectionState is ConnectionState.Connected || connectionState is ConnectionState.Bootstrapping
-    val settings = remember { SettingsRepository.load() }
+    val settings = remember { runBlocking { SettingsRepository.load() } }
 
     // Form states (controlled by parent config, but we keep local for immediate UI feedback before roundtrip)
     // Actually, for immediate updates, we can just derive from config.
@@ -293,12 +294,14 @@ fun AdvancedSettingsPanel(
                                             if (!m.exists()) m.mkdirs()
 
                                             // Update local settings
-                                            SettingsRepository.save(
-                                                settings.copy(
-                                                    uvCacheDir = u.absolutePath,
-                                                    modelsDir = m.absolutePath,
-                                                ),
-                                            )
+                                            runBlocking {
+                                                SettingsRepository.save(
+                                                    settings.copy(
+                                                        uvCacheDir = u.absolutePath,
+                                                        modelsDir = m.absolutePath,
+                                                    ),
+                                                )
+                                            }
 
                                             // Update config and restart immediately
                                             val newConfig =
@@ -329,9 +332,11 @@ fun AdvancedSettingsPanel(
                                 if (storageDir.isNotBlank()) {
                                     storageDir = ""
                                     // Reset to defaults
-                                    SettingsRepository.save(
-                                        settings.copy(uvCacheDir = null, modelsDir = null),
-                                    )
+                                    runBlocking {
+                                        SettingsRepository.save(
+                                            settings.copy(uvCacheDir = null, modelsDir = null),
+                                        )
+                                    }
                                     // Restart backend immediately with reset settings
                                     viewModel.restartBackend()
                                 }

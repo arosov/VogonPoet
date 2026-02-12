@@ -9,6 +9,7 @@ import androidx.compose.ui.window.rememberWindowState
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.KoinContext
 import org.koin.compose.viewmodel.koinViewModel
@@ -26,7 +27,7 @@ import vogonpoet.composeapp.generated.resources.Res
 import vogonpoet.composeapp.generated.resources.compose_multiplatform
 
 fun main() {
-    val settings = SettingsRepository.load()
+    val settings = runBlocking { SettingsRepository.load() }
     if (!settings.isFirstBoot) {
         BackendManager.startBackend()
     }
