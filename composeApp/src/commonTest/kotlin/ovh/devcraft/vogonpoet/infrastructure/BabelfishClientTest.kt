@@ -11,18 +11,18 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class KwBabelfishClientTest {
+class BabelfishClientTest {
     @Test
     fun testInitialState() =
         runTest {
-            val client = KwBabelfishClient(scope = this)
+            val client = BabelfishClient(scope = this)
             assertTrue(client.connectionState.value is ConnectionState.Disconnected)
         }
 
     @Test
     fun testEventParsing() =
         runTest {
-            val client = KwBabelfishClient(scope = this)
+            val client = BabelfishClient(scope = this)
             val events = mutableListOf<EngineEvent>()
             val job =
                 launch {
@@ -45,7 +45,7 @@ class KwBabelfishClientTest {
     @Test
     fun testModeParsing() =
         runTest {
-            val client = KwBabelfishClient(scope = this)
+            val client = BabelfishClient(scope = this)
 
             // Test transition to Active mode
             client.handleIncomingLine("""{"type": "status", "vad_state": "idle", "engine_state": "ready", "mode": "active"}""")

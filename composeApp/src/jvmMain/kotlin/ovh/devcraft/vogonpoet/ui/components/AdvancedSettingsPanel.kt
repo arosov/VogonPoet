@@ -426,6 +426,77 @@ fun AdvancedSettingsPanel(
                 )
             }
 
+            // Voice Detection Tuning
+            AdvancedSection(title = "Voice Detection Tuning") {
+                // Wakeword Sensitivity
+                val sensitivity = config.voice?.wakeword_sensitivity?.toFloat() ?: 0.5f
+                var localSensitivity by remember(sensitivity) { mutableStateOf(sensitivity) }
+
+                Text(
+                    text = "Wakeword Sensitivity: ${(localSensitivity * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = GruvboxFg0,
+                )
+                Slider(
+                    value = localSensitivity,
+                    onValueChange = { localSensitivity = (Math.round(it * 10f) / 10f) },
+                    onValueChangeFinished = {
+                        onConfigChange(
+                            config.copy(
+                                voice =
+                                    config.voice?.copy(wakeword_sensitivity = localSensitivity.toDouble())
+                                        ?: Babelfish.Voice(wakeword_sensitivity = localSensitivity.toDouble()),
+                            ),
+                        )
+                    },
+                    enabled = isReady,
+                    valueRange = 0.1f..0.9f,
+                    steps = 7,
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = GruvboxGreenDark,
+                            activeTrackColor = GruvboxGreenDark,
+                            disabledThumbColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                            disabledActiveTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                        ),
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Stop Word Sensitivity
+                val stopSensitivity = config.voice?.stop_wakeword_sensitivity?.toFloat() ?: 0.5f
+                var localStopSensitivity by remember(stopSensitivity) { mutableStateOf(stopSensitivity) }
+
+                Text(
+                    text = "Stop Word Sensitivity: ${(localStopSensitivity * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = GruvboxFg0,
+                )
+                Slider(
+                    value = localStopSensitivity,
+                    onValueChange = { localStopSensitivity = (Math.round(it * 10f) / 10f) },
+                    onValueChangeFinished = {
+                        onConfigChange(
+                            config.copy(
+                                voice =
+                                    config.voice?.copy(stop_wakeword_sensitivity = localStopSensitivity.toDouble())
+                                        ?: Babelfish.Voice(stop_wakeword_sensitivity = localStopSensitivity.toDouble()),
+                            ),
+                        )
+                    },
+                    enabled = isReady,
+                    valueRange = 0.1f..0.9f,
+                    steps = 7,
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = GruvboxGreenDark,
+                            activeTrackColor = GruvboxGreenDark,
+                            disabledThumbColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                            disabledActiveTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                        ),
+                )
+            }
+
             // Interface Settings
             AdvancedSection(title = "Activation Detection Indicator") {
                 Text(

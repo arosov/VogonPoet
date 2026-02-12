@@ -37,8 +37,6 @@ fun ConfigForm(
     val connectionState by viewModel.connectionState.collectAsState()
     var micExpanded by remember { mutableStateOf(false) }
 
-    // We don't need local state for mic name, we can just use config directly,
-    // unless we want to avoid jitter during selection animation? No, dropdown closes instantly.
     val selectedMicName = config.hardware?.microphone_name ?: ""
 
     // Load microphones and hardware when connected
@@ -167,7 +165,7 @@ fun ConfigForm(
                 }
             }
 
-            // Column 2: Voice Triggers (Wakeword + Sensitivity)
+            // Column 2: Voice Triggers (Wakeword + Stop word)
             OutlinedCard(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 colors =
@@ -177,7 +175,7 @@ fun ConfigForm(
             ) {
                 Column(
                     modifier = Modifier.padding(12.dp).fillMaxHeight(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
                         text = "Voice Triggers",
@@ -239,36 +237,57 @@ fun ConfigForm(
                         }
                     }
 
-                    // Sensitivity
-                    val sensitivity = config.voice?.wakeword_sensitivity?.toFloat() ?: 0.5f
-                    var localSensitivity by remember(sensitivity) { mutableStateOf(sensitivity) }
+                    // Stop word selection
+                    var stopWakewordExpanded by remember { mutableStateOf(false) }
+                    val currentStopWakeword = config.voice?.stop_wakeword ?: ""
 
-                    Column {
-                        Text(
-                            text = "Sensitivity: ${(localSensitivity * 100).toInt()}%",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = GruvboxFg0,
-                        )
-                        Slider(
-                            value = localSensitivity,
-                            onValueChange = { localSensitivity = (Math.round(it * 10f) / 10f) },
-                            onValueChangeFinished = {
-                                onConfigChange(
-                                    config.copy(
-                                        voice =
-                                            config.voice?.copy(wakeword_sensitivity = localSensitivity.toDouble())
-                                                ?: Babelfish.Voice(wakeword_sensitivity = localSensitivity.toDouble()),
-                                    ),
-                                )
-                            },
-                            valueRange = 0.1f..0.9f,
-                            steps = 7,
+                    ExposedDropdownMenuBox(
+                        expanded = stopWakewordExpanded,
+                        onExpandedChange = { if (isReady) stopWakewordExpanded = it },
+                    ) {
+                        OutlinedTextField(
+                            value = currentStopWakeword.takeIf { it.isNotBlank() } ?: "None",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Stop word") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = stopWakewordExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            enabled = isReady,
                             colors =
-                                SliderDefaults.colors(
-                                    thumbColor = GruvboxGreenDark,
-                                    activeTrackColor = GruvboxGreenDark,
+                                OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = GruvboxGreenDark,
+                                    focusedLabelColor = GruvboxGreenDark,
                                 ),
                         )
+                        ExposedDropdownMenu(
+                            expanded = stopWakewordExpanded,
+                            onDismissRequest = { stopWakewordExpanded = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("None") },
+                                onClick = {
+                                    stopWakewordExpanded = false
+                                    onConfigChange(
+                                        config.copy(
+                                            voice = config.voice?.copy(stop_wakeword = null) ?: Babelfish.Voice(stop_wakeword = null),
+                                        ),
+                                    )
+                                },
+                            )
+                            wakewordList.forEach { word ->
+                                DropdownMenuItem(
+                                    text = { Text(word.replace("_", " ").replaceFirstChar { it.uppercase() }) },
+                                    onClick = {
+                                        stopWakewordExpanded = false
+                                        onConfigChange(
+                                            config.copy(
+                                                voice = config.voice?.copy(stop_wakeword = word) ?: Babelfish.Voice(stop_wakeword = word),
+                                            ),
+                                        )
+                                    },
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -297,14 +316,11 @@ fun ConfigForm(
                         color = GruvboxGreenDark,
                     )
 
-                    val currentShortcut = config.ui?.shortcuts?.toggle_transcribing ?: "Ctrl+Shift+S"
+                    val currentShortcut = config.ui?.shortcuts?.toggle_listening ?: "Ctrl+Space"
                     var localShortcut by remember(currentShortcut) { mutableStateOf(currentShortcut) }
 
-                    // ShortcutSelector component handles its own state internally usually?
-                    // Let's check ShortcutSelector.kt. Assuming it exposes onShortcutChange.
-                    // We need it to be live.
                     ShortcutSelector(
-                        label = "Toggle Transcribing",
+                        label = "Toggle Listening",
                         shortcut = localShortcut,
                         onShortcutChange = {
                             localShortcut = it
@@ -313,9 +329,9 @@ fun ConfigForm(
                                     ui =
                                         config.ui?.copy(
                                             shortcuts =
-                                                config.ui?.shortcuts?.copy(toggle_transcribing = it)
-                                                    ?: Babelfish.Shortcuts(toggle_transcribing = it),
-                                        ) ?: Babelfish.Ui(shortcuts = Babelfish.Shortcuts(toggle_transcribing = it)),
+                                                config.ui?.shortcuts?.copy(toggle_listening = it)
+                                                    ?: Babelfish.Shortcuts(toggle_listening = it),
+                                        ) ?: Babelfish.Ui(shortcuts = Babelfish.Shortcuts(toggle_listening = it)),
                                 ),
                             )
                         },
@@ -324,7 +340,7 @@ fun ConfigForm(
                 }
             }
 
-            // Stop Words
+            // Stop words parsing transcript
             OutlinedCard(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 colors =
@@ -337,7 +353,7 @@ fun ConfigForm(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        text = "Stop Words",
+                        text = "Stop words parsing transcript",
                         style = MaterialTheme.typography.titleSmall,
                         color = GruvboxGreenDark,
                     )
@@ -349,7 +365,7 @@ fun ConfigForm(
                     OutlinedTextField(
                         value = localStopWords,
                         onValueChange = { localStopWords = it },
-                        label = { Text("Words that stop transcribing") },
+                        label = { Text("Words that stop listening") },
                         placeholder = { Text("comma, separated, words") },
                         modifier =
                             Modifier

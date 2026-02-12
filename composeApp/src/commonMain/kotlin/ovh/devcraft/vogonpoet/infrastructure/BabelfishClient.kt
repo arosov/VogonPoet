@@ -8,16 +8,16 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
-import ovh.devcraft.vogonpoet.domain.BabelfishClient
 import ovh.devcraft.vogonpoet.domain.HardwareDevice
 import ovh.devcraft.vogonpoet.domain.Microphone
 import ovh.devcraft.vogonpoet.domain.model.*
 import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import java.util.concurrent.ConcurrentHashMap
+import ovh.devcraft.vogonpoet.domain.BabelfishClient as IBabelfishClient
 
-class KwBabelfishClient(
+class BabelfishClient(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
-) : BabelfishClient {
+) : IBabelfishClient {
     private val json =
         Json {
             ignoreUnknownKeys = true

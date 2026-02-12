@@ -25,7 +25,7 @@ import vogonpoet.composeapp.generated.resources.tray_listening
 fun ApplicationScope.VogonPoetTray(
     connectionState: ConnectionState,
     vadState: VadState,
-    transcribingText: String = "Transcribing...",
+    listeningText: String = "Listening...",
     defaultIcon: Painter,
     onExit: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -79,19 +79,36 @@ fun ApplicationScope.VogonPoetTray(
             is ConnectionState.Connecting -> "VogonPoet: Starting..."
             is ConnectionState.BabelfishRestarting -> "VogonPoet: Starting..."
             is ConnectionState.Bootstrapping -> "VogonPoet: Bootstrap"
-            is ConnectionState.Connected -> if (vadState == VadState.Listening) "VogonPoet: $transcribingText" else "VogonPoet: Ready"
+            is ConnectionState.Connected -> if (vadState == VadState.Listening) "VogonPoet: $listeningText" else "VogonPoet: Ready"
             is ConnectionState.Error -> "VogonPoet: Connection Error"
         }
+
+    var isMenuOpen by remember { mutableStateOf(false) }
 
     Tray(
         state = trayState,
         icon = currentIcon,
-        tooltip = tooltip,
+        tooltip = if (isMenuOpen) null else tooltip,
+        onAction = {
+            // onAction is often called when the tray icon is clicked (especially on macOS/Windows)
+        },
         menu = {
-            Item("Settings", onClick = onOpenSettings)
-            Item("Activation Detection", onClick = onOpenVadWindow)
-            Item("Protocol Log", onClick = onOpenProtocolLog)
-            Item("Exit", onClick = onExit)
+            Item("Settings", onClick = {
+                isMenuOpen = false
+                onOpenSettings()
+            })
+            Item("Activation Detection", onClick = {
+                isMenuOpen = false
+                onOpenVadWindow()
+            })
+            Item("Protocol Log", onClick = {
+                isMenuOpen = false
+                onOpenProtocolLog()
+            })
+            Item("Exit", onClick = {
+                isMenuOpen = false
+                onExit()
+            })
         },
     )
 }

@@ -20,7 +20,7 @@ fun App(viewModel: MainViewModel) {
     val connectionState by viewModel.connectionState.collectAsState()
     val vadState by viewModel.vadState.collectAsState()
     val engineMode by viewModel.engineMode.collectAsState()
-    val transcribingText by viewModel.transcribingText.collectAsState()
+    val listeningText by viewModel.listeningText.collectAsState()
     val displayedEvent by viewModel.displayedEvent.collectAsState()
     val config by viewModel.config.collectAsState()
     val draftConfig by viewModel.draftConfig.collectAsState()
@@ -49,7 +49,7 @@ fun App(viewModel: MainViewModel) {
                         connectionState = connectionState,
                         vadState = vadState,
                         engineMode = engineMode,
-                        transcribingText = transcribingText,
+                        listeningText = listeningText,
                         config = config,
                         displayedEvent = displayedEvent,
                     )

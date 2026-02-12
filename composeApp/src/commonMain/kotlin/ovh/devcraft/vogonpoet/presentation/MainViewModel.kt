@@ -4,11 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import ovh.devcraft.vogonpoet.domain.BabelfishClient
 import ovh.devcraft.vogonpoet.domain.HardwareDevice
@@ -38,13 +36,13 @@ class MainViewModel(
     val draftConfig: StateFlow<Babelfish?> = _draftConfig.asStateFlow()
 
     private var activationCount = 0
-    private val _transcribingText = MutableStateFlow("Transcribing...")
-    val transcribingText: StateFlow<String> = _transcribingText.asStateFlow()
+    private val _listeningText = MutableStateFlow("Listening...")
+    val listeningText: StateFlow<String> = _listeningText.asStateFlow()
 
     private val _displayedEvent = MutableStateFlow<String?>(null)
     val displayedEvent: StateFlow<String?> = _displayedEvent.asStateFlow()
 
-    private val allPossibleStates = vogonLoadingStrings + "Transcribing..."
+    private val allPossibleStates = vogonLoadingStrings + "Listening..."
 
     // Microphone test state
     private val _microphoneList = MutableStateFlow<List<Microphone>>(emptyList())
@@ -88,7 +86,7 @@ class MainViewModel(
             BackendController.serverStatus.collectLatest { status ->
                 if (status == ServerStatus.INITIALIZING) {
                     activationCount = 0
-                    _transcribingText.value = "Transcribing..."
+                    _listeningText.value = "Listening..."
                     _draftConfig.value = null // Clear draft to sync with new server state
                 }
             }
@@ -99,9 +97,9 @@ class MainViewModel(
                 if (state == VadState.Listening) {
                     activationCount++
                     if (activationCount > 10) {
-                        _transcribingText.value = allPossibleStates[Random.nextInt(allPossibleStates.size)]
+                        _listeningText.value = allPossibleStates[Random.nextInt(allPossibleStates.size)]
                     } else {
-                        _transcribingText.value = "Transcribing..."
+                        _listeningText.value = "Listening..."
                     }
                 }
             }

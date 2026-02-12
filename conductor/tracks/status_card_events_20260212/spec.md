@@ -9,7 +9,7 @@ Additionally, there is a need to distinguish between two "Ready" states based on
 - States to display: "idle", "listening".
 - Events to display: "wakeword detected", "stop word detected".
 - Events must be transient: display for 2 seconds before reverting to the current state.
-- Integration must happen through `KwBabelfishClient` (parsing) and `MainViewModel` (timing/state management).
+- Integration must happen through `BabelfishClient` (parsing) and `MainViewModel` (timing/state management).
 - Distinguish between "Wakeword" mode and "Active" (Dictation) mode.
     - If `EngineMode.Wakeword`: Display "Ready - Idle".
     - If `EngineMode.Active`:
@@ -26,7 +26,7 @@ Additionally, there is a need to distinguish between two "Ready" states based on
 
 ### Frontend (VogonPoet)
 - **EngineMode.kt**: New enum (`Wakeword`, `Active`).
-- **KwBabelfishClient.kt**: 
+- **BabelfishClient.kt** (Infrastructure): 
     - Add `engineMode` state flow.
     - Parse `mode` from `status` message.
 - **MainViewModel.kt**: Expose `engineMode`.

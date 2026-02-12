@@ -8,9 +8,9 @@
 
 ## Phase 2: Domain & Infrastructure (VogonPoet)
 - [x] Create `domain/model/EngineMode.kt` enum (`Wakeword`, `Active`).
-- [x] Modify `KwBabelfishClient.kt`: Add `_engineMode` state flow.
-- [x] Modify `KwBabelfishClient.kt`: Parse `mode` from `status` message.
-- [x] Update `KwBabelfishClientTest` to verify mode parsing.
+- [x] Modify `BabelfishClient.kt` (infra): Add `_engineMode` state flow.
+- [x] Modify `BabelfishClient.kt` (infra): Parse `mode` from `status` message.
+- [x] Update `BabelfishClientTest` to verify mode parsing.
 
 ## Phase 3: Presentation Logic
 - [x] Modify `MainViewModel.kt`: Expose `engineMode`.

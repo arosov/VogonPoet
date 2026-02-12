@@ -65,7 +65,7 @@ fun main() {
 
                     val connectionState by viewModel.connectionState.collectAsState()
                     val vadState by viewModel.vadState.collectAsState()
-                    val transcribingText by viewModel.transcribingText.collectAsState()
+                    val listeningText by viewModel.listeningText.collectAsState()
                     val icon = painterResource(Res.drawable.compose_multiplatform)
 
                     var showSettings by remember { mutableStateOf(true) }
@@ -133,7 +133,7 @@ fun main() {
                     VogonPoetTray(
                         connectionState = connectionState,
                         vadState = vadState,
-                        transcribingText = transcribingText,
+                        listeningText = listeningText,
                         defaultIcon = icon,
                         onExit = ::exitApplication,
                         onOpenSettings = { showSettings = true },

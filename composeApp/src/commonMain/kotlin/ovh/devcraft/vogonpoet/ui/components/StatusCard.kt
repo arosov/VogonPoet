@@ -47,7 +47,7 @@ fun StatusCard(
     connectionState: ConnectionState,
     vadState: VadState,
     engineMode: EngineMode = EngineMode.Wakeword,
-    transcribingText: String = "Transcribing...",
+    listeningText: String = "Listening...",
     modifier: Modifier = Modifier,
     config: Babelfish? = null,
     displayedEvent: String? = null,
@@ -166,7 +166,7 @@ fun StatusCard(
                             if (substatus != null) {
                                 "Ready - $substatus"
                             } else if (vadState == VadState.Listening) {
-                                transcribingText
+                                listeningText
                             } else {
                                 "Ready"
                             }
