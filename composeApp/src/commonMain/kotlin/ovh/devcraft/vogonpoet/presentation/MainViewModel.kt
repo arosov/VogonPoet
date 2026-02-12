@@ -17,9 +17,9 @@ import ovh.devcraft.vogonpoet.domain.model.EngineMode
 import ovh.devcraft.vogonpoet.domain.model.ProtocolMessage
 import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 import ovh.devcraft.vogonpoet.domain.model.VadState
+import ovh.devcraft.vogonpoet.domain.model.VogonConfig
 import ovh.devcraft.vogonpoet.infrastructure.BackendController
 import ovh.devcraft.vogonpoet.infrastructure.VogonLogger
-import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import ovh.devcraft.vogonpoet.ui.constants.vogonLoadingStrings
 import kotlin.random.Random
 
@@ -30,10 +30,10 @@ class MainViewModel(
     val vadState: StateFlow<VadState> = babelfishClient.vadState
     val engineMode: StateFlow<EngineMode> = babelfishClient.engineMode
     val messages: StateFlow<List<ProtocolMessage>> = babelfishClient.messages
-    val config: StateFlow<Babelfish?> = babelfishClient.config
+    val config: StateFlow<VogonConfig?> = babelfishClient.config
 
-    private val _draftConfig = MutableStateFlow<Babelfish?>(null)
-    val draftConfig: StateFlow<Babelfish?> = _draftConfig.asStateFlow()
+    private val _draftConfig = MutableStateFlow<VogonConfig?>(null)
+    val draftConfig: StateFlow<VogonConfig?> = _draftConfig.asStateFlow()
 
     private var activationCount = 0
     private val _listeningText = MutableStateFlow("Listening...")
@@ -106,7 +106,7 @@ class MainViewModel(
         }
     }
 
-    fun updateDraft(newConfig: Babelfish) {
+    fun updateDraft(newConfig: VogonConfig) {
         _draftConfig.value = newConfig
     }
 
@@ -121,7 +121,7 @@ class MainViewModel(
         BackendController.restart()
     }
 
-    fun saveConfig(config: Babelfish? = _draftConfig.value) {
+    fun saveConfig(config: VogonConfig? = _draftConfig.value) {
         val configToSave = config ?: return
         viewModelScope.launch {
             try {
@@ -204,7 +204,7 @@ class MainViewModel(
         }
     }
 
-    fun saveAndRestart(config: Babelfish) {
+    fun saveAndRestart(config: VogonConfig) {
         viewModelScope.launch {
             VogonLogger.i("Saving config and restarting backend...")
             _draftConfig.value = config

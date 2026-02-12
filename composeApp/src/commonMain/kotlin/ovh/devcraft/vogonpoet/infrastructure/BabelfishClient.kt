@@ -11,6 +11,8 @@ import kotlinx.serialization.json.*
 import ovh.devcraft.vogonpoet.domain.HardwareDevice
 import ovh.devcraft.vogonpoet.domain.Microphone
 import ovh.devcraft.vogonpoet.domain.model.*
+import ovh.devcraft.vogonpoet.infrastructure.mapper.toDomain
+import ovh.devcraft.vogonpoet.infrastructure.mapper.toInfrastructure
 import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import java.util.concurrent.ConcurrentHashMap
 import ovh.devcraft.vogonpoet.domain.BabelfishClient as IBabelfishClient
@@ -48,8 +50,8 @@ class BabelfishClient(
     private val _messages = MutableStateFlow<List<ProtocolMessage>>(emptyList())
     override val messages: StateFlow<List<ProtocolMessage>> = _messages.asStateFlow()
 
-    private val _config = MutableStateFlow<Babelfish?>(null)
-    override val config: StateFlow<Babelfish?> = _config.asStateFlow()
+    private val _config = MutableStateFlow<VogonConfig?>(null)
+    override val config: StateFlow<VogonConfig?> = _config.asStateFlow()
 
     private var session: DefaultClientWebSocketSession? = null
     private var connectionJob: Job? = null
@@ -160,7 +162,7 @@ class BabelfishClient(
                         val configData = element["data"]
                         if (configData != null) {
                             val config = json.decodeFromJsonElement<Babelfish>(configData)
-                            _config.value = config
+                            _config.value = config.toDomain()
                         }
                     }
 
@@ -227,9 +229,10 @@ class BabelfishClient(
         session = null
     }
 
-    override suspend fun saveConfig(config: Babelfish) {
+    override suspend fun saveConfig(config: VogonConfig) {
         val currentSession = session ?: throw IllegalStateException("Not connected")
-        val configJson = json.encodeToString(Babelfish.serializer(), config)
+        val infraConfig = config.toInfrastructure()
+        val configJson = json.encodeToString(Babelfish.serializer(), infraConfig)
         val message = """{"type":"update_config","data":$configJson}"""
         currentSession.send(message)
         logMessage(MessageDirection.Sent, message)

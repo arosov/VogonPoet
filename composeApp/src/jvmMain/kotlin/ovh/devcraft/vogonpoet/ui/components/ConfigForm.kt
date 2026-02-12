@@ -12,7 +12,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
-import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
+import ovh.devcraft.vogonpoet.domain.model.VogonConfig
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.theme.*
 
@@ -20,8 +20,8 @@ import ovh.devcraft.vogonpoet.ui.theme.*
 @Composable
 fun ConfigForm(
     viewModel: MainViewModel,
-    config: Babelfish?,
-    onConfigChange: (Babelfish) -> Unit,
+    config: VogonConfig?,
+    onConfigChange: (VogonConfig) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (config == null) {
@@ -37,7 +37,7 @@ fun ConfigForm(
     val connectionState by viewModel.connectionState.collectAsState()
     var micExpanded by remember { mutableStateOf(false) }
 
-    val selectedMicName = config.hardware?.microphone_name ?: ""
+    val selectedMicName = config.hardware?.microphoneName ?: ""
 
     // Load microphones and hardware when connected
     LaunchedEffect(connectionState) {
@@ -113,8 +113,8 @@ fun ConfigForm(
                                     onConfigChange(
                                         config.copy(
                                             hardware =
-                                                config.hardware?.copy(microphone_name = null)
-                                                    ?: Babelfish.Hardware(microphone_name = null),
+                                                config.hardware?.copy(microphoneName = null)
+                                                    ?: VogonConfig.Hardware(microphoneName = null),
                                         ),
                                     )
                                 },
@@ -127,8 +127,8 @@ fun ConfigForm(
                                         onConfigChange(
                                             config.copy(
                                                 hardware =
-                                                    config.hardware?.copy(microphone_name = mic.name)
-                                                        ?: Babelfish.Hardware(microphone_name = mic.name),
+                                                    config.hardware?.copy(microphoneName = mic.name)
+                                                        ?: VogonConfig.Hardware(microphoneName = mic.name),
                                             ),
                                         )
                                     },
@@ -183,7 +183,7 @@ fun ConfigForm(
                         color = GruvboxGreenDark,
                     )
 
-                    val toggleShortcut = config.ui?.shortcuts?.toggle_listening ?: "Ctrl+Space"
+                    val toggleShortcut = config.ui?.shortcuts?.toggleListening ?: "Ctrl+Space"
                     var localToggleShortcut by remember(toggleShortcut) { mutableStateOf(toggleShortcut) }
 
                     ShortcutSelector(
@@ -196,16 +196,16 @@ fun ConfigForm(
                                     ui =
                                         config.ui?.copy(
                                             shortcuts =
-                                                config.ui?.shortcuts?.copy(toggle_listening = it)
-                                                    ?: Babelfish.Shortcuts(toggle_listening = it),
-                                        ) ?: Babelfish.Ui(shortcuts = Babelfish.Shortcuts(toggle_listening = it)),
+                                                config.ui?.shortcuts?.copy(toggleListening = it)
+                                                    ?: VogonConfig.Shortcuts(toggleListening = it),
+                                        ) ?: VogonConfig.Ui(shortcuts = VogonConfig.Shortcuts(toggleListening = it)),
                                 ),
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
                     )
 
-                    val pttShortcut = config.ui?.shortcuts?.force_listen ?: "Left Ctrl"
+                    val pttShortcut = config.ui?.shortcuts?.forceListen ?: "Left Ctrl"
                     var localPttShortcut by remember(pttShortcut) { mutableStateOf(pttShortcut) }
 
                     SingleKeySelector(
@@ -218,9 +218,9 @@ fun ConfigForm(
                                     ui =
                                         config.ui?.copy(
                                             shortcuts =
-                                                config.ui?.shortcuts?.copy(force_listen = it)
-                                                    ?: Babelfish.Shortcuts(force_listen = it),
-                                        ) ?: Babelfish.Ui(shortcuts = Babelfish.Shortcuts(force_listen = it)),
+                                                config.ui?.shortcuts?.copy(forceListen = it)
+                                                    ?: VogonConfig.Shortcuts(forceListen = it),
+                                        ) ?: VogonConfig.Ui(shortcuts = VogonConfig.Shortcuts(forceListen = it)),
                                 ),
                             )
                         },
@@ -282,7 +282,7 @@ fun ConfigForm(
                                 wakewordExpanded = false
                                 onConfigChange(
                                     config.copy(
-                                        voice = config.voice?.copy(wakeword = null) ?: Babelfish.Voice(wakeword = null),
+                                        voice = config.voice?.copy(wakeword = null) ?: VogonConfig.Voice(wakeword = null),
                                     ),
                                 )
                             },
@@ -294,7 +294,7 @@ fun ConfigForm(
                                     wakewordExpanded = false
                                     onConfigChange(
                                         config.copy(
-                                            voice = config.voice?.copy(wakeword = word) ?: Babelfish.Voice(wakeword = word),
+                                            voice = config.voice?.copy(wakeword = word) ?: VogonConfig.Voice(wakeword = word),
                                         ),
                                     )
                                 },
@@ -305,7 +305,7 @@ fun ConfigForm(
 
                 // Stop word selection
                 var stopWakewordExpanded by remember { mutableStateOf(false) }
-                val currentStopWakeword = config.voice?.stop_wakeword ?: ""
+                val currentStopWakeword = config.voice?.stopWakeword ?: ""
 
                 ExposedDropdownMenuBox(
                     expanded = stopWakewordExpanded,
@@ -336,7 +336,7 @@ fun ConfigForm(
                                 stopWakewordExpanded = false
                                 onConfigChange(
                                     config.copy(
-                                        voice = config.voice?.copy(stop_wakeword = null) ?: Babelfish.Voice(stop_wakeword = null),
+                                        voice = config.voice?.copy(stopWakeword = null) ?: VogonConfig.Voice(stopWakeword = null),
                                     ),
                                 )
                             },
@@ -349,7 +349,7 @@ fun ConfigForm(
                                     onConfigChange(
                                         config.copy(
                                             voice =
-                                                config.voice?.copy(stop_wakeword = word) ?: Babelfish.Voice(stop_wakeword = word),
+                                                config.voice?.copy(stopWakeword = word) ?: VogonConfig.Voice(stopWakeword = word),
                                         ),
                                     )
                                 },
@@ -366,7 +366,7 @@ fun ConfigForm(
                 )
 
                 // Stop words parsing transcript
-                val stopWordsList = config.voice?.stop_words ?: emptyList()
+                val stopWordsList = config.voice?.stopWords ?: emptyList()
                 val stopWordsString = stopWordsList.joinToString(", ")
                 var localStopWords by remember(stopWordsString) { mutableStateOf(stopWordsString) }
 
@@ -384,8 +384,8 @@ fun ConfigForm(
                                     onConfigChange(
                                         config.copy(
                                             voice =
-                                                config.voice?.copy(stop_words = newList)
-                                                    ?: Babelfish.Voice(stop_words = newList),
+                                                config.voice?.copy(stopWords = newList)
+                                                    ?: VogonConfig.Voice(stopWords = newList),
                                         ),
                                     )
                                 }
@@ -399,8 +399,8 @@ fun ConfigForm(
                                 onConfigChange(
                                     config.copy(
                                         voice =
-                                            config.voice?.copy(stop_words = newList)
-                                                ?: Babelfish.Voice(stop_words = newList),
+                                            config.voice?.copy(stopWords = newList)
+                                                ?: VogonConfig.Voice(stopWords = newList),
                                     ),
                                 )
                             },

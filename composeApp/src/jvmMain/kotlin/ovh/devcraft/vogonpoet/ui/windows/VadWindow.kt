@@ -39,8 +39,8 @@ fun VadWindow(
     val config by viewModel.draftConfig.collectAsState()
 
     // Get activation detection settings
-    val iconOnly = config?.ui?.activation_detection?.icon_only ?: false
-    val overlayMode = config?.ui?.activation_detection?.overlay_mode ?: false
+    val iconOnly = config?.ui?.activationDetection?.iconOnly ?: false
+    val overlayMode = config?.ui?.activationDetection?.overlayMode ?: false
 
     // Check if backend is ready
     val isReady = connectionState is ConnectionState.Connected

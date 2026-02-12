@@ -22,9 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.ServerStatus
-import ovh.devcraft.vogonpoet.infrastructure.BackendController
+import ovh.devcraft.vogonpoet.domain.model.VogonConfig
 import ovh.devcraft.vogonpoet.infrastructure.SettingsRepository
-import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.theme.*
 import ovh.devcraft.vogonpoet.ui.utils.SystemFilePicker
@@ -93,8 +92,8 @@ fun CollapsibleSidePanel(
 @Composable
 fun AdvancedSettingsPanel(
     viewModel: MainViewModel,
-    config: Babelfish?,
-    onConfigChange: (Babelfish) -> Unit,
+    config: VogonConfig?,
+    onConfigChange: (VogonConfig) -> Unit,
 ) {
     if (config == null) return
 
@@ -138,7 +137,7 @@ fun AdvancedSettingsPanel(
                 // Hardware Acceleration
                 var expanded by remember { mutableStateOf(false) }
                 val rawDevice = config.hardware?.device ?: "auto"
-                val isAutoDetect = config.hardware?.auto_detect ?: true
+                val isAutoDetect = config.hardware?.autoDetect ?: true
 
                 // Combine dynamic hardware with auto and cpu options
                 val hardwareOptions =
@@ -184,8 +183,8 @@ fun AdvancedSettingsPanel(
                                 onClick = {
                                     expanded = false
                                     if (value != currentDevice) {
-                                        val activeDevice = config.hardware?.active_device
-                                        val isCurrentlyAuto = config.hardware?.auto_detect ?: true
+                                        val activeDevice = config.hardware?.activeDevice
+                                        val isCurrentlyAuto = config.hardware?.autoDetect ?: true
 
                                         // If switching from Auto to the device it's ALREADY using, skip restart.
                                         val isSameAsActive = isCurrentlyAuto && value == activeDevice
@@ -195,10 +194,10 @@ fun AdvancedSettingsPanel(
                                                 hardware =
                                                     config.hardware?.copy(
                                                         device = if (value == "auto") "auto" else value,
-                                                        auto_detect = value == "auto",
-                                                    ) ?: Babelfish.Hardware(
+                                                        autoDetect = value == "auto",
+                                                    ) ?: VogonConfig.Hardware(
                                                         device = value,
-                                                        auto_detect = value == "auto",
+                                                        autoDetect = value == "auto",
                                                     ),
                                             )
 
@@ -214,16 +213,16 @@ fun AdvancedSettingsPanel(
                     }
                 }
 
-                config.hardware?.vram_total_gb?.let { total ->
-                    val isActiveCpu = config.hardware.active_device?.lowercase() == "cpu"
+                config.hardware?.vramTotalGb?.let { total ->
+                    val isActiveCpu = config.hardware.activeDevice?.lowercase() == "cpu"
                     val isConfiguredCpu = config.hardware.device.lowercase() == "cpu"
                     if (total > 0 && !isActiveCpu && !isConfiguredCpu) {
                         Spacer(modifier = Modifier.height(8.dp))
                         VramUsageBar(
                             total = total,
-                            baseline = config.hardware.vram_used_baseline_gb ?: 0.0,
-                            model = config.hardware.vram_used_model_gb ?: 0.0,
-                            deviceName = config.hardware.active_device_name ?: config.hardware.active_device,
+                            baseline = config.hardware.vramUsedBaselineGb ?: 0.0,
+                            model = config.hardware.vramUsedModelGb ?: 0.0,
+                            deviceName = config.hardware.activeDeviceName ?: config.hardware.activeDevice,
                             modifier = Modifier.padding(vertical = 4.dp),
                         )
                     }
@@ -305,8 +304,8 @@ fun AdvancedSettingsPanel(
                                             val newConfig =
                                                 config.copy(
                                                     cache =
-                                                        config.cache?.copy(cache_dir = u.absolutePath)
-                                                            ?: Babelfish.Cache(cache_dir = u.absolutePath),
+                                                        config.cache?.copy(cacheDir = u.absolutePath)
+                                                            ?: VogonConfig.Cache(cacheDir = u.absolutePath),
                                                 )
                                             viewModel.saveAndRestart(newConfig)
                                         }
@@ -391,7 +390,7 @@ fun AdvancedSettingsPanel(
                 )
 
                 // Silence Threshold
-                val rawThreshold = config.pipeline?.silence_threshold_ms?.toFloat() ?: 400f
+                val rawThreshold = config.pipeline?.silenceThresholdMs?.toFloat() ?: 400f
                 val silenceThreshold = (Math.round(rawThreshold / 50.0) * 50).toFloat()
 
                 Text(
@@ -411,8 +410,8 @@ fun AdvancedSettingsPanel(
                         onConfigChange(
                             config.copy(
                                 pipeline =
-                                    config.pipeline?.copy(silence_threshold_ms = localSilence.toLong())
-                                        ?: Babelfish.Pipeline(silence_threshold_ms = localSilence.toLong()),
+                                    config.pipeline?.copy(silenceThresholdMs = localSilence.toLong())
+                                        ?: VogonConfig.Pipeline(silenceThresholdMs = localSilence.toLong()),
                             ),
                         )
                     },
@@ -439,7 +438,7 @@ fun AdvancedSettingsPanel(
                 )
 
                 // Wakeword Sensitivity
-                val sensitivity = config.voice?.wakeword_sensitivity?.toFloat() ?: 0.5f
+                val sensitivity = config.voice?.wakewordSensitivity?.toFloat() ?: 0.5f
                 var localSensitivity by remember(sensitivity) { mutableStateOf(sensitivity) }
 
                 Text(
@@ -454,8 +453,8 @@ fun AdvancedSettingsPanel(
                         onConfigChange(
                             config.copy(
                                 voice =
-                                    config.voice?.copy(wakeword_sensitivity = localSensitivity.toDouble())
-                                        ?: Babelfish.Voice(wakeword_sensitivity = localSensitivity.toDouble()),
+                                    config.voice?.copy(wakewordSensitivity = localSensitivity.toDouble())
+                                        ?: VogonConfig.Voice(wakewordSensitivity = localSensitivity.toDouble()),
                             ),
                         )
                     },
@@ -474,7 +473,7 @@ fun AdvancedSettingsPanel(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Stop Word Sensitivity
-                val stopSensitivity = config.voice?.stop_wakeword_sensitivity?.toFloat() ?: 0.5f
+                val stopSensitivity = config.voice?.stopWakewordSensitivity?.toFloat() ?: 0.5f
                 var localStopSensitivity by remember(stopSensitivity) { mutableStateOf(stopSensitivity) }
 
                 Text(
@@ -489,8 +488,8 @@ fun AdvancedSettingsPanel(
                         onConfigChange(
                             config.copy(
                                 voice =
-                                    config.voice?.copy(stop_wakeword_sensitivity = localStopSensitivity.toDouble())
-                                        ?: Babelfish.Voice(stop_wakeword_sensitivity = localStopSensitivity.toDouble()),
+                                    config.voice?.copy(stopWakewordSensitivity = localStopSensitivity.toDouble())
+                                        ?: VogonConfig.Voice(stopWakewordSensitivity = localStopSensitivity.toDouble()),
                             ),
                         )
                     },
@@ -536,7 +535,7 @@ fun AdvancedSettingsPanel(
                                     ui =
                                         config.ui?.copy(
                                             notifications = it,
-                                        ) ?: Babelfish.Ui(notifications = it),
+                                        ) ?: VogonConfig.Ui(notifications = it),
                                 ),
                             )
                         },
@@ -560,8 +559,8 @@ fun AdvancedSettingsPanel(
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
 
-                val iconOnly = config.ui?.activation_detection?.icon_only ?: false
-                val overlayMode = config.ui?.activation_detection?.overlay_mode ?: false
+                val iconOnly = config.ui?.activationDetection?.iconOnly ?: false
+                val overlayMode = config.ui?.activationDetection?.overlayMode ?: false
 
                 // Icon Only Mode
                 Row(
@@ -588,11 +587,11 @@ fun AdvancedSettingsPanel(
                                 config.copy(
                                     ui =
                                         config.ui?.copy(
-                                            activation_detection =
-                                                config.ui?.activation_detection?.copy(icon_only = it)
-                                                    ?: Babelfish.Activation_detection(icon_only = it),
-                                        ) ?: Babelfish.Ui(
-                                            activation_detection = Babelfish.Activation_detection(icon_only = it),
+                                            activationDetection =
+                                                config.ui?.activationDetection?.copy(iconOnly = it)
+                                                    ?: VogonConfig.ActivationDetection(iconOnly = it),
+                                        ) ?: VogonConfig.Ui(
+                                            activationDetection = VogonConfig.ActivationDetection(iconOnly = it),
                                         ),
                                 ),
                             )
@@ -635,11 +634,11 @@ fun AdvancedSettingsPanel(
                                 config.copy(
                                     ui =
                                         config.ui?.copy(
-                                            activation_detection =
-                                                config.ui?.activation_detection?.copy(overlay_mode = it)
-                                                    ?: Babelfish.Activation_detection(overlay_mode = it),
-                                        ) ?: Babelfish.Ui(
-                                            activation_detection = Babelfish.Activation_detection(overlay_mode = it),
+                                            activationDetection =
+                                                config.ui?.activationDetection?.copy(overlayMode = it)
+                                                    ?: VogonConfig.ActivationDetection(overlayMode = it),
+                                        ) ?: VogonConfig.Ui(
+                                            activationDetection = VogonConfig.ActivationDetection(overlayMode = it),
                                         ),
                                 ),
                             )

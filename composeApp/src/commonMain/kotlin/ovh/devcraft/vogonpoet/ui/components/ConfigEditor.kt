@@ -11,12 +11,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
+import ovh.devcraft.vogonpoet.domain.model.VogonConfig
 import ovh.devcraft.vogonpoet.ui.theme.GruvboxBg1
 
 @Composable
 fun ConfigEditor(
-    config: Babelfish?,
+    config: VogonConfig?,
     modifier: Modifier = Modifier,
 ) {
     Card(

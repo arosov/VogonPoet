@@ -15,7 +15,6 @@ import ovh.devcraft.vogonpoet.domain.BabelfishClient
 import ovh.devcraft.vogonpoet.domain.HardwareDevice
 import ovh.devcraft.vogonpoet.domain.Microphone
 import ovh.devcraft.vogonpoet.domain.model.*
-import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -51,8 +50,8 @@ class MainViewModelTest {
         private val _messages = MutableStateFlow<List<ProtocolMessage>>(emptyList())
         override val messages: StateFlow<List<ProtocolMessage>> = _messages
 
-        private val _config = MutableStateFlow<Babelfish?>(null)
-        override val config: StateFlow<Babelfish?> = _config
+        private val _config = MutableStateFlow<VogonConfig?>(null)
+        override val config: StateFlow<VogonConfig?> = _config
 
         var connectCalled = 0
 
@@ -65,7 +64,7 @@ class MainViewModelTest {
             _connectionState.value = ConnectionState.Disconnected
         }
 
-        override suspend fun saveConfig(config: Babelfish) {
+        override suspend fun saveConfig(config: VogonConfig) {
             _config.value = config
         }
 
@@ -76,6 +75,10 @@ class MainViewModelTest {
         override suspend fun listWakewords(): List<String> = emptyList()
 
         override suspend fun setMicTest(enabled: Boolean) {}
+
+        override suspend fun forceListen() {}
+
+        override suspend fun toggleListening() {}
 
         override fun notifyBootstrap() {}
 

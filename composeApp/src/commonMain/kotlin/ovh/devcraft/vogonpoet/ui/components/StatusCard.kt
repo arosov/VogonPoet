@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.EngineMode
 import ovh.devcraft.vogonpoet.domain.model.VadState
-import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
+import ovh.devcraft.vogonpoet.domain.model.VogonConfig
 import ovh.devcraft.vogonpoet.ui.theme.*
 
 @Composable
@@ -49,7 +49,7 @@ fun StatusCard(
     engineMode: EngineMode = EngineMode.Wakeword,
     listeningText: String = "Listening...",
     modifier: Modifier = Modifier,
-    config: Babelfish? = null,
+    config: VogonConfig? = null,
     displayedEvent: String? = null,
 ) {
     val baseColor =
@@ -180,7 +180,7 @@ fun StatusCard(
             )
 
             if (connectionState is ConnectionState.Connected && vadState != VadState.Listening) {
-                val deviceName = config?.hardware?.active_device_name ?: config?.hardware?.active_device
+                val deviceName = config?.hardware?.activeDeviceName ?: config?.hardware?.activeDevice
                 deviceName?.let { device ->
                     OutlinedStatusText(
                         text = "Running on ${device.uppercase()}",
