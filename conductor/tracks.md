@@ -22,5 +22,28 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [x] Track: Distributable Packaging with Hydraulic Conveyor
-*Link: [./conductor/tracks/distributable_packaging_20260212/](./conductor/tracks/distributable_packaging_20260212/)*
+## [x] Track: Use GitHub Secret for Conveyor Signing Key
+*Link: [./conductor/tracks/use_secret_for_signing_key_20260212/](./conductor/tracks/use_secret_for_signing_key_20260212/)*
+
+
+---
+
+## [x] Track: Fix Hydraulic Conveyor Root Key Format
+*Link: [./conductor/tracks/fix_conveyor_key_20260212/](./conductor/tracks/fix_conveyor_key_20260212/)*
+
+
+---
+
+## [x] Track: Fix Hydraulic Conveyor GitHub Action Reference
+*Link: [./conductor/tracks/fix_conveyor_action_20260212/](./conductor/tracks/fix_conveyor_action_20260212/)*
+
+---
+
+## [x] Track: Fix Hydraulic Conveyor Mnemonic Word Count
+*Link: [./conductor/tracks/fix_conveyor_mnemonic_20260212/](./conductor/tracks/fix_conveyor_mnemonic_20260212/)*
+
+---
+
+## [x] Track: Fix Hydraulic Conveyor Mnemonic using BIP39 words
+*Link: [./conductor/tracks/fix_conveyor_mnemonic_bip39_20260212/](./conductor/tracks/fix_conveyor_mnemonic_bip39_20260212/)*
+
