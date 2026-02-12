@@ -109,8 +109,10 @@ class KwBabelfishClient(
 
                             val status = BackendController.serverStatus.value
                             if (status == ServerStatus.READY) {
-                                _connectionState.value = ConnectionState.Connected
-                                VogonLogger.i("Successfully connected to Babelfish.")
+                                // Even if the server is listening, it might still be loading models.
+                                // We stay in a starting state until we get the first real status message.
+                                _connectionState.value = ConnectionState.Bootstrapping("Starting engines...")
+                                VogonLogger.i("Connected to Babelfish, waiting for engine ready...")
                             } else {
                                 _connectionState.value = ConnectionState.Bootstrapping("Connected to bootstrap...")
                                 VogonLogger.i("Successfully connected to Bootstrap Server.")

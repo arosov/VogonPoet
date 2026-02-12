@@ -156,26 +156,15 @@ object BackendManager {
                         logBabel(line)
 
                         // Parse for status
-                        if (line.contains("Starting Babelfish...")) {
-                            _serverStatus.value = ServerStatus.STARTING
-                        }
-
                         if (line.contains("BOOTSTRAP SERVER STARTED")) {
                             _serverStatus.value = ServerStatus.BOOTSTRAPPING
-                        }
-
-                        if (line.contains("SERVER: WebSockets running on") || line.contains("server listening on 127.0.0.1:8123")) {
-                            // If we see this and we're NOT in bootstrap, it's the real server
-                            if (_serverStatus.value != ServerStatus.BOOTSTRAPPING) {
-                                _serverStatus.value = ServerStatus.READY
-                            }
-                        }
-
-                        if (line.contains("SERVER: WebSockets running on") || line.contains("server listening on 127.0.0.1:8123")) {
-                            // Only set to READY if we are not in the middle of a transition
-                            if (!line.contains("BOOTSTRAP SERVER STARTED")) {
-                                _serverStatus.value = ServerStatus.READY
-                            }
+                        } else if (line.contains("Exec-ing Babelfish")) {
+                            _serverStatus.value = ServerStatus.STARTING
+                        } else if (line.contains("SERVER: WebSockets running on") ||
+                            line.contains("babelfish_stt.server:Starting WebSocket server")
+                        ) {
+                            // If we see this, it's the real Babelfish server.
+                            _serverStatus.value = ServerStatus.READY
                         }
                     }
                 }

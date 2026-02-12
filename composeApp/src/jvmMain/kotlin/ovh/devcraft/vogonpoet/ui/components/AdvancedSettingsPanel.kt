@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.infrastructure.BackendController
 import ovh.devcraft.vogonpoet.infrastructure.ServerStatus
 import ovh.devcraft.vogonpoet.infrastructure.SettingsRepository
@@ -98,8 +99,8 @@ fun AdvancedSettingsPanel(
     if (config == null) return
 
     val hardwareList by viewModel.hardwareList.collectAsState()
-    val serverStatus by BackendController.serverStatus.collectAsState()
-    val isReady = serverStatus == ServerStatus.READY
+    val connectionState by viewModel.connectionState.collectAsState()
+    val isReady = connectionState is ConnectionState.Connected || connectionState is ConnectionState.Bootstrapping
     val settings = remember { SettingsRepository.load() }
 
     // Form states (controlled by parent config, but we keep local for immediate UI feedback before roundtrip)
