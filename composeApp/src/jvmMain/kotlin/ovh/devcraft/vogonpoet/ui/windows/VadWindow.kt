@@ -44,16 +44,12 @@ fun VadWindow(
     // Check if backend is ready
     val isReady = connectionState is ConnectionState.Connected
 
-    // Determine window properties based on overlay mode
+    // Remember window state across property changes to preserve position
     val windowState =
-        remember(iconOnly) {
-            if (iconOnly) {
-                // Small window for icon-only mode
-                WindowState(width = 85.dp, height = 85.dp)
-            } else {
-                // Default size for full mode
-                WindowState(width = 170.dp, height = 200.dp)
-            }
+        remember {
+            val width = if (iconOnly) 85.dp else 170.dp
+            val height = if (iconOnly) 85.dp else 200.dp
+            WindowState(width = width, height = height)
         }
 
     // Enforce exact window size (1px tolerance)

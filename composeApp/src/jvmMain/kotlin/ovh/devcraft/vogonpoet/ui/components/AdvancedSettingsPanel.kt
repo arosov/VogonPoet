@@ -20,6 +20,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import ovh.devcraft.vogonpoet.infrastructure.BackendController
+import ovh.devcraft.vogonpoet.infrastructure.ServerStatus
 import ovh.devcraft.vogonpoet.infrastructure.SettingsRepository
 import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
@@ -96,6 +98,8 @@ fun AdvancedSettingsPanel(
     if (config == null) return
 
     val hardwareList by viewModel.hardwareList.collectAsState()
+    val serverStatus by BackendController.serverStatus.collectAsState()
+    val isReady = serverStatus == ServerStatus.READY
     val settings = remember { SettingsRepository.load() }
 
     // Form states (controlled by parent config, but we keep local for immediate UI feedback before roundtrip)
@@ -153,20 +157,24 @@ fun AdvancedSettingsPanel(
                     }
 
                 ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = it },
+                    expanded = expanded && isReady,
+                    onExpandedChange = { if (isReady) expanded = it },
                 ) {
                     OutlinedTextField(
                         value = hardwareOptions.find { it.first == currentDevice }?.second ?: currentDevice,
                         onValueChange = {},
+                        enabled = isReady,
                         readOnly = true,
                         label = { Text("Processing Device") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded && isReady) },
                         modifier = Modifier.menuAnchor().fillMaxWidth(),
                         colors =
                             OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = GruvboxGreenDark,
                                 focusedLabelColor = GruvboxGreenDark,
+                                disabledBorderColor = GruvboxGray.copy(alpha = 0.5f),
+                                disabledLabelColor = GruvboxGray,
+                                disabledTextColor = GruvboxFg0.copy(alpha = 0.5f),
                             ),
                     )
                     ExposedDropdownMenu(
@@ -362,7 +370,7 @@ fun AdvancedSettingsPanel(
                                         .SolidColor(GruvboxGray.copy(alpha = 0.5f)),
                             ),
                     ) {
-                        Text("Open Application Directory", style = MaterialTheme.typography.bodySmall)
+                        Text("Config / logs directory", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -370,7 +378,9 @@ fun AdvancedSettingsPanel(
             // Pipeline Optimization
             AdvancedSection(title = "Pipeline Tuning") {
                 // Silence Threshold
-                val silenceThreshold = config.pipeline?.silence_threshold_ms?.toFloat() ?: 400f
+                val rawThreshold = config.pipeline?.silence_threshold_ms?.toFloat() ?: 400f
+                val silenceThreshold = (Math.round(rawThreshold / 50.0) * 50).toFloat()
+
                 Text(
                     text = "Silence Threshold: ${silenceThreshold.toInt()}ms",
                     style = MaterialTheme.typography.bodyMedium,
@@ -381,7 +391,9 @@ fun AdvancedSettingsPanel(
                 var localSilence by remember(silenceThreshold) { mutableStateOf(silenceThreshold) }
                 Slider(
                     value = localSilence,
-                    onValueChange = { localSilence = it },
+                    onValueChange = {
+                        localSilence = (Math.round(it / 50.0) * 50).toFloat()
+                    },
                     onValueChangeFinished = {
                         onConfigChange(
                             config.copy(
@@ -408,7 +420,14 @@ fun AdvancedSettingsPanel(
             }
 
             // Interface Settings
-            AdvancedSection(title = "Interface") {
+            AdvancedSection(title = "Activation Detection Indicator") {
+                Text(
+                    text = "Main window is accessible via the system tray icon.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GruvboxFg0.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+
                 val iconOnly = config.ui?.activation_detection?.icon_only ?: false
                 val overlayMode = config.ui?.activation_detection?.overlay_mode ?: false
 
