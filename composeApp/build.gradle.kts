@@ -102,11 +102,14 @@ tasks.register("bundleBabelfish") {
 }
 
 // Ensure bundleBabelfish runs before resources are processed
+// Disabled for now to prevent accidental regeneration as per user request
+/*
 tasks.configureEach {
     if (name == "jvmProcessResources") {
         dependsOn("bundleBabelfish")
     }
 }
+*/
 
 kotlin {
     jvm()
