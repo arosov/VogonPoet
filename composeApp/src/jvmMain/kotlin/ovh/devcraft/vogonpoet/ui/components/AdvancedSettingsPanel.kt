@@ -215,7 +215,9 @@ fun AdvancedSettingsPanel(
                 }
 
                 config.hardware?.vram_total_gb?.let { total ->
-                    if (total > 0) {
+                    val isActiveCpu = config.hardware.active_device?.lowercase() == "cpu"
+                    val isConfiguredCpu = config.hardware.device.lowercase() == "cpu"
+                    if (total > 0 && !isActiveCpu && !isConfiguredCpu) {
                         Spacer(modifier = Modifier.height(8.dp))
                         VramUsageBar(
                             total = total,
@@ -381,6 +383,13 @@ fun AdvancedSettingsPanel(
 
             // Pipeline Optimization
             AdvancedSection(title = "Pipeline Tuning") {
+                Text(
+                    text = "How long to wait after voice stops before finalizing a sentence.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GruvboxGray,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+
                 // Silence Threshold
                 val rawThreshold = config.pipeline?.silence_threshold_ms?.toFloat() ?: 400f
                 val silenceThreshold = (Math.round(rawThreshold / 50.0) * 50).toFloat()
@@ -418,16 +427,17 @@ fun AdvancedSettingsPanel(
                             disabledActiveTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
                         ),
                 )
-
-                Text(
-                    text = "How long to wait after voice stops before finalizing",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = GruvboxFg0.copy(alpha = 0.6f),
-                )
             }
 
             // Voice Detection Tuning
             AdvancedSection(title = "Voice Detection Tuning") {
+                Text(
+                    text = "Adjust detection sensitivity. This sets the similarity threshold for matching wake-words and stop-words.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GruvboxGray,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+
                 // Wakeword Sensitivity
                 val sensitivity = config.voice?.wakeword_sensitivity?.toFloat() ?: 0.5f
                 var localSensitivity by remember(sensitivity) { mutableStateOf(sensitivity) }
@@ -500,10 +510,10 @@ fun AdvancedSettingsPanel(
             // Interface Settings
             AdvancedSection(title = "Activation Detection Indicator") {
                 Text(
-                    text = "That window is accessible in the system tray icon.",
+                    text = "This floating status window is accessible via the system tray icon.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = GruvboxFg0.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(bottom = 4.dp),
+                    color = GruvboxGray,
+                    modifier = Modifier.padding(bottom = 8.dp),
                 )
 
                 val iconOnly = config.ui?.activation_detection?.icon_only ?: false
