@@ -7,16 +7,14 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Preparation & Configuration' (Protocol in workflow.md)
 
 
-## Phase 2: Build Integration & GitHub Actions [checkpoint: b7d8e9f]
-- [x] Task: Update Gradle build to ensure `babelfish.zip` is available in `jvmMain/resources` (7a8b9c0)
-- [x] Task: Create GitHub Actions workflow `.github/workflows/release.yml` (d1e2f3g)
+## Phase 2: Build Integration & GitHub Actions [checkpoint: 6cec0c4]
+- [x] Task: Update Gradle build to ensure `babelfish.zip` is available in `jvmMain/resources` (6cec0c4)
+- [x] Task: Create GitHub Actions workflow `.github/workflows/release.yml` (6cec0c4)
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Build Integration & GitHub Actions' (Protocol in workflow.md)
 
 
 ## Phase 3: Verification & Cleanup
-- [ ] Task: Verify Local Build (Optional/Dry Run)
-    - Attempt a local build of the Conveyor package (if Conveyor is installed locally, else verify config syntax).
-- [ ] Task: Documentation
-    - Update `README.md` with instructions on how the release process works.
-    - Document the `conveyor.conf` basics for future maintainers.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Verification & Cleanup' (Protocol in workflow.md)
+- [x] Task: Verify Local Build (Optional/Dry Run) (6cec0c4)
+- [x] Task: Documentation (6cec0c4)
+- [~] Task: Conductor - User Manual Verification 'Phase 3: Verification & Cleanup' (Protocol in workflow.md)
+
