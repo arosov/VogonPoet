@@ -111,10 +111,6 @@ fun AdvancedSettingsPanel(
         mutableStateOf(settings.uvCacheDir?.let { File(it).parent } ?: "")
     }
 
-    // Restart Dialog State
-    var showRestartDialog by remember { mutableStateOf(false) }
-    var pendingRestartAction by remember { mutableStateOf<() -> Unit>({}) }
-
     val scrollState = rememberScrollState()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -187,21 +183,29 @@ fun AdvancedSettingsPanel(
                                 onClick = {
                                     expanded = false
                                     if (value != currentDevice) {
-                                        pendingRestartAction = {
-                                            val newConfig =
-                                                config.copy(
-                                                    hardware =
-                                                        config.hardware?.copy(
-                                                            device = if (value == "auto") "auto" else value,
-                                                            auto_detect = value == "auto",
-                                                        ) ?: Babelfish.Hardware(
-                                                            device = value,
-                                                            auto_detect = value == "auto",
-                                                        ),
-                                                )
+                                        val activeDevice = config.hardware?.active_device
+                                        val isCurrentlyAuto = config.hardware?.auto_detect ?: true
+
+                                        // If switching from Auto to the device it's ALREADY using, skip restart.
+                                        val isSameAsActive = isCurrentlyAuto && value == activeDevice
+
+                                        val newConfig =
+                                            config.copy(
+                                                hardware =
+                                                    config.hardware?.copy(
+                                                        device = if (value == "auto") "auto" else value,
+                                                        auto_detect = value == "auto",
+                                                    ) ?: Babelfish.Hardware(
+                                                        device = value,
+                                                        auto_detect = value == "auto",
+                                                    ),
+                                            )
+
+                                        if (isSameAsActive) {
+                                            viewModel.saveConfig(newConfig)
+                                        } else {
                                             viewModel.saveAndRestart(newConfig)
                                         }
-                                        showRestartDialog = true
                                     }
                                 },
                             )
@@ -278,39 +282,39 @@ fun AdvancedSettingsPanel(
                                         storageDir.takeIf { it.isNotBlank() } ?: defaultStorageDir,
                                     )?.let { newPath ->
                                         if (newPath != storageDir) {
-                                            pendingRestartAction = {
-                                                storageDir = newPath
-                                                val baseFile = File(newPath)
-                                                val u = File(baseFile, "uv")
-                                                val m = File(baseFile, "models")
-                                                if (!u.exists()) u.mkdirs()
-                                                if (!m.exists()) m.mkdirs()
+                                            storageDir = newPath
+                                            val baseFile = File(newPath)
+                                            val u = File(baseFile, "uv")
+                                            val m = File(baseFile, "models")
+                                            if (!u.exists()) u.mkdirs()
+                                            if (!m.exists()) m.mkdirs()
 
-                                                // Update local settings
-                                                SettingsRepository.save(
-                                                    settings.copy(
-                                                        uvCacheDir = u.absolutePath,
-                                                        modelsDir = m.absolutePath,
-                                                    ),
+                                            // Update local settings
+                                            SettingsRepository.save(
+                                                settings.copy(
+                                                    uvCacheDir = u.absolutePath,
+                                                    modelsDir = m.absolutePath,
+                                                ),
+                                            )
+
+                                            // Update config and restart immediately
+                                            val newConfig =
+                                                config.copy(
+                                                    cache =
+                                                        config.cache?.copy(cache_dir = u.absolutePath)
+                                                            ?: Babelfish.Cache(cache_dir = u.absolutePath),
                                                 )
-
-                                                // Update config and restart
-                                                val newConfig =
-                                                    config.copy(
-                                                        cache =
-                                                            config.cache?.copy(cache_dir = u.absolutePath)
-                                                                ?: Babelfish.Cache(cache_dir = u.absolutePath),
-                                                    )
-                                                viewModel.saveAndRestart(newConfig)
-                                            }
-                                            showRestartDialog = true
+                                            viewModel.saveAndRestart(newConfig)
                                         }
                                     }
                             },
+                            enabled = isReady,
                             colors =
                                 ButtonDefaults.buttonColors(
                                     containerColor = GruvboxBlueDark,
                                     contentColor = GruvboxFg0,
+                                    disabledContainerColor = GruvboxBlueDark.copy(alpha = 0.5f),
+                                    disabledContentColor = GruvboxFg0.copy(alpha = 0.5f),
                                 ),
                             modifier = Modifier.weight(1f),
                         ) {
@@ -320,31 +324,29 @@ fun AdvancedSettingsPanel(
                         TextButton(
                             onClick = {
                                 if (storageDir.isNotBlank()) {
-                                    pendingRestartAction = {
-                                        storageDir = ""
-                                        // Reset to defaults
-                                        SettingsRepository.save(
-                                            settings.copy(uvCacheDir = null, modelsDir = null),
-                                        )
-                                        // Config update might be tricky if we don't know the default path backend uses,
-                                        // but usually sending null/empty triggers default.
-                                        // However, existing logic sent null to SettingsRepository but what about Babelfish config?
-                                        // The original code calculated null -> null.
-                                        // We'll trust the backend handles a restart with cleared local settings by picking up defaults.
-                                        // But we should probably NOT send a cache_dir update if it's default, or send the default path.
-                                        // For now, let's just trigger the local settings reset and restart.
-                                        viewModel.restartBackend()
-                                    }
-                                    showRestartDialog = true
+                                    storageDir = ""
+                                    // Reset to defaults
+                                    SettingsRepository.save(
+                                        settings.copy(uvCacheDir = null, modelsDir = null),
+                                    )
+                                    // Restart backend immediately with reset settings
+                                    viewModel.restartBackend()
                                 }
                             },
-                            enabled = storageDir.isNotBlank() && storageDir != defaultStorageDir,
+                            enabled = isReady && storageDir.isNotBlank() && storageDir != defaultStorageDir,
                             modifier = Modifier.wrapContentWidth(),
                         ) {
                             Text(
                                 "Reset",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (storageDir.isNotBlank() && storageDir != defaultStorageDir) GruvboxRedDark else GruvboxGray,
+                                color =
+                                    if (isReady && storageDir.isNotBlank() &&
+                                        storageDir != defaultStorageDir
+                                    ) {
+                                        GruvboxRedDark
+                                    } else {
+                                        GruvboxGray
+                                    },
                             )
                         }
                     }
@@ -403,12 +405,15 @@ fun AdvancedSettingsPanel(
                             ),
                         )
                     },
+                    enabled = isReady,
                     valueRange = 100f..800f,
                     steps = 13,
                     colors =
                         SliderDefaults.colors(
                             thumbColor = GruvboxGreenDark,
                             activeTrackColor = GruvboxGreenDark,
+                            disabledThumbColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                            disabledActiveTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
                         ),
                 )
 
@@ -465,10 +470,13 @@ fun AdvancedSettingsPanel(
                                 ),
                             )
                         },
+                        enabled = isReady,
                         colors =
                             SwitchDefaults.colors(
                                 checkedThumbColor = GruvboxGreenDark,
                                 checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                                disabledCheckedThumbColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                                disabledCheckedTrackColor = GruvboxGreenDark.copy(alpha = 0.25f),
                             ),
                     )
                 }
@@ -509,10 +517,13 @@ fun AdvancedSettingsPanel(
                                 ),
                             )
                         },
+                        enabled = isReady,
                         colors =
                             SwitchDefaults.colors(
                                 checkedThumbColor = GruvboxGreenDark,
                                 checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                                disabledCheckedThumbColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                                disabledCheckedTrackColor = GruvboxGreenDark.copy(alpha = 0.25f),
                             ),
                     )
                 }
@@ -535,37 +546,6 @@ fun AdvancedSettingsPanel(
                     hoverColor = GruvboxGreenDark.copy(alpha = 0.8f),
                 ),
         )
-
-        if (showRestartDialog) {
-            AlertDialog(
-                onDismissRequest = { showRestartDialog = false },
-                title = { Text("Restart Required") },
-                text = {
-                    Text(
-                        "Changing this setting requires a system restart. The application backend will be re-initialized.\n\nContinue?",
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            pendingRestartAction()
-                            showRestartDialog = false
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = GruvboxRedDark),
-                    ) {
-                        Text("Restart Now")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showRestartDialog = false }) {
-                        Text("Cancel", color = GruvboxFg0)
-                    }
-                },
-                containerColor = GruvboxBg1,
-                titleContentColor = GruvboxRedDark,
-                textContentColor = GruvboxFg0,
-            )
-        }
     }
 }
 
