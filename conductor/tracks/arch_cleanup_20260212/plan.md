@@ -11,9 +11,9 @@
 ## Phase 2: Infrastructure Layer Refactoring
 *Goal: Implement repositories and mapping logic.*
 
-- [ ] Task: Implement `VogonConfig` mappers in `infrastructure` layer
-- [ ] Task: Implement `BackendRepositoryImpl` (actual/expect) that wraps `BackendController`
-- [ ] Task: Update `BabelfishClientImpl` to implement the updated domain interface with mapping
+- [x] Task: Implement `VogonConfig` mappers in `infrastructure` layer (c6c917b)
+- [~] Task: Implement `BackendRepositoryImpl` (actual/expect) that wraps `BackendController`
+- [x] Task: Update `BabelfishClientImpl` to implement the updated domain interface with mapping (c6c917b)
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Infrastructure Layer Refactoring' (Protocol in workflow.md)
 
 ## Phase 3: Presentation and Threading Optimization

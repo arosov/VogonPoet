@@ -6,6 +6,8 @@ import kotlinx.coroutines.SupervisorJob
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 import ovh.devcraft.vogonpoet.domain.BabelfishClient
+import ovh.devcraft.vogonpoet.domain.BackendRepository
+import ovh.devcraft.vogonpoet.infrastructure.BackendRepositoryImpl
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.infrastructure.BabelfishClient as BabelfishClientImpl
 
@@ -15,6 +17,10 @@ val appModule =
 
         single<BabelfishClient> {
             BabelfishClientImpl(scope = get())
+        }
+
+        single<BackendRepository> {
+            BackendRepositoryImpl
         }
 
         viewModelOf(::MainViewModel)
