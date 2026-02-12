@@ -20,7 +20,7 @@
     "agent": {
         "plan": {
             "mode": "primary",
-            "model": "google/gemini-3-flash-preview"
+            "model": "google/gemini-3-pro-preview"
         },
         "build": {
             "mode": "primary",
