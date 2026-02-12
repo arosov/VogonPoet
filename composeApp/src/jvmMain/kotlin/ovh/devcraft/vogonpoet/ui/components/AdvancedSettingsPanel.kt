@@ -221,6 +221,7 @@ fun AdvancedSettingsPanel(
                             total = total,
                             baseline = config.hardware.vram_used_baseline_gb ?: 0.0,
                             model = config.hardware.vram_used_model_gb ?: 0.0,
+                            deviceName = config.hardware.active_device_name ?: config.hardware.active_device,
                             modifier = Modifier.padding(vertical = 4.dp),
                         )
                     }
@@ -573,6 +574,7 @@ fun VramUsageBar(
     total: Double,
     baseline: Double,
     model: Double,
+    deviceName: String? = null,
     modifier: Modifier = Modifier,
 ) {
     if (total <= 0) return
@@ -586,6 +588,14 @@ fun VramUsageBar(
     val freeWeight = (free / total).toFloat().coerceIn(0.01f, 1f)
 
     Column(modifier = modifier.fillMaxWidth()) {
+        deviceName?.let {
+            Text(
+                text = it.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = GruvboxFg0.copy(alpha = 0.7f),
+                modifier = Modifier.padding(bottom = 2.dp),
+            )
+        }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("VRAM Usage", style = MaterialTheme.typography.labelMedium, color = GruvboxFg0)
             Text("${model.format(1)} / ${total.format(1)} GB", style = MaterialTheme.typography.labelSmall, color = GruvboxFg0)
