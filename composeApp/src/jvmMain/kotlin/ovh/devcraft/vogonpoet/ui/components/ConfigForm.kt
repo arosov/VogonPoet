@@ -251,7 +251,7 @@ fun ConfigForm(
                         )
                         Slider(
                             value = localSensitivity,
-                            onValueChange = { localSensitivity = it },
+                            onValueChange = { localSensitivity = (Math.round(it * 10f) / 10f) },
                             onValueChangeFinished = {
                                 onConfigChange(
                                     config.copy(
@@ -262,7 +262,7 @@ fun ConfigForm(
                                 )
                             },
                             valueRange = 0.1f..0.9f,
-                            steps = 8,
+                            steps = 7,
                             colors =
                                 SliderDefaults.colors(
                                     thumbColor = GruvboxGreenDark,
@@ -349,7 +349,7 @@ fun ConfigForm(
                     OutlinedTextField(
                         value = localStopWords,
                         onValueChange = { localStopWords = it },
-                        label = { Text("Words that stop listening") },
+                        label = { Text("Words that stop transcribing") },
                         placeholder = { Text("comma, separated, words") },
                         modifier =
                             Modifier

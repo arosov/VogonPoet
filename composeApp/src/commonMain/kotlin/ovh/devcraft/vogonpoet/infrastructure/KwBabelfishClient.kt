@@ -6,18 +6,12 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
 import ovh.devcraft.vogonpoet.domain.BabelfishClient
 import ovh.devcraft.vogonpoet.domain.HardwareDevice
 import ovh.devcraft.vogonpoet.domain.Microphone
-import ovh.devcraft.vogonpoet.domain.model.ConnectionState
-import ovh.devcraft.vogonpoet.domain.model.MessageDirection
-import ovh.devcraft.vogonpoet.domain.model.ProtocolMessage
-import ovh.devcraft.vogonpoet.domain.model.VadState
+import ovh.devcraft.vogonpoet.domain.model.*
 import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import java.util.concurrent.ConcurrentHashMap
 
@@ -44,6 +38,12 @@ class KwBabelfishClient(
 
     private val _vadState = MutableStateFlow(VadState.Idle)
     override val vadState: StateFlow<VadState> = _vadState.asStateFlow()
+
+    private val _engineMode = MutableStateFlow(EngineMode.Wakeword)
+    override val engineMode: StateFlow<EngineMode> = _engineMode.asStateFlow()
+
+    private val _events = MutableSharedFlow<EngineEvent>()
+    override val events: SharedFlow<EngineEvent> = _events.asSharedFlow()
 
     private val _messages = MutableStateFlow<List<ProtocolMessage>>(emptyList())
     override val messages: StateFlow<List<ProtocolMessage>> = _messages.asStateFlow()
@@ -145,7 +145,7 @@ class KwBabelfishClient(
             }
     }
 
-    private fun handleIncomingLine(line: String) {
+    internal fun handleIncomingLine(line: String) {
         if (line.isBlank()) return
         logMessage(MessageDirection.Received, line)
         try {
@@ -168,13 +168,19 @@ class KwBabelfishClient(
                         val message = element["message"]?.jsonPrimitive?.contentOrNull
                         val vadStateStr = element["vad_state"]?.jsonPrimitive?.contentOrNull
                         val engineState = element["engine_state"]?.jsonPrimitive?.contentOrNull
+                        val modeStr = element["mode"]?.jsonPrimitive?.contentOrNull
 
-                        if (vadStateStr == "listening" || vadStateStr == "idle" || engineState == "ready" || message == "Engine Ready!") {
+                        if (vadStateStr == "listening" || vadStateStr == "idle" ||
+                            engineState == "ready" || message == "Engine Ready!"
+                        ) {
                             _connectionState.value = ConnectionState.Connected
-                            if (vadStateStr == "listening") {
-                                _vadState.value = VadState.Listening
-                            } else if (vadStateStr == "idle") {
-                                _vadState.value = VadState.Idle
+                            when (vadStateStr) {
+                                "listening" -> _vadState.value = VadState.Listening
+                                "idle" -> _vadState.value = VadState.Idle
+                            }
+                            when (modeStr) {
+                                "wakeword" -> _engineMode.value = EngineMode.Wakeword
+                                "active" -> _engineMode.value = EngineMode.Active
                             }
                         } else if (message != null) {
                             _connectionState.value = ConnectionState.Bootstrapping(message)
@@ -184,6 +190,22 @@ class KwBabelfishClient(
                             if (message.contains("Starting Babelfish...")) {
                                 scope.launch {
                                     session?.close(CloseReason(CloseReason.Codes.NORMAL, "Bootstrap completed"))
+                                }
+                            }
+                        }
+                    }
+
+                    "event" -> {
+                        val eventName = element["event"]?.jsonPrimitive?.contentOrNull ?: return
+                        _connectionState.value = ConnectionState.Connected
+                        scope.launch {
+                            when (eventName) {
+                                "wakeword_detected" -> {
+                                    _events.emit(EngineEvent.WakewordDetected)
+                                }
+
+                                "stop_word_detected" -> {
+                                    _events.emit(EngineEvent.StopWordDetected)
                                 }
                             }
                         }
@@ -201,6 +223,7 @@ class KwBabelfishClient(
         connectionJob = null
         _connectionState.value = ConnectionState.Disconnected
         _vadState.value = VadState.Idle
+        _engineMode.value = EngineMode.Wakeword
         session = null
     }
 

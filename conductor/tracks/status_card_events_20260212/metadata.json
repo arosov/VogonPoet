@@ -1,0 +1,8 @@
+{
+  "id": "status_card_events_20260212",
+  "title": "Status Card Events Integration",
+  "description": "Integrate engine state and events (wakeword, stop word) into the StatusCard display.",
+  "status": "completed",
+  "created_at": "2026-02-12T10:00:00Z",
+  "updated_at": "2026-02-12T10:30:00Z"
+}

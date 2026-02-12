@@ -4,6 +4,11 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
+## [x] Track: Status Card Events Integration
+*Link: [./conductor/tracks/status_card_events_20260212/](./conductor/tracks/status_card_events_20260212/)*
+
+---
+
 ## [~] Track: Unified ONNX STT Implementation
 *Link: [./conductor/tracks/unified_onnx_stt_20260210/](./conductor/tracks/unified_onnx_stt_20260210/)*
 

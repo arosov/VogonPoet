@@ -2,7 +2,9 @@ package ovh.devcraft.vogonpoet.presentation
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -10,9 +12,10 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import ovh.devcraft.vogonpoet.domain.BabelfishClient
-import ovh.devcraft.vogonpoet.domain.model.ConnectionState
-import ovh.devcraft.vogonpoet.domain.model.ProtocolMessage
-import ovh.devcraft.vogonpoet.domain.model.VadState
+import ovh.devcraft.vogonpoet.domain.HardwareDevice
+import ovh.devcraft.vogonpoet.domain.Microphone
+import ovh.devcraft.vogonpoet.domain.model.*
+import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -39,8 +42,17 @@ class MainViewModelTest {
         private val _vadState = MutableStateFlow(VadState.Idle)
         override val vadState: StateFlow<VadState> = _vadState
 
+        private val _engineMode = MutableStateFlow(EngineMode.Wakeword)
+        override val engineMode: StateFlow<EngineMode> = _engineMode
+
+        private val _events = MutableSharedFlow<EngineEvent>()
+        override val events: SharedFlow<EngineEvent> = _events
+
         private val _messages = MutableStateFlow<List<ProtocolMessage>>(emptyList())
         override val messages: StateFlow<List<ProtocolMessage>> = _messages
+
+        private val _config = MutableStateFlow<Babelfish?>(null)
+        override val config: StateFlow<Babelfish?> = _config
 
         var connectCalled = 0
 
@@ -53,8 +65,26 @@ class MainViewModelTest {
             _connectionState.value = ConnectionState.Disconnected
         }
 
+        override suspend fun saveConfig(config: Babelfish) {
+            _config.value = config
+        }
+
+        override suspend fun listMicrophones(): List<Microphone> = emptyList()
+
+        override suspend fun listHardware(): List<HardwareDevice> = emptyList()
+
+        override suspend fun listWakewords(): List<String> = emptyList()
+
+        override suspend fun setMicTest(enabled: Boolean) {}
+
+        override fun notifyBootstrap() {}
+
         fun emitVad(state: VadState) {
             _vadState.value = state
+        }
+
+        suspend fun emitEvent(event: EngineEvent) {
+            _events.emit(event)
         }
     }
 
@@ -79,5 +109,22 @@ class MainViewModelTest {
             assertEquals(VadState.Listening, viewModel.vadState.value)
 
             assertEquals(ConnectionState.Connected, viewModel.connectionState.value)
+        }
+
+    @Test
+    fun testEventTimeout() =
+        runTest {
+            val fakeClient = FakeBabelfishClient()
+            val viewModel = MainViewModel(fakeClient)
+
+            runCurrent()
+            fakeClient.emitEvent(EngineEvent.WakewordDetected)
+            runCurrent()
+
+            assertEquals("wakeword detected", viewModel.displayedEvent.value)
+
+            testDispatcher.scheduler.advanceTimeBy(2001)
+            runCurrent()
+            assertEquals(null, viewModel.displayedEvent.value)
         }
 }

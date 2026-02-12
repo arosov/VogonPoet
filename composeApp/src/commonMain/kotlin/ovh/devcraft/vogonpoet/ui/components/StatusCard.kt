@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
+import ovh.devcraft.vogonpoet.domain.model.EngineMode
 import ovh.devcraft.vogonpoet.domain.model.VadState
 import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import ovh.devcraft.vogonpoet.ui.theme.*
@@ -45,26 +46,51 @@ fun OutlinedStatusText(
 fun StatusCard(
     connectionState: ConnectionState,
     vadState: VadState,
+    engineMode: EngineMode = EngineMode.Wakeword,
     transcribingText: String = "Transcribing...",
     modifier: Modifier = Modifier,
     config: Babelfish? = null,
+    displayedEvent: String? = null,
 ) {
     val baseColor =
         when (connectionState) {
-            is ConnectionState.Disconnected -> GruvboxBlueDark
-            is ConnectionState.Connecting -> GruvboxBlueDark
-            is ConnectionState.BabelfishRestarting -> GruvboxBlueDark
-            is ConnectionState.Bootstrapping -> GruvboxBlueDark
-            is ConnectionState.Connected -> if (vadState == VadState.Listening) GruvboxGreenLight else GruvboxGreenDarker
-            is ConnectionState.Error -> GruvboxRedDark
+            is ConnectionState.Disconnected -> {
+                GruvboxBlueDark
+            }
+
+            is ConnectionState.Connecting -> {
+                GruvboxBlueDark
+            }
+
+            is ConnectionState.BabelfishRestarting -> {
+                GruvboxBlueDark
+            }
+
+            is ConnectionState.Bootstrapping -> {
+                GruvboxBlueDark
+            }
+
+            is ConnectionState.Connected -> {
+                if (vadState == VadState.Listening ||
+                    displayedEvent != null
+                ) {
+                    GruvboxGreenLight
+                } else {
+                    GruvboxGreenDarker
+                }
+            }
+
+            is ConnectionState.Error -> {
+                GruvboxRedDark
+            }
         }
 
     val color by animateColorAsState(baseColor)
 
-    // Pulsing animation for Listening state
+    // Pulsing animation for active states
     val infiniteTransition = rememberInfiniteTransition()
     val animatedAlpha =
-        if ((connectionState is ConnectionState.Connected && vadState == VadState.Listening) ||
+        if ((connectionState is ConnectionState.Connected && (vadState == VadState.Listening || displayedEvent != null)) ||
             connectionState is ConnectionState.Bootstrapping
         ) {
             infiniteTransition.animateFloat(
@@ -107,12 +133,48 @@ fun StatusCard(
                 modifier = Modifier,
                 text =
                     when (connectionState) {
-                        is ConnectionState.Disconnected -> "Bootstrap"
-                        is ConnectionState.Connecting -> "Starting..."
-                        is ConnectionState.BabelfishRestarting -> "Starting..."
-                        is ConnectionState.Bootstrapping -> "Starting..."
-                        is ConnectionState.Connected -> if (vadState == VadState.Listening) transcribingText else "Ready"
-                        is ConnectionState.Error -> "Connection Error"
+                        is ConnectionState.Disconnected -> {
+                            "Bootstrap"
+                        }
+
+                        is ConnectionState.Connecting -> {
+                            "Starting..."
+                        }
+
+                        is ConnectionState.BabelfishRestarting -> {
+                            "Starting..."
+                        }
+
+                        is ConnectionState.Bootstrapping -> {
+                            "Starting..."
+                        }
+
+                        is ConnectionState.Connected -> {
+                            val substatus =
+                                displayedEvent ?: when (vadState) {
+                                    VadState.Listening -> {
+                                        null
+                                    }
+
+                                    VadState.Idle -> {
+                                        when (engineMode) {
+                                            EngineMode.Wakeword -> "Idle"
+                                            EngineMode.Active -> "Listening"
+                                        }
+                                    }
+                                }
+                            if (substatus != null) {
+                                "Ready - $substatus"
+                            } else if (vadState == VadState.Listening) {
+                                transcribingText
+                            } else {
+                                "Ready"
+                            }
+                        }
+
+                        is ConnectionState.Error -> {
+                            "Connection Error"
+                        }
                     },
                 style = MaterialTheme.typography.headlineMedium,
             )

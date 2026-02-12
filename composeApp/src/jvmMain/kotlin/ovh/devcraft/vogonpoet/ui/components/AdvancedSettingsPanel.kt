@@ -374,7 +374,7 @@ fun AdvancedSettingsPanel(
                                         .SolidColor(GruvboxGray.copy(alpha = 0.5f)),
                             ),
                     ) {
-                        Text("Config / logs directory", style = MaterialTheme.typography.bodySmall)
+                        Text("Open config & logs", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -429,7 +429,7 @@ fun AdvancedSettingsPanel(
             // Interface Settings
             AdvancedSection(title = "Activation Detection Indicator") {
                 Text(
-                    text = "Main window is accessible via the system tray icon.",
+                    text = "That window is accessible in the system tray icon.",
                     style = MaterialTheme.typography.bodySmall,
                     color = GruvboxFg0.copy(alpha = 0.6f),
                     modifier = Modifier.padding(bottom = 4.dp),

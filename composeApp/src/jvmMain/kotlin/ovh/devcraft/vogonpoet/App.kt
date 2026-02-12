@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import ovh.devcraft.vogonpoet.domain.model.EngineMode
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.components.AdvancedSettingsPanel
 import ovh.devcraft.vogonpoet.ui.components.CollapsibleSidePanel
@@ -18,7 +19,9 @@ import ovh.devcraft.vogonpoet.ui.theme.*
 fun App(viewModel: MainViewModel) {
     val connectionState by viewModel.connectionState.collectAsState()
     val vadState by viewModel.vadState.collectAsState()
+    val engineMode by viewModel.engineMode.collectAsState()
     val transcribingText by viewModel.transcribingText.collectAsState()
+    val displayedEvent by viewModel.displayedEvent.collectAsState()
     val config by viewModel.config.collectAsState()
     val draftConfig by viewModel.draftConfig.collectAsState()
     var isPanelExpanded by remember { mutableStateOf(false) }
@@ -45,8 +48,10 @@ fun App(viewModel: MainViewModel) {
                     StatusCard(
                         connectionState = connectionState,
                         vadState = vadState,
+                        engineMode = engineMode,
                         transcribingText = transcribingText,
                         config = config,
+                        displayedEvent = displayedEvent,
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))

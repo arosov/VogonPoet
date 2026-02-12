@@ -14,6 +14,8 @@ import ovh.devcraft.vogonpoet.domain.BabelfishClient
 import ovh.devcraft.vogonpoet.domain.HardwareDevice
 import ovh.devcraft.vogonpoet.domain.Microphone
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
+import ovh.devcraft.vogonpoet.domain.model.EngineEvent
+import ovh.devcraft.vogonpoet.domain.model.EngineMode
 import ovh.devcraft.vogonpoet.domain.model.ProtocolMessage
 import ovh.devcraft.vogonpoet.domain.model.VadState
 import ovh.devcraft.vogonpoet.infrastructure.BackendController
@@ -28,6 +30,7 @@ class MainViewModel(
 ) : ViewModel() {
     val connectionState: StateFlow<ConnectionState> = babelfishClient.connectionState
     val vadState: StateFlow<VadState> = babelfishClient.vadState
+    val engineMode: StateFlow<EngineMode> = babelfishClient.engineMode
     val messages: StateFlow<List<ProtocolMessage>> = babelfishClient.messages
     val config: StateFlow<Babelfish?> = babelfishClient.config
 
@@ -37,6 +40,9 @@ class MainViewModel(
     private var activationCount = 0
     private val _transcribingText = MutableStateFlow("Transcribing...")
     val transcribingText: StateFlow<String> = _transcribingText.asStateFlow()
+
+    private val _displayedEvent = MutableStateFlow<String?>(null)
+    val displayedEvent: StateFlow<String?> = _displayedEvent.asStateFlow()
 
     private val allPossibleStates = vogonLoadingStrings + "Transcribing..."
 
@@ -56,6 +62,18 @@ class MainViewModel(
     init {
         viewModelScope.launch {
             babelfishClient.connect()
+        }
+
+        viewModelScope.launch {
+            babelfishClient.events.collect { event ->
+                _displayedEvent.value =
+                    when (event) {
+                        EngineEvent.WakewordDetected -> "wakeword detected"
+                        EngineEvent.StopWordDetected -> "stop word detected"
+                    }
+                delay(2000)
+                _displayedEvent.value = null
+            }
         }
 
         viewModelScope.launch {
