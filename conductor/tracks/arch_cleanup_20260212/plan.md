@@ -8,13 +8,13 @@
 - [x] Task: Update `BabelfishClient` domain interface to use `VogonConfig` instead of the infrastructure model (c927539)
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Domain Layer Refactoring' (Protocol in workflow.md)
 
-## Phase 2: Infrastructure Layer Refactoring
+## Phase 2: Infrastructure Layer Refactoring [checkpoint: 73fbbe5]
 *Goal: Implement repositories and mapping logic.*
 
 - [x] Task: Implement `VogonConfig` mappers in `infrastructure` layer (c6c917b)
-- [~] Task: Implement `BackendRepositoryImpl` (actual/expect) that wraps `BackendController`
+- [x] Task: Implement `BackendRepositoryImpl` (actual/expect) that wraps `BackendController` (73fbbe5)
 - [x] Task: Update `BabelfishClientImpl` to implement the updated domain interface with mapping (c6c917b)
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Infrastructure Layer Refactoring' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Infrastructure Layer Refactoring' (Protocol in workflow.md)
 
 ## Phase 3: Presentation and Threading Optimization
 *Goal: Decouple ViewModel and offload I/O to background threads.*
