@@ -119,7 +119,9 @@ class MainViewModel(
 
     fun restartBackend() {
         babelfishClient.notifyBootstrap()
-        backendRepository.restart()
+        viewModelScope.launch {
+            backendRepository.restart()
+        }
     }
 
     fun saveConfig(config: VogonConfig? = _draftConfig.value) {

@@ -29,7 +29,7 @@ import vogonpoet.composeapp.generated.resources.compose_multiplatform
 fun main() {
     val settings = runBlocking { SettingsRepository.load() }
     if (!settings.isFirstBoot) {
-        BackendManager.startBackend()
+        runBlocking { BackendManager.startBackend() }
     }
 
     startKoin {
@@ -57,7 +57,7 @@ fun main() {
                         FirstBootScreen(
                             onFinished = {
                                 isFirstBoot = false
-                                BackendManager.startBackend()
+                                runBlocking { BackendManager.startBackend() }
                             },
                         )
                     }

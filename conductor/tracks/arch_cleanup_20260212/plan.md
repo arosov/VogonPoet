@@ -20,8 +20,8 @@
 *Goal: Decouple ViewModel and offload I/O to background threads.*
 
 - [x] Task: Refactor `MainViewModel` to use `BackendRepository` and domain models (0f015a4)
-- [~] Task: Wrap `SettingsRepository` blocking calls in `withContext(Dispatchers.IO)`
-- [ ] Task: Wrap `BackendManager` process lifecycle and I/O calls in `Dispatchers.IO`
+- [x] Task: Wrap `SettingsRepository` blocking calls in `withContext(Dispatchers.IO)` (9d11c88)
+- [~] Task: Wrap `BackendManager` process lifecycle and I/O calls in `Dispatchers.IO`
 - [ ] Task: Refactor `BackendManager` log parsing to use Coroutines/Flows instead of raw threads
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Presentation and Threading Optimization' (Protocol in workflow.md)
 

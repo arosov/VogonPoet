@@ -6,9 +6,9 @@ import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 interface BackendRepository {
     val serverStatus: StateFlow<ServerStatus>
 
-    fun start()
+    suspend fun start()
 
-    fun stop()
+    suspend fun stop()
 
-    fun restart()
+    suspend fun restart()
 }

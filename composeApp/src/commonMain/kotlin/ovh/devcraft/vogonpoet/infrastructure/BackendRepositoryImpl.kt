@@ -7,9 +7,9 @@ import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 expect object BackendRepositoryImpl : BackendRepository {
     override val serverStatus: StateFlow<ServerStatus>
 
-    override fun start()
+    override suspend fun start()
 
-    override fun stop()
+    override suspend fun stop()
 
-    override fun restart()
+    override suspend fun restart()
 }
