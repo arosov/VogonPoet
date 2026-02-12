@@ -29,6 +29,7 @@ class KwBabelfishClient(
             ignoreUnknownKeys = true
             prettyPrint = true
             isLenient = true
+            encodeDefaults = true
         }
 
     private val client =

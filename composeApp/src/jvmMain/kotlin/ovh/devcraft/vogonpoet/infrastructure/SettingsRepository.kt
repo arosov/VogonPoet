@@ -7,8 +7,9 @@ import java.io.File
 actual object SettingsRepository {
     private val json =
         Json {
-            prettyPrint = true
             ignoreUnknownKeys = true
+            prettyPrint = true
+            encodeDefaults = true
         }
 
     val appDataDir: File by lazy {

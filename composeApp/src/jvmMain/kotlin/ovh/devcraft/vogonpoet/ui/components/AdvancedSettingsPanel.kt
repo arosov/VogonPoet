@@ -137,6 +137,7 @@ fun AdvancedSettingsPanel(
                 // Hardware Acceleration
                 var expanded by remember { mutableStateOf(false) }
                 val rawDevice = config.hardware?.device ?: "auto"
+                val isAutoDetect = config.hardware?.auto_detect ?: true
 
                 // Combine dynamic hardware with auto and cpu options
                 val hardwareOptions =
@@ -144,13 +145,11 @@ fun AdvancedSettingsPanel(
                         hardwareList.filter { it.id != "cpu" && it.id != "auto" }.map { it.id to it.name }
 
                 // Safe current device selection:
-                // If the config has a value (e.g. "cuda") that is no longer in the list (because we use "cuda:0"),
-                // fall back to "auto" to prevent UI glitches or raw values.
                 val currentDevice =
-                    if (hardwareOptions.any { it.first == rawDevice }) {
-                        rawDevice
-                    } else {
-                        "auto"
+                    when {
+                        isAutoDetect -> "auto"
+                        hardwareOptions.any { it.first == rawDevice } -> rawDevice
+                        else -> "auto"
                     }
 
                 ExposedDropdownMenuBox(
@@ -184,8 +183,13 @@ fun AdvancedSettingsPanel(
                                             val newConfig =
                                                 config.copy(
                                                     hardware =
-                                                        config.hardware?.copy(device = value)
-                                                            ?: Babelfish.Hardware(device = value),
+                                                        config.hardware?.copy(
+                                                            device = if (value == "auto") "auto" else value,
+                                                            auto_detect = value == "auto",
+                                                        ) ?: Babelfish.Hardware(
+                                                            device = value,
+                                                            auto_detect = value == "auto",
+                                                        ),
                                                 )
                                             viewModel.saveAndRestart(newConfig)
                                         }

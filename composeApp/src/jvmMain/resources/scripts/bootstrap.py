@@ -256,8 +256,9 @@ class BootstrapServer:
 
             all_gpu_names = get_all_gpus()
 
-            # Check for config file to see if CPU is explicitly requested
-            config_forces_cpu = False
+            # Check for config file to see if a specific device is requested
+            config_device = "auto"
+            auto_detect = True
             app_data_dir = os.environ.get("VOGON_APP_DATA_DIR")
             if app_data_dir:
                 config_path = Path(app_data_dir) / "babelfish.config.json"
@@ -265,19 +266,64 @@ class BootstrapServer:
                     try:
                         with open(config_path, "r") as f:
                             data = json.load(f)
-                            if data.get("hardware", {}).get("device") == "cpu":
-                                config_forces_cpu = True
+                            hw_config = data.get("hardware", {})
+                            config_device = hw_config.get("device", "auto")
+                            auto_detect = hw_config.get("auto_detect", True)
                     except Exception as e:
                         logger.warning(f"Failed to read config for bootstrap: {e}")
 
-            if os.environ.get("VOGON_FORCE_CPU") or config_forces_cpu:
+            env_forces_cpu = str(os.environ.get("VOGON_FORCE_CPU", "")).lower() in (
+                "1",
+                "true",
+                "yes",
+                "on",
+            )
+
+            if env_forces_cpu or (not auto_detect and config_device == "cpu"):
                 logger.info("CPU mode requested via config or env. Forcing CPU mode.")
                 gpu_desc = "CPU (Forced)"
                 hw_mode = "cpu"
                 extra_to_install = "cpu"
+            elif not auto_detect and (
+                config_device
+                in (
+                    "cuda",
+                    "rocm",
+                    "dml",
+                    "metal",
+                )
+                or config_device.startswith("cuda:")
+            ):
+                logger.info(
+                    f"Specific GPU requested: {config_device}. Forcing GPU mode."
+                )
+                gpu_desc = config_device.upper()
+                if config_device.startswith("cuda") or config_device == "cuda":
+                    if sys.platform == "win32":
+                        hw_mode = "nvidia_win"
+                        extra_to_install = "windows-gpu"
+                    else:
+                        hw_mode = "nvidia_linux"
+                        extra_to_install = "nvidia-linux"
+                elif config_device == "rocm":
+                    hw_mode = "amd_linux"
+                    extra_to_install = "amd-linux"
+                elif config_device == "metal":
+                    hw_mode = "metal"
+                    extra_to_install = "cpu"
+                elif config_device == "dml":
+                    hw_mode = "windows_gpu"
+                    extra_to_install = "windows-gpu"
             else:
                 # Selection logic (Priority: NVIDIA > AMD > Metal > DML)
-                if "NVIDIA" in detected_caps:
+                is_nvidia = "NVIDIA" in detected_caps or any(
+                    "nvidia" in g.lower() for g in all_gpu_names
+                )
+                is_amd = "AMD (ROCm)" in detected_caps or any(
+                    "amd" in g.lower() or "ati" in g.lower() for g in all_gpu_names
+                )
+
+                if is_nvidia:
                     logger.info(
                         "NVIDIA GPU detected, selecting nvidia_linux/nvidia_win mode"
                     )
@@ -287,7 +333,7 @@ class BootstrapServer:
                     else:
                         hw_mode = "nvidia_linux"
                         extra_to_install = "nvidia-linux"
-                elif "AMD (ROCm)" in detected_caps:
+                elif is_amd:
                     logger.info("AMD GPU detected, selecting amd_linux mode")
                     hw_mode = "amd_linux"
                     extra_to_install = "amd-linux"
@@ -435,7 +481,9 @@ class BootstrapServer:
                     )
 
             args = [UV_CMD, "run", "babelfish"]
-            if hw_mode == "cpu":
+            if hw_mode == "cpu" and (
+                env_forces_cpu or (not auto_detect and config_device == "cpu")
+            ):
                 args.append("--cpu")
 
             if sys.platform == "win32":
