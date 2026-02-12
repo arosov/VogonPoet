@@ -22,6 +22,12 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
+## [ ] Track: Fix Hydraulic Conveyor Root Key Format
+*Link: [./conductor/tracks/fix_conveyor_key_20260212/](./conductor/tracks/fix_conveyor_key_20260212/)*
+
+
+---
+
 ## [x] Track: Fix Hydraulic Conveyor GitHub Action Reference
 *Link: [./conductor/tracks/fix_conveyor_action_20260212/](./conductor/tracks/fix_conveyor_action_20260212/)*
 

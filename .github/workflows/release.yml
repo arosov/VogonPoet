@@ -30,7 +30,7 @@ jobs:
         with:
           command: make site
           agree_to_license: 1
-          signing_key: internal
+          signing_key: vogon poet packaging release internal / 2026-02-12T20:00:00Z
         env:
           # If you have a site URL or other secrets, they would go here
           # For now, we are just generating the local artifacts
