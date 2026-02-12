@@ -4,7 +4,7 @@
 *Goal: Establish clean domain boundaries and models.*
 
 - [x] Task: Create `VogonConfig` domain model and related entities in `ovh.devcraft.vogonpoet.domain.model` (30c18f4)
-- [~] Task: Define `BackendRepository` interface in `ovh.devcraft.vogonpoet.domain`
+- [x] Task: Define `BackendRepository` interface in `ovh.devcraft.vogonpoet.domain` (99ac129)
 - [ ] Task: Update `BabelfishClient` domain interface to use `VogonConfig` instead of the infrastructure model
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Domain Layer Refactoring' (Protocol in workflow.md)
 
