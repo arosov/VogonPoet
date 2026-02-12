@@ -20,7 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 import ovh.devcraft.vogonpoet.domain.model.VogonConfig
@@ -101,15 +101,28 @@ fun AdvancedSettingsPanel(
     val hardwareList by viewModel.hardwareList.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
     val isReady = connectionState is ConnectionState.Connected || connectionState is ConnectionState.Bootstrapping
-    val settings = remember { runBlocking { SettingsRepository.load() } }
+    val scope = rememberCoroutineScope()
+
+    val settings by produceState<ovh.devcraft.vogonpoet.domain.VogonSettings?>(null) {
+        value = SettingsRepository.load()
+    }
+
+    if (settings == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = GruvboxGreenDark)
+        }
+        return
+    }
+
+    val nonNullSettings = settings ?: return
 
     // Form states (controlled by parent config, but we keep local for immediate UI feedback before roundtrip)
     // Actually, for immediate updates, we can just derive from config.
     // But we need temporary state for Storage Directory before it's confirmed.
 
     // Storage dir derived from uvCacheDir parent or config
-    var storageDir by remember(settings) {
-        mutableStateOf(settings.uvCacheDir?.let { File(it).parent } ?: "")
+    var storageDir by remember(nonNullSettings) {
+        mutableStateOf(nonNullSettings.uvCacheDir?.let { File(it).parent } ?: "")
     }
 
     val scrollState = rememberScrollState()
@@ -294,9 +307,9 @@ fun AdvancedSettingsPanel(
                                             if (!m.exists()) m.mkdirs()
 
                                             // Update local settings
-                                            runBlocking {
+                                            scope.launch {
                                                 SettingsRepository.save(
-                                                    settings.copy(
+                                                    nonNullSettings.copy(
                                                         uvCacheDir = u.absolutePath,
                                                         modelsDir = m.absolutePath,
                                                     ),
@@ -332,9 +345,9 @@ fun AdvancedSettingsPanel(
                                 if (storageDir.isNotBlank()) {
                                     storageDir = ""
                                     // Reset to defaults
-                                    runBlocking {
+                                    scope.launch {
                                         SettingsRepository.save(
-                                            settings.copy(uvCacheDir = null, modelsDir = null),
+                                            nonNullSettings.copy(uvCacheDir = null, modelsDir = null),
                                         )
                                     }
                                     // Restart backend immediately with reset settings

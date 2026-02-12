@@ -223,4 +223,9 @@ class MainViewModel(
             restartBackend()
         }
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        babelfishClient.disconnect()
+    }
 }

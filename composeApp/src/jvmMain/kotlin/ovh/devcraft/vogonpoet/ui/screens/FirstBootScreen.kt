@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import ovh.devcraft.vogonpoet.domain.VogonSettings
 import ovh.devcraft.vogonpoet.infrastructure.SettingsRepository
 import ovh.devcraft.vogonpoet.ui.theme.*
@@ -18,6 +18,7 @@ import ovh.devcraft.vogonpoet.ui.utils.SystemFilePicker
 @Composable
 fun FirstBootScreen(onFinished: () -> Unit) {
     var storageDir by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     val defaultStorageDir =
         remember {
@@ -133,7 +134,7 @@ fun FirstBootScreen(onFinished: () -> Unit) {
                         if (!uvDir.exists()) uvDir.mkdirs()
                         if (!modelsDir.exists()) modelsDir.mkdirs()
 
-                        runBlocking {
+                        scope.launch {
                             SettingsRepository.save(
                                 VogonSettings(
                                     isFirstBoot = false,
@@ -141,8 +142,8 @@ fun FirstBootScreen(onFinished: () -> Unit) {
                                     modelsDir = modelsDir.absolutePath,
                                 ),
                             )
+                            onFinished()
                         }
-                        onFinished()
                     },
                     modifier = Modifier.fillMaxWidth(0.5f).height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = GruvboxGreenDark),

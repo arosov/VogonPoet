@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import ovh.devcraft.vogonpoet.domain.BabelfishClient
+import ovh.devcraft.vogonpoet.domain.BackendRepository
 import ovh.devcraft.vogonpoet.domain.HardwareDevice
 import ovh.devcraft.vogonpoet.domain.Microphone
 import ovh.devcraft.vogonpoet.domain.model.*
@@ -82,6 +83,8 @@ class MainViewModelTest {
 
         override fun notifyBootstrap() {}
 
+        override fun close() {}
+
         fun emitVad(state: VadState) {
             _vadState.value = state
         }
@@ -91,11 +94,37 @@ class MainViewModelTest {
         }
     }
 
+    private class FakeBackendRepository : BackendRepository {
+        private val _serverStatus = MutableStateFlow(ServerStatus.STOPPED)
+        override val serverStatus: StateFlow<ServerStatus> = _serverStatus
+
+        var startCalled = 0
+        var stopCalled = 0
+        var restartCalled = 0
+
+        override suspend fun start() {
+            startCalled++
+            _serverStatus.value = ServerStatus.READY
+        }
+
+        override suspend fun stop() {
+            stopCalled++
+            _serverStatus.value = ServerStatus.STOPPED
+        }
+
+        override suspend fun restart() {
+            restartCalled++
+            stop()
+            start()
+        }
+    }
+
     @Test
     fun testInitializationStartsConnection() =
         runTest {
+            val fakeRepo = FakeBackendRepository()
             val fakeClient = FakeBabelfishClient()
-            val viewModel = MainViewModel(fakeClient)
+            val viewModel = MainViewModel(fakeClient, fakeRepo)
 
             runCurrent()
             assertEquals(1, fakeClient.connectCalled)
@@ -104,8 +133,9 @@ class MainViewModelTest {
     @Test
     fun testExposesClientStates() =
         runTest {
+            val fakeRepo = FakeBackendRepository()
             val fakeClient = FakeBabelfishClient()
-            val viewModel = MainViewModel(fakeClient)
+            val viewModel = MainViewModel(fakeClient, fakeRepo)
 
             runCurrent()
             fakeClient.emitVad(VadState.Listening)
@@ -117,8 +147,9 @@ class MainViewModelTest {
     @Test
     fun testEventTimeout() =
         runTest {
+            val fakeRepo = FakeBackendRepository()
             val fakeClient = FakeBabelfishClient()
-            val viewModel = MainViewModel(fakeClient)
+            val viewModel = MainViewModel(fakeClient, fakeRepo)
 
             runCurrent()
             fakeClient.emitEvent(EngineEvent.WakewordDetected)

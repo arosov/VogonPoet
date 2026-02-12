@@ -31,6 +31,8 @@ interface BabelfishClient {
     suspend fun toggleListening()
 
     fun notifyBootstrap()
+
+    fun close()
 }
 
 data class Microphone(

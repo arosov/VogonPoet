@@ -9,6 +9,7 @@ import androidx.compose.ui.window.rememberWindowState
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.KoinContext
@@ -28,9 +29,6 @@ import vogonpoet.composeapp.generated.resources.compose_multiplatform
 
 fun main() {
     val settings = runBlocking { SettingsRepository.load() }
-    if (!settings.isFirstBoot) {
-        runBlocking { BackendManager.startBackend() }
-    }
 
     startKoin {
         modules(appModule)
@@ -46,6 +44,7 @@ fun main() {
         CompositionLocalProvider(LocalViewModelStoreOwner provides viewModelStoreOwner) {
             KoinContext {
                 var isFirstBoot by remember { mutableStateOf(settings.isFirstBoot) }
+                val scope = rememberCoroutineScope()
 
                 if (isFirstBoot) {
                     Window(
@@ -57,12 +56,16 @@ fun main() {
                         FirstBootScreen(
                             onFinished = {
                                 isFirstBoot = false
-                                runBlocking { BackendManager.startBackend() }
+                                scope.launch { BackendManager.startBackend() }
                             },
                         )
                     }
                 } else {
                     val viewModel = koinViewModel<MainViewModel>()
+
+                    LaunchedEffect(Unit) {
+                        BackendManager.startBackend()
+                    }
 
                     val connectionState by viewModel.connectionState.collectAsState()
                     val vadState by viewModel.vadState.collectAsState()

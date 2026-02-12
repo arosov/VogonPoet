@@ -16,20 +16,21 @@
 - [x] Task: Update `BabelfishClientImpl` to implement the updated domain interface with mapping (c6c917b)
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Infrastructure Layer Refactoring' (Protocol in workflow.md)
 
-## Phase 3: Presentation and Threading Optimization
+## Phase 3: Presentation and Threading Optimization [checkpoint: 4546c0d]
 *Goal: Decouple ViewModel and offload I/O to background threads.*
 
 - [x] Task: Refactor `MainViewModel` to use `BackendRepository` and domain models (0f015a4)
 - [x] Task: Wrap `SettingsRepository` blocking calls in `withContext(Dispatchers.IO)` (9d11c88)
-- [~] Task: Wrap `BackendManager` process lifecycle and I/O calls in `Dispatchers.IO`
-- [ ] Task: Refactor `BackendManager` log parsing to use Coroutines/Flows instead of raw threads
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Presentation and Threading Optimization' (Protocol in workflow.md)
+- [x] Task: Wrap `BackendManager` process lifecycle and I/O calls in `Dispatchers.IO` (4546c0d)
+- [x] Task: Refactor `BackendManager` log parsing to use Coroutines/Flows instead of raw threads (4546c0d)
+- [x] Task: Eliminate improper `runBlocking` usage in UI components (AdvancedSettingsPanel, FirstBootScreen, main.kt) (4546c0d)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Presentation and Threading Optimization' (Protocol in workflow.md)
 
-## Phase 4: Resource and Memory Management Fixes
+## Phase 4: Resource and Memory Management Fixes [checkpoint: final]
 *Goal: Resolve leaks and optimize performance.*
 
-- [ ] Task: Refactor `BackendManager` to use a single persistent Shutdown Hook
-- [ ] Task: Implement proper `close()` logic for `PrintWriter` log streams in `BackendManager`
-- [ ] Task: Add cleanup/dispose logic for `HttpClient` in `BabelfishClient`
-- [ ] Task: Optimize `ProtocolMessage` log storage (replace List with capped ArrayDeque/Collection)
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Resource and Memory Management Fixes' (Protocol in workflow.md)
+- [x] Task: Refactor `BackendManager` to use a single persistent Shutdown Hook (4546c0d)
+- [x] Task: Implement proper `close()` logic for `PrintWriter` log streams in `BackendManager` (4546c0d)
+- [x] Task: Add cleanup/dispose logic for `HttpClient` in `BabelfishClient` (de76fb3)
+- [x] Task: Optimize `ProtocolMessage` log storage (replace List with capped ArrayDeque/Collection) (de76fb3)
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Resource and Memory Management Fixes' (Protocol in workflow.md) [checkpoint: de76fb3]

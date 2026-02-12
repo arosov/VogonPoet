@@ -8,6 +8,7 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
+import ovh.devcraft.vogonpoet.domain.BackendRepository
 import ovh.devcraft.vogonpoet.domain.HardwareDevice
 import ovh.devcraft.vogonpoet.domain.Microphone
 import ovh.devcraft.vogonpoet.domain.model.*
@@ -18,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap
 import ovh.devcraft.vogonpoet.domain.BabelfishClient as IBabelfishClient
 
 class BabelfishClient(
+    private val backendRepository: BackendRepository,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
 ) : IBabelfishClient {
     private val json =
@@ -58,6 +60,8 @@ class BabelfishClient(
 
     private val responseHandlers = ConcurrentHashMap<String, CompletableDeferred<JsonObject>>()
 
+    private val messageLog = mutableListOf<ProtocolMessage>()
+
     private val SERVER_URL = "ws://127.0.0.1:8123/config"
 
     override suspend fun connect() {
@@ -67,7 +71,7 @@ class BabelfishClient(
             scope.launch {
                 // Monitor server status
                 launch {
-                    BackendController.serverStatus.collectLatest { status ->
+                    backendRepository.serverStatus.collectLatest { status ->
                         when (status) {
                             ServerStatus.INITIALIZING -> {
                                 _connectionState.value = ConnectionState.Disconnected
@@ -95,7 +99,7 @@ class BabelfishClient(
                 }
 
                 while (isActive) {
-                    val currentStatus = BackendController.serverStatus.value
+                    val currentStatus = backendRepository.serverStatus.value
 
                     if (currentStatus != ServerStatus.READY && currentStatus != ServerStatus.BOOTSTRAPPING) {
                         delay(500)
@@ -109,7 +113,7 @@ class BabelfishClient(
                         client.webSocket(SERVER_URL) {
                             session = this
 
-                            val status = BackendController.serverStatus.value
+                            val status = backendRepository.serverStatus.value
                             if (status == ServerStatus.READY) {
                                 // Even if the server is listening, it might still be loading models.
                                 // We stay in a starting state until we get the first real status message.
@@ -229,6 +233,11 @@ class BabelfishClient(
         session = null
     }
 
+    override fun close() {
+        disconnect()
+        client.close()
+    }
+
     override suspend fun saveConfig(config: VogonConfig) {
         val currentSession = session ?: throw IllegalStateException("Not connected")
         val infraConfig = config.toInfrastructure()
@@ -313,7 +322,7 @@ class BabelfishClient(
     }
 
     override fun notifyBootstrap() {
-        // No longer strictly needed as we watch BackendController.serverStatus
+        // No longer strictly needed as we watch backendRepository.serverStatus
     }
 
     private fun logMessage(
@@ -327,6 +336,13 @@ class BabelfishClient(
                 direction = direction,
                 content = content,
             )
-        _messages.value = (_messages.value + msg).takeLast(100)
+
+        synchronized(messageLog) {
+            messageLog.add(msg)
+            if (messageLog.size > 100) {
+                messageLog.removeAt(0)
+            }
+            _messages.value = messageLog.toList()
+        }
     }
 }
