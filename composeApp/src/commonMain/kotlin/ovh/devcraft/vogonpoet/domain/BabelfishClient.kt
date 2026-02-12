@@ -3,7 +3,6 @@ package ovh.devcraft.vogonpoet.domain
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import ovh.devcraft.vogonpoet.domain.model.*
-import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 
 interface BabelfishClient {
     val connectionState: StateFlow<ConnectionState>
@@ -11,13 +10,13 @@ interface BabelfishClient {
     val engineMode: StateFlow<EngineMode>
     val events: SharedFlow<EngineEvent>
     val messages: StateFlow<List<ProtocolMessage>>
-    val config: StateFlow<Babelfish?>
+    val config: StateFlow<VogonConfig?>
 
     suspend fun connect()
 
     fun disconnect()
 
-    suspend fun saveConfig(config: Babelfish)
+    suspend fun saveConfig(config: VogonConfig)
 
     suspend fun listMicrophones(): List<Microphone>
 
