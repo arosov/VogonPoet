@@ -18,9 +18,16 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.kotlinSerialization)
+    id("dev.hydraulic.conveyor") version "1.13"
 }
-
+version = "0.0.1"
 apply<JSONSchemaCodegenPlugin>()
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+}
 
 // --- Babelfish Bundling Task ---
 tasks.register("bundleBabelfish") {
@@ -166,6 +173,14 @@ kotlin {
             runtimeOnly("org.lwjgl:lwjgl-tinyfd:${libs.versions.lwjgl.get()}:natives-macos")
         }
     }
+}
+
+dependencies {
+    // Use the configurations created by the Conveyor plugin to tell Gradle/Conveyor where to find the artifacts for each platform.
+    linuxAmd64(compose.desktop.linux_x64)
+    macAmd64(compose.desktop.macos_x64)
+    macAarch64(compose.desktop.macos_arm64)
+    windowsAmd64(compose.desktop.windows_x64)
 }
 
 compose.desktop {
