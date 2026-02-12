@@ -182,6 +182,28 @@ class MainViewModel(
         }
     }
 
+    fun forceListen() {
+        viewModelScope.launch {
+            try {
+                babelfishClient.forceListen()
+                VogonLogger.i("Force listen command sent")
+            } catch (e: Exception) {
+                VogonLogger.e("Failed to send force listen command", e)
+            }
+        }
+    }
+
+    fun toggleListening() {
+        viewModelScope.launch {
+            try {
+                babelfishClient.toggleListening()
+                VogonLogger.i("Toggle listening command sent")
+            } catch (e: Exception) {
+                VogonLogger.e("Failed to send toggle listening command", e)
+            }
+        }
+    }
+
     fun saveAndRestart(config: Babelfish) {
         viewModelScope.launch {
             VogonLogger.i("Saving config and restarting backend...")

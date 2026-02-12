@@ -51,28 +51,28 @@ fun ConfigForm(
     val currentConnectionState by viewModel.connectionState.collectAsState()
     val isReady = currentConnectionState is ConnectionState.Connected || currentConnectionState is ConnectionState.Bootstrapping
 
-    Column(
+    Row(
         modifier =
             modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Row 1: Microphone | Voice Triggers
-        Row(
-            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        // Column 1: Microphone (Top) + Shortcuts (Bottom)
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Column 1: Microphone Selection
+            // Microphone Selection
             OutlinedCard(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
+                modifier = Modifier.fillMaxWidth(),
                 colors =
                     CardDefaults.outlinedCardColors(
                         containerColor = GruvboxBg1.copy(alpha = 0.5f),
                     ),
             ) {
                 Column(
-                    modifier = Modifier.padding(12.dp).fillMaxHeight(),
+                    modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
@@ -165,165 +165,32 @@ fun ConfigForm(
                 }
             }
 
-            // Column 2: Voice Triggers (Wakeword + Stop word)
+            // Shortcuts Card
             OutlinedCard(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
+                modifier = Modifier.fillMaxWidth(),
                 colors =
                     CardDefaults.outlinedCardColors(
                         containerColor = GruvboxBg1.copy(alpha = 0.5f),
                     ),
             ) {
                 Column(
-                    modifier = Modifier.padding(12.dp).fillMaxHeight(),
+                    modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        text = "Voice Triggers",
+                        text = "Shortcuts",
                         style = MaterialTheme.typography.titleSmall,
                         color = GruvboxGreenDark,
                     )
 
-                    // Wakeword selection
-                    var wakewordExpanded by remember { mutableStateOf(false) }
-                    val wakewordList by viewModel.wakewordList.collectAsState()
-                    val currentWakeword = config.voice?.wakeword ?: ""
-
-                    ExposedDropdownMenuBox(
-                        expanded = wakewordExpanded,
-                        onExpandedChange = { if (isReady) wakewordExpanded = it },
-                    ) {
-                        OutlinedTextField(
-                            value = currentWakeword.takeIf { it.isNotBlank() } ?: "None",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Wakeword") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = wakewordExpanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            enabled = isReady,
-                            colors =
-                                OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = GruvboxGreenDark,
-                                    focusedLabelColor = GruvboxGreenDark,
-                                ),
-                        )
-                        ExposedDropdownMenu(
-                            expanded = wakewordExpanded,
-                            onDismissRequest = { wakewordExpanded = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("None") },
-                                onClick = {
-                                    wakewordExpanded = false
-                                    onConfigChange(
-                                        config.copy(
-                                            voice = config.voice?.copy(wakeword = null) ?: Babelfish.Voice(wakeword = null),
-                                        ),
-                                    )
-                                },
-                            )
-                            wakewordList.forEach { word ->
-                                DropdownMenuItem(
-                                    text = { Text(word.replace("_", " ").replaceFirstChar { it.uppercase() }) },
-                                    onClick = {
-                                        wakewordExpanded = false
-                                        onConfigChange(
-                                            config.copy(
-                                                voice = config.voice?.copy(wakeword = word) ?: Babelfish.Voice(wakeword = word),
-                                            ),
-                                        )
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    // Stop word selection
-                    var stopWakewordExpanded by remember { mutableStateOf(false) }
-                    val currentStopWakeword = config.voice?.stop_wakeword ?: ""
-
-                    ExposedDropdownMenuBox(
-                        expanded = stopWakewordExpanded,
-                        onExpandedChange = { if (isReady) stopWakewordExpanded = it },
-                    ) {
-                        OutlinedTextField(
-                            value = currentStopWakeword.takeIf { it.isNotBlank() } ?: "None",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Stop word") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = stopWakewordExpanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            enabled = isReady,
-                            colors =
-                                OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = GruvboxGreenDark,
-                                    focusedLabelColor = GruvboxGreenDark,
-                                ),
-                        )
-                        ExposedDropdownMenu(
-                            expanded = stopWakewordExpanded,
-                            onDismissRequest = { stopWakewordExpanded = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("None") },
-                                onClick = {
-                                    stopWakewordExpanded = false
-                                    onConfigChange(
-                                        config.copy(
-                                            voice = config.voice?.copy(stop_wakeword = null) ?: Babelfish.Voice(stop_wakeword = null),
-                                        ),
-                                    )
-                                },
-                            )
-                            wakewordList.forEach { word ->
-                                DropdownMenuItem(
-                                    text = { Text(word.replace("_", " ").replaceFirstChar { it.uppercase() }) },
-                                    onClick = {
-                                        stopWakewordExpanded = false
-                                        onConfigChange(
-                                            config.copy(
-                                                voice = config.voice?.copy(stop_wakeword = word) ?: Babelfish.Voice(stop_wakeword = word),
-                                            ),
-                                        )
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Row 2: Shortcut | Stop Words
-        Row(
-            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            // Shortcuts
-            OutlinedCard(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-                colors =
-                    CardDefaults.outlinedCardColors(
-                        containerColor = GruvboxBg1.copy(alpha = 0.5f),
-                    ),
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp).fillMaxHeight(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = "Shortcut",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = GruvboxGreenDark,
-                    )
-
-                    val currentShortcut = config.ui?.shortcuts?.toggle_listening ?: "Ctrl+Space"
-                    var localShortcut by remember(currentShortcut) { mutableStateOf(currentShortcut) }
+                    val toggleShortcut = config.ui?.shortcuts?.toggle_listening ?: "Ctrl+Space"
+                    var localToggleShortcut by remember(toggleShortcut) { mutableStateOf(toggleShortcut) }
 
                     ShortcutSelector(
                         label = "Toggle Listening",
-                        shortcut = localShortcut,
+                        shortcut = localToggleShortcut,
                         onShortcutChange = {
-                            localShortcut = it
+                            localToggleShortcut = it
                             onConfigChange(
                                 config.copy(
                                     ui =
@@ -337,56 +204,182 @@ fun ConfigForm(
                         },
                         modifier = Modifier.fillMaxWidth(),
                     )
+
+                    val pttShortcut = config.ui?.shortcuts?.force_listen ?: "Left Ctrl"
+                    var localPttShortcut by remember(pttShortcut) { mutableStateOf(pttShortcut) }
+
+                    SingleKeySelector(
+                        label = "Push to Talk",
+                        currentKey = localPttShortcut,
+                        onKeyChange = {
+                            localPttShortcut = it
+                            onConfigChange(
+                                config.copy(
+                                    ui =
+                                        config.ui?.copy(
+                                            shortcuts =
+                                                config.ui?.shortcuts?.copy(force_listen = it)
+                                                    ?: Babelfish.Shortcuts(force_listen = it),
+                                        ) ?: Babelfish.Ui(shortcuts = Babelfish.Shortcuts(force_listen = it)),
+                                ),
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
+        }
 
-            // Stop words parsing transcript
-            OutlinedCard(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-                colors =
-                    CardDefaults.outlinedCardColors(
-                        containerColor = GruvboxBg1.copy(alpha = 0.5f),
-                    ),
+        // Column 2: Voice Triggers (Wakeword + Stop word + Stop words list)
+        OutlinedCard(
+            modifier = Modifier.weight(1f),
+            colors =
+                CardDefaults.outlinedCardColors(
+                    containerColor = GruvboxBg1.copy(alpha = 0.5f),
+                ),
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Column(
-                    modifier = Modifier.padding(12.dp).fillMaxHeight(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                Text(
+                    text = "Voice Triggers",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = GruvboxGreenDark,
+                )
+
+                // Wakeword selection
+                var wakewordExpanded by remember { mutableStateOf(false) }
+                val wakewordList by viewModel.wakewordList.collectAsState()
+                val currentWakeword = config.voice?.wakeword ?: ""
+
+                ExposedDropdownMenuBox(
+                    expanded = wakewordExpanded,
+                    onExpandedChange = { if (isReady) wakewordExpanded = it },
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(
-                        text = "Stop words parsing transcript",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = GruvboxGreenDark,
-                    )
-
-                    val stopWordsList = config.voice?.stop_words ?: emptyList()
-                    val stopWordsString = stopWordsList.joinToString(", ")
-                    var localStopWords by remember(stopWordsString) { mutableStateOf(stopWordsString) }
-
                     OutlinedTextField(
-                        value = localStopWords,
-                        onValueChange = { localStopWords = it },
-                        label = { Text("Words that stop listening") },
-                        placeholder = { Text("comma, separated, words") },
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .onFocusChanged { focusState ->
-                                    if (!focusState.isFocused && localStopWords != stopWordsString) {
-                                        val newList = localStopWords.split(",").map { it.trim() }.filter { it.isNotBlank() }
-                                        onConfigChange(
-                                            config.copy(
-                                                voice =
-                                                    config.voice?.copy(stop_words = newList)
-                                                        ?: Babelfish.Voice(stop_words = newList),
-                                            ),
-                                        )
-                                    }
+                        value = currentWakeword.takeIf { it.isNotBlank() } ?: "None",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Wakeword") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = wakewordExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        enabled = isReady,
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = GruvboxGreenDark,
+                                focusedLabelColor = GruvboxGreenDark,
+                            ),
+                    )
+                    ExposedDropdownMenu(
+                        expanded = wakewordExpanded,
+                        onDismissRequest = { wakewordExpanded = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("None") },
+                            onClick = {
+                                wakewordExpanded = false
+                                onConfigChange(
+                                    config.copy(
+                                        voice = config.voice?.copy(wakeword = null) ?: Babelfish.Voice(wakeword = null),
+                                    ),
+                                )
+                            },
+                        )
+                        wakewordList.forEach { word ->
+                            DropdownMenuItem(
+                                text = { Text(word.replace("_", " ").replaceFirstChar { it.uppercase() }) },
+                                onClick = {
+                                    wakewordExpanded = false
+                                    onConfigChange(
+                                        config.copy(
+                                            voice = config.voice?.copy(wakeword = word) ?: Babelfish.Voice(wakeword = word),
+                                        ),
+                                    )
                                 },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions =
-                            KeyboardActions(
-                                onDone = {
+                            )
+                        }
+                    }
+                }
+
+                // Stop word selection
+                var stopWakewordExpanded by remember { mutableStateOf(false) }
+                val currentStopWakeword = config.voice?.stop_wakeword ?: ""
+
+                ExposedDropdownMenuBox(
+                    expanded = stopWakewordExpanded,
+                    onExpandedChange = { if (isReady) stopWakewordExpanded = it },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    OutlinedTextField(
+                        value = currentStopWakeword.takeIf { it.isNotBlank() } ?: "None",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Stop word") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = stopWakewordExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        enabled = isReady,
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = GruvboxGreenDark,
+                                focusedLabelColor = GruvboxGreenDark,
+                            ),
+                    )
+                    ExposedDropdownMenu(
+                        expanded = stopWakewordExpanded,
+                        onDismissRequest = { stopWakewordExpanded = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("None") },
+                            onClick = {
+                                stopWakewordExpanded = false
+                                onConfigChange(
+                                    config.copy(
+                                        voice = config.voice?.copy(stop_wakeword = null) ?: Babelfish.Voice(stop_wakeword = null),
+                                    ),
+                                )
+                            },
+                        )
+                        wakewordList.forEach { word ->
+                            DropdownMenuItem(
+                                text = { Text(word.replace("_", " ").replaceFirstChar { it.uppercase() }) },
+                                onClick = {
+                                    stopWakewordExpanded = false
+                                    onConfigChange(
+                                        config.copy(
+                                            voice =
+                                                config.voice?.copy(stop_wakeword = word) ?: Babelfish.Voice(stop_wakeword = word),
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    text = "The above dropdowns rely on a dedicated model per word.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = GruvboxFg0.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+
+                // Stop words parsing transcript
+                val stopWordsList = config.voice?.stop_words ?: emptyList()
+                val stopWordsString = stopWordsList.joinToString(", ")
+                var localStopWords by remember(stopWordsString) { mutableStateOf(stopWordsString) }
+
+                OutlinedTextField(
+                    value = localStopWords,
+                    onValueChange = { localStopWords = it },
+                    label = { Text("Stop words (transcript parsing)") },
+                    placeholder = { Text("comma, separated, words") },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && localStopWords != stopWordsString) {
                                     val newList = localStopWords.split(",").map { it.trim() }.filter { it.isNotBlank() }
                                     onConfigChange(
                                         config.copy(
@@ -395,18 +388,36 @@ fun ConfigForm(
                                                     ?: Babelfish.Voice(stop_words = newList),
                                         ),
                                     )
-                                },
-                            ),
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GruvboxGreenDark,
-                                focusedLabelColor = GruvboxGreenDark,
-                            ),
-                    )
-                }
+                                }
+                            },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions =
+                        KeyboardActions(
+                            onDone = {
+                                val newList = localStopWords.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                                onConfigChange(
+                                    config.copy(
+                                        voice =
+                                            config.voice?.copy(stop_words = newList)
+                                                ?: Babelfish.Voice(stop_words = newList),
+                                    ),
+                                )
+                            },
+                        ),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = GruvboxGreenDark,
+                            focusedLabelColor = GruvboxGreenDark,
+                        ),
+                )
+                Text(
+                    text = "Detected words that will immediately stop transcription.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = GruvboxFg0.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(start = 4.dp),
+                )
             }
         }
-
-        Spacer(modifier = Modifier.weight(1f))
     }
 }

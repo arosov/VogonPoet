@@ -295,6 +295,20 @@ class BabelfishClient(
         logMessage(MessageDirection.Sent, message)
     }
 
+    override suspend fun forceListen() {
+        val currentSession = session ?: throw IllegalStateException("Not connected")
+        val message = """{"type":"force_listen"}"""
+        currentSession.send(message)
+        logMessage(MessageDirection.Sent, message)
+    }
+
+    override suspend fun toggleListening() {
+        val currentSession = session ?: throw IllegalStateException("Not connected")
+        val message = """{"type":"toggle_listening"}"""
+        currentSession.send(message)
+        logMessage(MessageDirection.Sent, message)
+    }
+
     override fun notifyBootstrap() {
         // No longer strictly needed as we watch BackendController.serverStatus
     }

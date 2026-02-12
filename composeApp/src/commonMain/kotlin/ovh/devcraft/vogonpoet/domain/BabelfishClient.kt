@@ -27,6 +27,10 @@ interface BabelfishClient {
 
     suspend fun setMicTest(enabled: Boolean)
 
+    suspend fun forceListen()
+
+    suspend fun toggleListening()
+
     fun notifyBootstrap()
 }
 
