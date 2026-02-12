@@ -19,7 +19,7 @@
 ## Phase 3: Presentation and Threading Optimization
 *Goal: Decouple ViewModel and offload I/O to background threads.*
 
-- [ ] Task: Refactor `MainViewModel` to use `BackendRepository` and domain models
+- [~] Task: Refactor `MainViewModel` to use `BackendRepository` and domain models
 - [ ] Task: Wrap `SettingsRepository` blocking calls in `withContext(Dispatchers.IO)`
 - [ ] Task: Wrap `BackendManager` process lifecycle and I/O calls in `Dispatchers.IO`
 - [ ] Task: Refactor `BackendManager` log parsing to use Coroutines/Flows instead of raw threads

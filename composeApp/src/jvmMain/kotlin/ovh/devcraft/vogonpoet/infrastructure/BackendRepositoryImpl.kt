@@ -5,17 +5,17 @@ import ovh.devcraft.vogonpoet.domain.BackendRepository
 import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 
 actual object BackendRepositoryImpl : BackendRepository {
-    override val serverStatus: StateFlow<ServerStatus> = BackendManager.serverStatus
+    actual override val serverStatus: StateFlow<ServerStatus> = BackendManager.serverStatus
 
-    override fun start() {
+    actual override fun start() {
         BackendManager.startBackend()
     }
 
-    override fun stop() {
+    actual override fun stop() {
         BackendManager.stopBackend()
     }
 
-    override fun restart() {
+    actual override fun restart() {
         BackendManager.restartBackend()
     }
 }
