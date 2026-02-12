@@ -26,10 +26,11 @@ jobs:
         run: ./gradlew :composeApp:packageUberJarForCurrentOS
 
       - name: Package with Conveyor
-        uses: hydraulic-software/conveyor/action@master
+        uses: hydraulic-software/conveyor/actions/build@master
         with:
           command: make site
           agree_to_license: 1
+          signing_key: internal
         env:
           # If you have a site URL or other secrets, they would go here
           # For now, we are just generating the local artifacts

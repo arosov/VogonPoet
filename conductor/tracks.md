@@ -19,3 +19,9 @@ This file tracks all major tracks for the project. Each track has its own detail
 ## [x] Track: Mic Name Persistence
 *Link: [./conductor/tracks/mic_name_persistence_20260211/](./conductor/tracks/mic_name_persistence_20260211/)*
 
+
+---
+
+## [~] Track: Fix Hydraulic Conveyor GitHub Action Reference
+*Link: [./conductor/tracks/fix_conveyor_action_20260212/](./conductor/tracks/fix_conveyor_action_20260212/)*
+
