@@ -297,14 +297,14 @@ fun ConfigForm(
                         color = GruvboxGreenDark,
                     )
 
-                    val currentShortcut = config.ui?.shortcuts?.toggle_listening ?: "Ctrl+Shift+S"
+                    val currentShortcut = config.ui?.shortcuts?.toggle_transcribing ?: "Ctrl+Shift+S"
                     var localShortcut by remember(currentShortcut) { mutableStateOf(currentShortcut) }
 
                     // ShortcutSelector component handles its own state internally usually?
                     // Let's check ShortcutSelector.kt. Assuming it exposes onShortcutChange.
                     // We need it to be live.
                     ShortcutSelector(
-                        label = "Toggle Listening",
+                        label = "Toggle Transcribing",
                         shortcut = localShortcut,
                         onShortcutChange = {
                             localShortcut = it
@@ -313,9 +313,9 @@ fun ConfigForm(
                                     ui =
                                         config.ui?.copy(
                                             shortcuts =
-                                                config.ui?.shortcuts?.copy(toggle_listening = it)
-                                                    ?: Babelfish.Shortcuts(toggle_listening = it),
-                                        ) ?: Babelfish.Ui(shortcuts = Babelfish.Shortcuts(toggle_listening = it)),
+                                                config.ui?.shortcuts?.copy(toggle_transcribing = it)
+                                                    ?: Babelfish.Shortcuts(toggle_transcribing = it),
+                                        ) ?: Babelfish.Ui(shortcuts = Babelfish.Shortcuts(toggle_transcribing = it)),
                                 ),
                             )
                         },
