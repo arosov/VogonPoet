@@ -19,8 +19,3 @@ This file tracks all major tracks for the project. Each track has its own detail
 ## [x] Track: Mic Name Persistence
 *Link: [./conductor/tracks/mic_name_persistence_20260211/](./conductor/tracks/mic_name_persistence_20260211/)*
 
-
----
-
-## [x] Track: Distributable Packaging with Hydraulic Conveyor
-*Link: [./conductor/tracks/distributable_packaging_20260212/](./conductor/tracks/distributable_packaging_20260212/)*
