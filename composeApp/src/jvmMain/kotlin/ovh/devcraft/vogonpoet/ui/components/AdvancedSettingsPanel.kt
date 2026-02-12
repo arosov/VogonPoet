@@ -508,6 +508,50 @@ fun AdvancedSettingsPanel(
             }
 
             // Interface Settings
+            AdvancedSection(title = "Notifications") {
+                val notifications = config.ui?.notifications ?: true
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Desktop Notifications",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = GruvboxFg0,
+                        )
+                        Text(
+                            text = "Show alerts when the engine is triggered or stopped",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = GruvboxFg0.copy(alpha = 0.6f),
+                        )
+                    }
+                    Switch(
+                        checked = notifications,
+                        onCheckedChange = {
+                            onConfigChange(
+                                config.copy(
+                                    ui =
+                                        config.ui?.copy(
+                                            notifications = it,
+                                        ) ?: Babelfish.Ui(notifications = it),
+                                ),
+                            )
+                        },
+                        enabled = isReady,
+                        colors =
+                            SwitchDefaults.colors(
+                                checkedThumbColor = GruvboxGreenDark,
+                                checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                                disabledCheckedThumbColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                                disabledCheckedTrackColor = GruvboxGreenDark.copy(alpha = 0.25f),
+                            ),
+                    )
+                }
+            }
+
             AdvancedSection(title = "Activation Detection Indicator") {
                 Text(
                     text = "This floating status window is accessible via the system tray icon.",
