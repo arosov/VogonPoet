@@ -228,7 +228,7 @@ fun ConfigForm(
                     )
 
                     Text(
-                        text = "Releasing will only stop listening after the current utterance.",
+                        text = "Listening will continue until you stop speaking.",
                         style = MaterialTheme.typography.labelSmall,
                         color = GruvboxFg0.copy(alpha = 0.5f),
                         modifier = Modifier.padding(start = 4.dp),

@@ -95,6 +95,7 @@ fun AdvancedSettingsPanel(
     viewModel: MainViewModel,
     config: VogonConfig?,
     onConfigChange: (VogonConfig) -> Unit,
+    onDismiss: () -> Unit = {},
 ) {
     if (config == null) return
 
@@ -196,6 +197,7 @@ fun AdvancedSettingsPanel(
                                 text = { Text(label) },
                                 onClick = {
                                     expanded = false
+                                    onDismiss()
                                     if (value != currentDevice) {
                                         val activeDevice = config.hardware?.activeDevice
                                         val isCurrentlyAuto = config.hardware?.autoDetect ?: true

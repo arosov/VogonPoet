@@ -95,6 +95,7 @@ fun App(viewModel: MainViewModel) {
                                 viewModel.updateDraft(newConfig)
                                 viewModel.saveConfig(newConfig)
                             },
+                            onDismiss = { isPanelExpanded = false },
                         )
                     }
                 }

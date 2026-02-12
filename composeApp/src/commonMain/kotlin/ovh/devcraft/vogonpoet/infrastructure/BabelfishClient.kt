@@ -7,6 +7,8 @@ import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.*
 import ovh.devcraft.vogonpoet.domain.BackendRepository
 import ovh.devcraft.vogonpoet.domain.HardwareDevice
@@ -61,8 +63,11 @@ class BabelfishClient(
     private val responseHandlers = ConcurrentHashMap<String, CompletableDeferred<JsonObject>>()
 
     private val messageLog = mutableListOf<ProtocolMessage>()
+    private val logMutex = Mutex()
 
-    private val SERVER_URL = "ws://127.0.0.1:8123/config"
+    companion object {
+        private const val DEFAULT_SERVER_URL = "ws://127.0.0.1:8123/config"
+    }
 
     override suspend fun connect() {
         if (connectionJob?.isActive == true) return
@@ -107,10 +112,10 @@ class BabelfishClient(
                     }
 
                     _connectionState.value = ConnectionState.Connecting
-                    VogonLogger.i("Attempting to connect to Babelfish at $SERVER_URL...")
+                    VogonLogger.i("Attempting to connect to Babelfish at $DEFAULT_SERVER_URL...")
 
                     try {
-                        client.webSocket(SERVER_URL) {
+                        client.webSocket(DEFAULT_SERVER_URL) {
                             session = this
 
                             val status = backendRepository.serverStatus.value
@@ -151,7 +156,7 @@ class BabelfishClient(
             }
     }
 
-    internal fun handleIncomingLine(line: String) {
+    internal suspend fun handleIncomingLine(line: String) {
         if (line.isBlank()) return
         logMessage(MessageDirection.Received, line)
         try {
@@ -325,7 +330,7 @@ class BabelfishClient(
         // No longer strictly needed as we watch backendRepository.serverStatus
     }
 
-    private fun logMessage(
+    private suspend fun logMessage(
         direction: MessageDirection,
         content: String,
     ) {
@@ -337,7 +342,7 @@ class BabelfishClient(
                 content = content,
             )
 
-        synchronized(messageLog) {
+        logMutex.withLock {
             messageLog.add(msg)
             if (messageLog.size > 100) {
                 messageLog.removeAt(0)
