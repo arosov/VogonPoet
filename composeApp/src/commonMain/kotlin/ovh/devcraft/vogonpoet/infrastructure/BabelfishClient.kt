@@ -243,6 +243,10 @@ class BabelfishClient(
                             _transcription.update { it.copy(ghostText = ghost) }
                         }
                     }
+
+                    "transcription_reset" -> {
+                        _transcription.update { it.copy(ghostText = "") }
+                    }
                 }
             }
         } catch (e: Exception) {
