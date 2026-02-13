@@ -21,6 +21,11 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
+## [x] Track: Configurable Input Strategies
+*Link: [./conductor/tracks/input_strategies_20260213/](./conductor/tracks/input_strategies_20260213/)*
+
+---
+
 
 ---
 

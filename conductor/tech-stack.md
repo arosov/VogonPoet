@@ -17,5 +17,5 @@
 
 ## Babelfish (Backend)
 - **Language:** Python 3.12
-- **Input Simulation:** pynput (for system-wide text injection)
+- **Input Simulation:** pynput, pyperclip (for clipboard-based injection)
 - **ASR Engine:** onnx-asr
