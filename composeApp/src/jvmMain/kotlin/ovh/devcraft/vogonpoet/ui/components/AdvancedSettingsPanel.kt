@@ -151,8 +151,8 @@ fun AdvancedSettingsPanel(
             AdvancedSection(title = "System Configuration") {
                 // Hardware Acceleration
                 var expanded by remember { mutableStateOf(false) }
-                val rawDevice = config.hardware?.device ?: "auto"
-                val isAutoDetect = config.hardware?.autoDetect ?: true
+                val rawDevice = config.hardware.device
+                val isAutoDetect = config.hardware.autoDetect
 
                 // Combine dynamic hardware with auto and cpu options
                 val hardwareOptions =
@@ -178,7 +178,7 @@ fun AdvancedSettingsPanel(
                         readOnly = true,
                         label = { Text("Processing Device") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded && isReady) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = isReady).fillMaxWidth(),
                         colors =
                             OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = GruvboxGreenDark,
@@ -199,8 +199,8 @@ fun AdvancedSettingsPanel(
                                     expanded = false
                                     onDismiss()
                                     if (value != currentDevice) {
-                                        val activeDevice = config.hardware?.activeDevice
-                                        val isCurrentlyAuto = config.hardware?.autoDetect ?: true
+                                        val activeDevice = config.hardware.activeDevice
+                                        val isCurrentlyAuto = config.hardware.autoDetect
 
                                         // If switching from Auto to the device it's ALREADY using, skip restart.
                                         val isSameAsActive = isCurrentlyAuto && value == activeDevice && value != "cpu"
@@ -208,11 +208,8 @@ fun AdvancedSettingsPanel(
                                         val newConfig =
                                             config.copy(
                                                 hardware =
-                                                    config.hardware?.copy(
+                                                    config.hardware.copy(
                                                         device = if (value == "auto") "auto" else value,
-                                                        autoDetect = value == "auto",
-                                                    ) ?: VogonConfig.Hardware(
-                                                        device = value,
                                                         autoDetect = value == "auto",
                                                     ),
                                             )
@@ -229,7 +226,7 @@ fun AdvancedSettingsPanel(
                     }
                 }
 
-                config.hardware?.vramTotalGb?.let { total ->
+                config.hardware.vramTotalGb?.let { total ->
                     val isActiveCpu = config.hardware.activeDevice?.lowercase() == "cpu"
                     val isConfiguredCpu = config.hardware.device.lowercase() == "cpu"
                     if (total > 0 && !isActiveCpu && !isConfiguredCpu) {
@@ -322,8 +319,7 @@ fun AdvancedSettingsPanel(
                                             val newConfig =
                                                 config.copy(
                                                     cache =
-                                                        config.cache?.copy(cacheDir = u.absolutePath)
-                                                            ?: VogonConfig.Cache(cacheDir = u.absolutePath),
+                                                        config.cache.copy(cacheDir = u.absolutePath),
                                                 )
                                             viewModel.saveAndRestart(newConfig)
                                         }
@@ -389,7 +385,7 @@ fun AdvancedSettingsPanel(
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = GruvboxFg0),
                         border =
-                            ButtonDefaults.outlinedButtonBorder.copy(
+                            ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
                                 brush =
                                     androidx.compose.ui.graphics
                                         .SolidColor(GruvboxGray.copy(alpha = 0.5f)),
@@ -410,7 +406,7 @@ fun AdvancedSettingsPanel(
                 )
 
                 // Silence Threshold
-                val rawThreshold = config.pipeline?.silenceThresholdMs?.toFloat() ?: 400f
+                val rawThreshold = config.pipeline.silenceThresholdMs.toFloat()
                 val silenceThreshold = (Math.round(rawThreshold / 50.0) * 50).toFloat()
 
                 Text(
@@ -430,8 +426,7 @@ fun AdvancedSettingsPanel(
                         onConfigChange(
                             config.copy(
                                 pipeline =
-                                    config.pipeline?.copy(silenceThresholdMs = localSilence.toLong())
-                                        ?: VogonConfig.Pipeline(silenceThresholdMs = localSilence.toLong()),
+                                    config.pipeline.copy(silenceThresholdMs = localSilence.toLong()),
                             ),
                         )
                     },
@@ -458,7 +453,7 @@ fun AdvancedSettingsPanel(
                 )
 
                 // Wakeword Sensitivity
-                val sensitivity = config.voice?.wakewordSensitivity?.toFloat() ?: 0.5f
+                val sensitivity = config.voice.wakewordSensitivity?.toFloat() ?: 0.5f
                 var localSensitivity by remember(sensitivity) { mutableStateOf(sensitivity) }
 
                 Text(
@@ -473,8 +468,7 @@ fun AdvancedSettingsPanel(
                         onConfigChange(
                             config.copy(
                                 voice =
-                                    config.voice?.copy(wakewordSensitivity = localSensitivity.toDouble())
-                                        ?: VogonConfig.Voice(wakewordSensitivity = localSensitivity.toDouble()),
+                                    config.voice.copy(wakewordSensitivity = localSensitivity.toDouble()),
                             ),
                         )
                     },
@@ -493,7 +487,7 @@ fun AdvancedSettingsPanel(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Stop Word Sensitivity
-                val stopSensitivity = config.voice?.stopWakewordSensitivity?.toFloat() ?: 0.5f
+                val stopSensitivity = config.voice.stopWakewordSensitivity?.toFloat() ?: 0.5f
                 var localStopSensitivity by remember(stopSensitivity) { mutableStateOf(stopSensitivity) }
 
                 Text(
@@ -508,8 +502,7 @@ fun AdvancedSettingsPanel(
                         onConfigChange(
                             config.copy(
                                 voice =
-                                    config.voice?.copy(stopWakewordSensitivity = localStopSensitivity.toDouble())
-                                        ?: VogonConfig.Voice(stopWakewordSensitivity = localStopSensitivity.toDouble()),
+                                    config.voice.copy(stopWakewordSensitivity = localStopSensitivity.toDouble()),
                             ),
                         )
                     },
@@ -535,9 +528,9 @@ fun AdvancedSettingsPanel(
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
 
-                val inputEnabled = config.systemInput?.enabled ?: false
-                val typeGhost = config.systemInput?.typeGhost ?: false
-                val currentStrategy = config.systemInput?.strategy ?: VogonConfig.InputStrategy.CLIPBOARD
+                val inputEnabled = config.systemInput.enabled
+                val typeGhost = config.systemInput.typeGhost
+                val currentStrategy = config.systemInput.strategy
 
                 // Enable Input Toggle
                 Row(
@@ -563,8 +556,7 @@ fun AdvancedSettingsPanel(
                             onConfigChange(
                                 config.copy(
                                     systemInput =
-                                        config.systemInput?.copy(enabled = it)
-                                            ?: VogonConfig.SystemInput(enabled = it),
+                                        config.systemInput.copy(enabled = it),
                                 ),
                             )
                         },
@@ -603,8 +595,7 @@ fun AdvancedSettingsPanel(
                             onConfigChange(
                                 config.copy(
                                     systemInput =
-                                        config.systemInput?.copy(typeGhost = it)
-                                            ?: VogonConfig.SystemInput(typeGhost = it),
+                                        config.systemInput.copy(typeGhost = it),
                                 ),
                             )
                         },
@@ -640,7 +631,12 @@ fun AdvancedSettingsPanel(
                         readOnly = true,
                         label = { Text("Injection Strategy") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = strategyExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        modifier =
+                            Modifier
+                                .menuAnchor(
+                                    ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                    enabled = isReady && inputEnabled,
+                                ).fillMaxWidth(),
                         colors =
                             OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = GruvboxGreenDark,
@@ -662,8 +658,7 @@ fun AdvancedSettingsPanel(
                                     onConfigChange(
                                         config.copy(
                                             systemInput =
-                                                config.systemInput?.copy(strategy = strategy)
-                                                    ?: VogonConfig.SystemInput(strategy = strategy),
+                                                config.systemInput.copy(strategy = strategy),
                                         ),
                                     )
                                 },
@@ -675,7 +670,7 @@ fun AdvancedSettingsPanel(
 
             // Interface Settings
             AdvancedSection(title = "Notifications") {
-                val notifications = config.ui?.notifications ?: true
+                val notifications = config.ui.notifications
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -700,9 +695,9 @@ fun AdvancedSettingsPanel(
                             onConfigChange(
                                 config.copy(
                                     ui =
-                                        config.ui?.copy(
+                                        config.ui.copy(
                                             notifications = it,
-                                        ) ?: VogonConfig.Ui(notifications = it),
+                                        ),
                                 ),
                             )
                         },
@@ -726,8 +721,8 @@ fun AdvancedSettingsPanel(
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
 
-                val iconOnly = config.ui?.activationDetection?.iconOnly ?: false
-                val overlayMode = config.ui?.activationDetection?.overlayMode ?: false
+                val iconOnly = config.ui.activationDetection.iconOnly
+                val overlayMode = config.ui.activationDetection.overlayMode
 
                 // Icon Only Mode
                 Row(
@@ -753,12 +748,9 @@ fun AdvancedSettingsPanel(
                             onConfigChange(
                                 config.copy(
                                     ui =
-                                        config.ui?.copy(
+                                        config.ui.copy(
                                             activationDetection =
-                                                config.ui?.activationDetection?.copy(iconOnly = it)
-                                                    ?: VogonConfig.ActivationDetection(iconOnly = it),
-                                        ) ?: VogonConfig.Ui(
-                                            activationDetection = VogonConfig.ActivationDetection(iconOnly = it),
+                                                config.ui.activationDetection.copy(iconOnly = it),
                                         ),
                                 ),
                             )
@@ -800,12 +792,9 @@ fun AdvancedSettingsPanel(
                             onConfigChange(
                                 config.copy(
                                     ui =
-                                        config.ui?.copy(
+                                        config.ui.copy(
                                             activationDetection =
-                                                config.ui?.activationDetection?.copy(overlayMode = it)
-                                                    ?: VogonConfig.ActivationDetection(overlayMode = it),
-                                        ) ?: VogonConfig.Ui(
-                                            activationDetection = VogonConfig.ActivationDetection(overlayMode = it),
+                                                config.ui.activationDetection.copy(overlayMode = it),
                                         ),
                                 ),
                             )
@@ -830,7 +819,7 @@ fun AdvancedSettingsPanel(
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
 
-                val alwaysOnTop = config.ui?.transcriptionWindow?.alwaysOnTop ?: true
+                val alwaysOnTop = config.ui.transcriptionWindow.alwaysOnTop
 
                 // Always on Top Toggle
                 Row(
@@ -856,12 +845,9 @@ fun AdvancedSettingsPanel(
                             onConfigChange(
                                 config.copy(
                                     ui =
-                                        config.ui?.copy(
+                                        config.ui.copy(
                                             transcriptionWindow =
-                                                config.ui?.transcriptionWindow?.copy(alwaysOnTop = it)
-                                                    ?: VogonConfig.TranscriptionWindow(alwaysOnTop = it),
-                                        ) ?: VogonConfig.Ui(
-                                            transcriptionWindow = VogonConfig.TranscriptionWindow(alwaysOnTop = it),
+                                                config.ui.transcriptionWindow.copy(alwaysOnTop = it),
                                         ),
                                 ),
                             )

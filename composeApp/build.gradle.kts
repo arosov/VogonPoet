@@ -111,6 +111,14 @@ tasks.configureEach {
 kotlin {
     jvm()
 
+    targets.configureEach {
+        compilations.configureEach {
+            compileTaskProvider.get().compilerOptions {
+                freeCompilerArgs.add("-Xexpect-actual-classes")
+            }
+        }
+    }
+
     sourceSets {
         commonMain {
             kotlin.srcDir(layout.buildDirectory.dir("generated/sources/json-kotlin"))

@@ -37,7 +37,7 @@ fun ConfigForm(
     val connectionState by viewModel.connectionState.collectAsState()
     var micExpanded by remember { mutableStateOf(false) }
 
-    val selectedMicName = config.hardware?.microphoneName ?: ""
+    val selectedMicName = config.hardware.microphoneName ?: ""
 
     // Load microphones and hardware when connected
     LaunchedEffect(connectionState) {
@@ -94,7 +94,12 @@ fun ConfigForm(
                             readOnly = true,
                             label = { Text("Select Device") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = micExpanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            modifier =
+                                Modifier
+                                    .menuAnchor(
+                                        ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                        enabled = isReady,
+                                    ).fillMaxWidth(),
                             enabled = isReady,
                             colors =
                                 OutlinedTextFieldDefaults.colors(
@@ -113,8 +118,7 @@ fun ConfigForm(
                                     onConfigChange(
                                         config.copy(
                                             hardware =
-                                                config.hardware?.copy(microphoneName = null)
-                                                    ?: VogonConfig.Hardware(microphoneName = null),
+                                                config.hardware.copy(microphoneName = null),
                                         ),
                                     )
                                 },
@@ -127,8 +131,7 @@ fun ConfigForm(
                                         onConfigChange(
                                             config.copy(
                                                 hardware =
-                                                    config.hardware?.copy(microphoneName = mic.name)
-                                                        ?: VogonConfig.Hardware(microphoneName = mic.name),
+                                                    config.hardware.copy(microphoneName = mic.name),
                                             ),
                                         )
                                     },
@@ -183,7 +186,7 @@ fun ConfigForm(
                         color = GruvboxGreenDark,
                     )
 
-                    val toggleShortcut = config.ui?.shortcuts?.toggleListening ?: "Ctrl+Space"
+                    val toggleShortcut = config.ui.shortcuts.toggleListening
                     var localToggleShortcut by remember(toggleShortcut) { mutableStateOf(toggleShortcut) }
 
                     ShortcutSelector(
@@ -194,18 +197,17 @@ fun ConfigForm(
                             onConfigChange(
                                 config.copy(
                                     ui =
-                                        config.ui?.copy(
+                                        config.ui.copy(
                                             shortcuts =
-                                                config.ui?.shortcuts?.copy(toggleListening = it)
-                                                    ?: VogonConfig.Shortcuts(toggleListening = it),
-                                        ) ?: VogonConfig.Ui(shortcuts = VogonConfig.Shortcuts(toggleListening = it)),
+                                                config.ui.shortcuts.copy(toggleListening = it),
+                                        ),
                                 ),
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
                     )
 
-                    val pttShortcut = config.ui?.shortcuts?.forceListen ?: "Left Ctrl"
+                    val pttShortcut = config.ui.shortcuts.forceListen
                     var localPttShortcut by remember(pttShortcut) { mutableStateOf(pttShortcut) }
 
                     SingleKeySelector(
@@ -216,11 +218,10 @@ fun ConfigForm(
                             onConfigChange(
                                 config.copy(
                                     ui =
-                                        config.ui?.copy(
+                                        config.ui.copy(
                                             shortcuts =
-                                                config.ui?.shortcuts?.copy(forceListen = it)
-                                                    ?: VogonConfig.Shortcuts(forceListen = it),
-                                        ) ?: VogonConfig.Ui(shortcuts = VogonConfig.Shortcuts(forceListen = it)),
+                                                config.ui.shortcuts.copy(forceListen = it),
+                                        ),
                                 ),
                             )
                         },
@@ -258,7 +259,7 @@ fun ConfigForm(
                 // Wakeword selection
                 var wakewordExpanded by remember { mutableStateOf(false) }
                 val wakewordList by viewModel.wakewordList.collectAsState()
-                val currentWakeword = config.voice?.wakeword ?: ""
+                val currentWakeword = config.voice.wakeword ?: ""
 
                 ExposedDropdownMenuBox(
                     expanded = wakewordExpanded,
@@ -271,7 +272,7 @@ fun ConfigForm(
                         readOnly = true,
                         label = { Text("Wakeword") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = wakewordExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = isReady).fillMaxWidth(),
                         enabled = isReady,
                         colors =
                             OutlinedTextFieldDefaults.colors(
@@ -289,7 +290,7 @@ fun ConfigForm(
                                 wakewordExpanded = false
                                 onConfigChange(
                                     config.copy(
-                                        voice = config.voice?.copy(wakeword = null) ?: VogonConfig.Voice(wakeword = null),
+                                        voice = config.voice.copy(wakeword = null),
                                     ),
                                 )
                             },
@@ -301,7 +302,7 @@ fun ConfigForm(
                                     wakewordExpanded = false
                                     onConfigChange(
                                         config.copy(
-                                            voice = config.voice?.copy(wakeword = word) ?: VogonConfig.Voice(wakeword = word),
+                                            voice = config.voice.copy(wakeword = word),
                                         ),
                                     )
                                 },
@@ -312,7 +313,7 @@ fun ConfigForm(
 
                 // Stop word selection
                 var stopWakewordExpanded by remember { mutableStateOf(false) }
-                val currentStopWakeword = config.voice?.stopWakeword ?: ""
+                val currentStopWakeword = config.voice.stopWakeword ?: ""
 
                 ExposedDropdownMenuBox(
                     expanded = stopWakewordExpanded,
@@ -325,7 +326,7 @@ fun ConfigForm(
                         readOnly = true,
                         label = { Text("Stop word") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = stopWakewordExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = isReady).fillMaxWidth(),
                         enabled = isReady,
                         colors =
                             OutlinedTextFieldDefaults.colors(
@@ -343,7 +344,7 @@ fun ConfigForm(
                                 stopWakewordExpanded = false
                                 onConfigChange(
                                     config.copy(
-                                        voice = config.voice?.copy(stopWakeword = null) ?: VogonConfig.Voice(stopWakeword = null),
+                                        voice = config.voice.copy(stopWakeword = null),
                                     ),
                                 )
                             },
@@ -356,7 +357,7 @@ fun ConfigForm(
                                     onConfigChange(
                                         config.copy(
                                             voice =
-                                                config.voice?.copy(stopWakeword = word) ?: VogonConfig.Voice(stopWakeword = word),
+                                                config.voice.copy(stopWakeword = word),
                                         ),
                                     )
                                 },
@@ -373,7 +374,7 @@ fun ConfigForm(
                 )
 
                 // Stop words parsing transcript
-                val stopWordsList = config.voice?.stopWords ?: emptyList()
+                val stopWordsList = config.voice.stopWords ?: emptyList()
                 val stopWordsString = stopWordsList.joinToString(", ")
                 var localStopWords by remember(stopWordsString) { mutableStateOf(stopWordsString) }
 
@@ -391,8 +392,7 @@ fun ConfigForm(
                                     onConfigChange(
                                         config.copy(
                                             voice =
-                                                config.voice?.copy(stopWords = newList)
-                                                    ?: VogonConfig.Voice(stopWords = newList),
+                                                config.voice.copy(stopWords = newList),
                                         ),
                                     )
                                 }
@@ -406,8 +406,7 @@ fun ConfigForm(
                                 onConfigChange(
                                     config.copy(
                                         voice =
-                                            config.voice?.copy(stopWords = newList)
-                                                ?: VogonConfig.Voice(stopWords = newList),
+                                            config.voice.copy(stopWords = newList),
                                     ),
                                 )
                             },
