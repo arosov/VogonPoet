@@ -22,7 +22,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [~] Track: Use GitHub Secret for Conveyor Signing Key
+## [x] Track: Use GitHub Secret for Conveyor Signing Key
 *Link: [./conductor/tracks/use_secret_for_signing_key_20260212/](./conductor/tracks/use_secret_for_signing_key_20260212/)*
 
 
