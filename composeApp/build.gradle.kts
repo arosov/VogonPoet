@@ -18,8 +18,20 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.kotlinSerialization)
+    id("dev.hydraulic.conveyor") version "1.12"
 }
-
+conveyor {
+    displayName.set("VogonPoet")
+    rdnsName.set("ovh.devcraft.vogonpoet")
+    vendor.set("DevCraft")
+    contactEmail.set("contact@devcraft.ovh")
+    description.set("A minimalist frontend to babelfish STT server.")
+    license.set("Apache-2.0")
+    site {
+        baseUrl.set("https://github.com/arosov/VogonPoet/releases/latest/download")
+    }
+}
+version = "0.0.1"
 apply<JSONSchemaCodegenPlugin>()
 
 // --- Babelfish Bundling Task ---
