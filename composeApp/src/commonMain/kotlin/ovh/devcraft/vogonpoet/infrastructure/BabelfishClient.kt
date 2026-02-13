@@ -57,6 +57,9 @@ class BabelfishClient(
     private val _config = MutableStateFlow<VogonConfig?>(null)
     override val config: StateFlow<VogonConfig?> = _config.asStateFlow()
 
+    private val _transcription = MutableStateFlow(TranscriptionState())
+    override val transcription: StateFlow<TranscriptionState> = _transcription.asStateFlow()
+
     private var session: DefaultClientWebSocketSession? = null
     private var connectionJob: Job? = null
 
@@ -219,6 +222,25 @@ class BabelfishClient(
                                     _events.emit(EngineEvent.StopWordDetected)
                                 }
                             }
+                        }
+                    }
+
+                    "transcription" -> {
+                        val text = element["text"]?.jsonPrimitive?.contentOrNull ?: ""
+                        val ghost = element["ghost"]?.jsonPrimitive?.contentOrNull ?: ""
+                        val isFinal = element["final"]?.jsonPrimitive?.boolean ?: false
+
+                        if (isFinal) {
+                            if (text.isNotBlank()) {
+                                _transcription.update { current ->
+                                    current.copy(
+                                        finalizedText = (current.finalizedText + text).takeLast(50),
+                                        ghostText = "",
+                                    )
+                                }
+                            }
+                        } else {
+                            _transcription.update { it.copy(ghostText = ghost) }
                         }
                     }
                 }

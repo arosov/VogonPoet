@@ -3,6 +3,7 @@ package ovh.devcraft.vogonpoet.domain.model
 data class VogonConfig(
     val hardware: Hardware = Hardware(),
     val pipeline: Pipeline = Pipeline(),
+    val systemInput: SystemInput = SystemInput(),
     val voice: Voice = Voice(),
     val ui: Ui = Ui(),
     val server: Server = Server(),
@@ -35,6 +36,11 @@ data class VogonConfig(
         val tier: String = "auto",
     )
 
+    data class SystemInput(
+        val enabled: Boolean = false,
+        val typeGhost: Boolean = false,
+    )
+
     data class Voice(
         val wakeword: String? = null,
         val stopWakeword: String? = null,
@@ -49,6 +55,7 @@ data class VogonConfig(
         val notifications: Boolean = true,
         val shortcuts: Shortcuts = Shortcuts(),
         val activationDetection: ActivationDetection = ActivationDetection(),
+        val transcriptionWindow: TranscriptionWindow = TranscriptionWindow(),
     )
 
     data class Shortcuts(
@@ -59,6 +66,10 @@ data class VogonConfig(
     data class ActivationDetection(
         val iconOnly: Boolean = false,
         val overlayMode: Boolean = false,
+    )
+
+    data class TranscriptionWindow(
+        val alwaysOnTop: Boolean = true,
     )
 
     data class Server(

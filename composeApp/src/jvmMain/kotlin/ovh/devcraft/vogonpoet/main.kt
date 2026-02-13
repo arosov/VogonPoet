@@ -23,6 +23,7 @@ import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.VogonPoetTray
 import ovh.devcraft.vogonpoet.ui.screens.FirstBootScreen
 import ovh.devcraft.vogonpoet.ui.windows.ProtocolLogWindow
+import ovh.devcraft.vogonpoet.ui.windows.TranscriptionWindow
 import ovh.devcraft.vogonpoet.ui.windows.VadWindow
 import vogonpoet.composeapp.generated.resources.Res
 import vogonpoet.composeapp.generated.resources.compose_multiplatform
@@ -74,6 +75,7 @@ fun main() {
 
                     var showSettings by remember { mutableStateOf(true) }
                     var showVadWindow by remember { mutableStateOf(false) }
+                    var showTranscriptionWindow by remember { mutableStateOf(false) }
                     var showProtocolLog by remember { mutableStateOf(false) }
 
                     // Settings Window State - compact height to fit content
@@ -134,6 +136,14 @@ fun main() {
                         )
                     }
 
+                    // Transcription Window
+                    if (showTranscriptionWindow) {
+                        TranscriptionWindow(
+                            viewModel = viewModel,
+                            onCloseRequest = { showTranscriptionWindow = false },
+                        )
+                    }
+
                     VogonPoetTray(
                         connectionState = connectionState,
                         vadState = vadState,
@@ -142,6 +152,7 @@ fun main() {
                         onExit = ::exitApplication,
                         onOpenSettings = { showSettings = true },
                         onOpenVadWindow = { showVadWindow = true },
+                        onOpenTranscriptionWindow = { showTranscriptionWindow = true },
                         onOpenProtocolLog = { showProtocolLog = true },
                     )
                 }

@@ -30,6 +30,7 @@ fun ApplicationScope.VogonPoetTray(
     onExit: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenVadWindow: () -> Unit,
+    onOpenTranscriptionWindow: () -> Unit,
     onOpenProtocolLog: () -> Unit,
 ) {
     val trayState = rememberTrayState()
@@ -100,6 +101,10 @@ fun ApplicationScope.VogonPoetTray(
             Item("Activation Detection", onClick = {
                 isMenuOpen = false
                 onOpenVadWindow()
+            })
+            Item("Transcription", onClick = {
+                isMenuOpen = false
+                onOpenTranscriptionWindow()
             })
             Item("Protocol Log", onClick = {
                 isMenuOpen = false

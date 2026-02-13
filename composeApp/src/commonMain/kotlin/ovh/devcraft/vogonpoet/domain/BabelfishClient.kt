@@ -11,6 +11,7 @@ interface BabelfishClient {
     val events: SharedFlow<EngineEvent>
     val messages: StateFlow<List<ProtocolMessage>>
     val config: StateFlow<VogonConfig?>
+    val transcription: StateFlow<TranscriptionState>
 
     suspend fun connect()
 

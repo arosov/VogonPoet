@@ -526,6 +526,97 @@ fun AdvancedSettingsPanel(
                 )
             }
 
+            // System-wide Input
+            AdvancedSection(title = "System-wide Input") {
+                Text(
+                    text = "Automatically type transcription into other applications.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GruvboxGray,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+
+                val inputEnabled = config.systemInput?.enabled ?: false
+                val typeGhost = config.systemInput?.typeGhost ?: false
+
+                // Enable Input Toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Enable System Input",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = GruvboxFg0,
+                        )
+                        Text(
+                            text = "Type text into the focused window",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = GruvboxFg0.copy(alpha = 0.6f),
+                        )
+                    }
+                    Switch(
+                        checked = inputEnabled,
+                        onCheckedChange = {
+                            onConfigChange(
+                                config.copy(
+                                    systemInput =
+                                        config.systemInput?.copy(enabled = it)
+                                            ?: VogonConfig.SystemInput(enabled = it),
+                                ),
+                            )
+                        },
+                        enabled = isReady,
+                        colors =
+                            SwitchDefaults.colors(
+                                checkedThumbColor = GruvboxGreenDark,
+                                checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                            ),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Type Ghost Toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Type Ghost Output",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = GruvboxFg0,
+                        )
+                        Text(
+                            text = "Show real-time typing (replaces by backspacing)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = GruvboxFg0.copy(alpha = 0.6f),
+                        )
+                    }
+                    Switch(
+                        checked = typeGhost,
+                        onCheckedChange = {
+                            onConfigChange(
+                                config.copy(
+                                    systemInput =
+                                        config.systemInput?.copy(typeGhost = it)
+                                            ?: VogonConfig.SystemInput(typeGhost = it),
+                                ),
+                            )
+                        },
+                        enabled = isReady && inputEnabled,
+                        colors =
+                            SwitchDefaults.colors(
+                                checkedThumbColor = GruvboxGreenDark,
+                                checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                            ),
+                    )
+                }
+            }
+
             // Interface Settings
             AdvancedSection(title = "Notifications") {
                 val notifications = config.ui?.notifications ?: true
@@ -670,6 +761,60 @@ fun AdvancedSettingsPanel(
                                 checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
                                 disabledCheckedThumbColor = GruvboxGreenDark.copy(alpha = 0.5f),
                                 disabledCheckedTrackColor = GruvboxGreenDark.copy(alpha = 0.25f),
+                            ),
+                    )
+                }
+            }
+
+            AdvancedSection(title = "Transcription Window") {
+                Text(
+                    text = "Controls for the dedicated transcription flow window.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GruvboxGray,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+
+                val alwaysOnTop = config.ui?.transcriptionWindow?.alwaysOnTop ?: true
+
+                // Always on Top Toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Always on Top",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = GruvboxFg0,
+                        )
+                        Text(
+                            text = "Keep window above all other applications",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = GruvboxFg0.copy(alpha = 0.6f),
+                        )
+                    }
+                    Switch(
+                        checked = alwaysOnTop,
+                        onCheckedChange = {
+                            onConfigChange(
+                                config.copy(
+                                    ui =
+                                        config.ui?.copy(
+                                            transcriptionWindow =
+                                                config.ui?.transcriptionWindow?.copy(alwaysOnTop = it)
+                                                    ?: VogonConfig.TranscriptionWindow(alwaysOnTop = it),
+                                        ) ?: VogonConfig.Ui(
+                                            transcriptionWindow = VogonConfig.TranscriptionWindow(alwaysOnTop = it),
+                                        ),
+                                ),
+                            )
+                        },
+                        enabled = isReady,
+                        colors =
+                            SwitchDefaults.colors(
+                                checkedThumbColor = GruvboxGreenDark,
+                                checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
                             ),
                     )
                 }

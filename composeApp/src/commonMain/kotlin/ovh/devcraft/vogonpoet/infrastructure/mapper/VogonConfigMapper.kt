@@ -37,6 +37,13 @@ fun Babelfish.toDomain(): VogonConfig =
                         } ?: VogonConfig.Performance(),
                 )
             } ?: VogonConfig.Pipeline(),
+        systemInput =
+            system_input?.let { si ->
+                VogonConfig.SystemInput(
+                    enabled = si.enabled,
+                    typeGhost = si.type_ghost,
+                )
+            } ?: VogonConfig.SystemInput(),
         voice =
             voice?.let { v ->
                 VogonConfig.Voice(
@@ -67,6 +74,12 @@ fun Babelfish.toDomain(): VogonConfig =
                                 overlayMode = ad.overlay_mode,
                             )
                         } ?: VogonConfig.ActivationDetection(),
+                    transcriptionWindow =
+                        u.transcription_window?.let { tw ->
+                            VogonConfig.TranscriptionWindow(
+                                alwaysOnTop = tw.always_on_top,
+                            )
+                        } ?: VogonConfig.TranscriptionWindow(),
                 )
             } ?: VogonConfig.Ui(),
         server =
@@ -118,6 +131,13 @@ fun VogonConfig.toInfrastructure(): Babelfish =
                         },
                 )
             },
+        system_input =
+            systemInput.let { si ->
+                Babelfish.System_input(
+                    enabled = si.enabled,
+                    type_ghost = si.typeGhost,
+                )
+            },
         voice =
             voice.let { v ->
                 Babelfish.Voice(
@@ -146,6 +166,12 @@ fun VogonConfig.toInfrastructure(): Babelfish =
                             Babelfish.Activation_detection(
                                 icon_only = ad.iconOnly,
                                 overlay_mode = ad.overlayMode,
+                            )
+                        },
+                    transcription_window =
+                        u.transcriptionWindow.let { tw ->
+                            Babelfish.Transcription_window(
+                                always_on_top = tw.alwaysOnTop,
                             )
                         },
                 )
