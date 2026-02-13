@@ -25,14 +25,29 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew :composeApp:packageUberJarForCurrentOS
 
+      - name: Restore Conveyor Cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .conveyor
+          key: conveyor-${{ runner.os }}-${{ hashFiles('conveyor.conf', 'composeApp/build.gradle.kts') }}
+          restore-keys: |
+            conveyor-${{ runner.os }}-
+
       - name: Package with Conveyor
         uses: hydraulic-software/conveyor/actions/build@v21.1
         with:
-          command: make site
+          command: make site --cache-limit=5
           agree_to_license: 1
           signing_key: ${{ secrets.CONVEYOR_SIGNING_KEY }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save Conveyor Cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .conveyor
+          key: conveyor-${{ runner.os }}-${{ hashFiles('conveyor.conf', 'composeApp/build.gradle.kts') }}-${{ github.run_id }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4

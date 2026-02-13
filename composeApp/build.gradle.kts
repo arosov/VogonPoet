@@ -18,7 +18,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.kotlinSerialization)
-    id("dev.hydraulic.conveyor") version "1.12"
+    id("dev.hydraulic.conveyor") version "1.13"
 }
 version = "0.0.1"
 apply<JSONSchemaCodegenPlugin>()
