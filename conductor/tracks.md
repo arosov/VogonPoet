@@ -38,6 +38,6 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [~] Track: Fix Hydraulic Conveyor Mnemonic using BIP39 words
+## [x] Track: Fix Hydraulic Conveyor Mnemonic using BIP39 words
 *Link: [./conductor/tracks/fix_conveyor_mnemonic_bip39_20260212/](./conductor/tracks/fix_conveyor_mnemonic_bip39_20260212/)*
 
