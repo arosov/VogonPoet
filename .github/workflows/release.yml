@@ -30,7 +30,7 @@ jobs:
         with:
           command: make site
           agree_to_license: 1
-          signing_key: "${{ secrets.CONVEYOR_SIGNING_KEY }}"
+          signing_key: ${{ secrets.CONVEYOR_SIGNING_KEY }}
         env:
           # If you have a site URL or other secrets, they would go here
           # For now, we are just generating the local artifacts
