@@ -1,12 +1,12 @@
 # Plan: System Input & Transcription Window
 
-## Phase 1: Babelfish Infrastructure & Configuration
+## Phase 1: Babelfish Infrastructure & Configuration [checkpoint: 486e581]
 - [x] Task: Add `pynput` dependency to `babelfish/pyproject.toml` (bbf0ff7)
 - [x] Task: Update `babelfish/src/babelfish_stt/config.py` with system input settings (9b1e22a)
-    - Add `enable_system_input` and `type_ghost_output` to `UIConfig` or a new `InputConfig`.
 - [x] Task: Generate updated `babelfish_schema.json` and propagate to VogonPoet (1233173)
 - [x] Task: Regenerate VogonPoet Kotlin models (1233173)
-- [~] Task: Conductor - User Manual Verification 'Phase 1: Babelfish Infrastructure & Configuration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Babelfish Infrastructure & Configuration' (Protocol in workflow.md)
+
 
 ## Phase 2: Babelfish - System Input Implementation
 - [ ] Task: Implement `InputSimulator` in `babelfish/src/babelfish_stt/input_manager.py`
