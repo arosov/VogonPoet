@@ -21,6 +21,7 @@ VogonPoet is a minimalist, high-performance desktop frontend for the Babelfish S
     - **Connectivity Status:** Immediate feedback on the WebSocket connection to the Babelfish server.
 - **Backend Management:**
     - **Always-on Status Overlay:** A persistent, minimal indicator of the system's current state.
+    - **Transcription Stream:** A dedicated window showing the real-time transcription flow (ghost and final text).
     - **Live Configuration Dashboard:** A reactive interface where changes apply immediately without manual saving, providing instant feedback.
     - **Advanced System Controls:** Dedicated management for critical settings like hardware acceleration and storage location, with safety safeguards.
 

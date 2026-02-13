@@ -24,7 +24,3 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
----
-
-## [~] Track: System Input & Transcription Window
-*Link: [./conductor/tracks/system_input_20260213/](./conductor/tracks/system_input_20260213/)*

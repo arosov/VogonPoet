@@ -14,3 +14,8 @@
 - **Build Tool:** Gradle (Kotlin DSL)
 - **Dependency Management:** Gradle Version Catalogs (`libs.versions.toml`)
 - **Primary Target:** JVM / Desktop (Linux, Windows, macOS)
+
+## Babelfish (Backend)
+- **Language:** Python 3.12
+- **Input Simulation:** pynput (for system-wide text injection)
+- **ASR Engine:** onnx-asr
