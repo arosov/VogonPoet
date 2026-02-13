@@ -36,7 +36,7 @@ jobs:
       - name: Package with Conveyor
         uses: hydraulic-software/conveyor/actions/build@v21.1
         with:
-          command: make site --cache-limit=5.0
+          command: make site
           agree_to_license: 1
           signing_key: ${{ secrets.CONVEYOR_SIGNING_KEY }}
         env:
