@@ -23,7 +23,9 @@ jobs:
           cache: 'gradle'
 
       - name: Build with Gradle
-        run: ./gradlew :composeApp:packageUberJarForCurrentOS
+        run: |
+          ./gradlew :composeApp:packageUberJarForCurrentOS :composeApp:writeConveyorConfig
+          mv composeApp/generated.conveyor.conf conveyor.conf
 
       - name: Package with Conveyor
         uses: hydraulic-software/conveyor/actions/build@v21.1
