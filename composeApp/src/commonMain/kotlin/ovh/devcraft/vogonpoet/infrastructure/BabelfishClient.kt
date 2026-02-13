@@ -326,9 +326,25 @@ class BabelfishClient(
             } ?: emptyList()
         }
 
-    override suspend fun listWakewords(): List<String> =
+    override suspend fun listWakewords(): List<WakewordInfo> =
         requestResponse("list_wakewords", "wakewords_list") { response ->
-            response["data"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
+            val words = response["data"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
+            val metadata = response["metadata"]?.jsonObject
+
+            words.map { name ->
+                val isCustom =
+                    name.endsWith("*") || metadata
+                        ?.get(name)
+                        ?.jsonObject
+                        ?.get("is_custom")
+                        ?.jsonPrimitive
+                        ?.boolean == true
+                WakewordInfo(
+                    name = name,
+                    isCustom = isCustom,
+                    displayName = name,
+                )
+            }
         }
 
     override suspend fun setMicTest(enabled: Boolean) {

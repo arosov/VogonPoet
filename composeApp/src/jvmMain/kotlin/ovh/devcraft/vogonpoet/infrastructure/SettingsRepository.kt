@@ -4,7 +4,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import ovh.devcraft.vogonpoet.domain.VogonSettings
+import java.awt.Desktop
 import java.io.File
+import java.io.IOException
 
 actual object SettingsRepository {
     private val json =
@@ -60,6 +62,38 @@ actual object SettingsRepository {
         }
         dir
     }
+
+    val openwakewordModelsDir: File by lazy {
+        val dir = File(appDataDir, "openwakeword_models")
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
+        // Create start and stop subdirectories
+        File(dir, "start").mkdirs()
+        File(dir, "stop").mkdirs()
+        dir
+    }
+
+    /**
+     * Opens the wake word models directory in the system's file manager.
+     * @return true if successful, false otherwise
+     */
+    fun openModelsFolder(): Boolean =
+        try {
+            if (Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().open(openwakewordModelsDir)
+                true
+            } else {
+                VogonLogger.e("Desktop not supported on this platform")
+                false
+            }
+        } catch (e: IOException) {
+            VogonLogger.e("Failed to open models folder", e)
+            false
+        } catch (e: Exception) {
+            VogonLogger.e("Unexpected error opening models folder", e)
+            false
+        }
 
     private val settingsFile: File by lazy {
         File(appDataDir, "vogon.config.json")

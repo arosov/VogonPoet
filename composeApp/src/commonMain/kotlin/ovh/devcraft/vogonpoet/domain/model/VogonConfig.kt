@@ -1,5 +1,14 @@
 package ovh.devcraft.vogonpoet.domain.model
 
+/**
+ * Information about a wake word model.
+ */
+data class WakewordInfo(
+    val name: String,
+    val isCustom: Boolean = false,
+    val displayName: String = name,
+)
+
 data class VogonConfig(
     val hardware: Hardware = Hardware(),
     val pipeline: Pipeline = Pipeline(),

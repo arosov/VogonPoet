@@ -20,6 +20,7 @@ import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 import ovh.devcraft.vogonpoet.domain.model.TranscriptionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
 import ovh.devcraft.vogonpoet.domain.model.VogonConfig
+import ovh.devcraft.vogonpoet.domain.model.WakewordInfo
 import ovh.devcraft.vogonpoet.infrastructure.VogonLogger
 import ovh.devcraft.vogonpoet.ui.constants.vogonLoadingStrings
 import kotlin.random.Random
@@ -54,8 +55,8 @@ class MainViewModel(
     private val _hardwareList = MutableStateFlow<List<HardwareDevice>>(emptyList())
     val hardwareList: StateFlow<List<HardwareDevice>> = _hardwareList
 
-    private val _wakewordList = MutableStateFlow<List<String>>(emptyList())
-    val wakewordList: StateFlow<List<String>> = _wakewordList
+    private val _wakewordList = MutableStateFlow<List<WakewordInfo>>(emptyList())
+    val wakewordList: StateFlow<List<WakewordInfo>> = _wakewordList
 
     private val _isMicTesting = MutableStateFlow(false)
     val isMicTesting: StateFlow<Boolean> = _isMicTesting

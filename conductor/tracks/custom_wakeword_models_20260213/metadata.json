@@ -1,0 +1,8 @@
+{
+  "track_id": "custom_wakeword_models_20260213",
+  "type": "feature",
+  "status": "in_progress",
+  "created_at": "2026-02-13T23:45:00Z",
+  "updated_at": "2026-02-13T23:45:00Z",
+  "description": "Add support for custom wake word models from openwakeword_models/ directory with start/stop subdirectories and language organization"
+}

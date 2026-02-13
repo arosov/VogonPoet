@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
 import ovh.devcraft.vogonpoet.domain.model.VogonConfig
+import ovh.devcraft.vogonpoet.domain.model.WakewordInfo
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.theme.*
 
@@ -261,13 +262,30 @@ fun ConfigForm(
                 val wakewordList by viewModel.wakewordList.collectAsState()
                 val currentWakeword = config.voice.wakeword ?: ""
 
+                // Helper function to format wakeword display name
+                fun formatWakewordDisplay(info: WakewordInfo): String {
+                    val baseName =
+                        info.name
+                            .removeSuffix("*")
+                            .replace("_", " ")
+                            .replaceFirstChar { it.uppercase() }
+                    return if (info.isCustom) "$baseName *" else baseName
+                }
+
                 ExposedDropdownMenuBox(
                     expanded = wakewordExpanded,
                     onExpandedChange = { if (isReady) wakewordExpanded = it },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     OutlinedTextField(
-                        value = currentWakeword.takeIf { it.isNotBlank() } ?: "None",
+                        value =
+                            currentWakeword
+                                .takeIf { it.isNotBlank() }
+                                ?.removeSuffix(
+                                    "*",
+                                )?.replace("_", " ")
+                                ?.replaceFirstChar { it.uppercase() }
+                                ?: "None",
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Wakeword") },
@@ -295,18 +313,51 @@ fun ConfigForm(
                                 )
                             },
                         )
-                        wakewordList.forEach { word ->
+                        // Group: Built-in models
+                        val builtinModels = wakewordList.filter { !it.isCustom }
+                        val customModels = wakewordList.filter { it.isCustom }
+
+                        if (builtinModels.isNotEmpty()) {
                             DropdownMenuItem(
-                                text = { Text(word.replace("_", " ").replaceFirstChar { it.uppercase() }) },
-                                onClick = {
-                                    wakewordExpanded = false
-                                    onConfigChange(
-                                        config.copy(
-                                            voice = config.voice.copy(wakeword = word),
-                                        ),
-                                    )
-                                },
+                                text = { Text("— Built-in —", color = GruvboxFg0.copy(alpha = 0.5f)) },
+                                onClick = {},
+                                enabled = false,
                             )
+                            builtinModels.forEach { word ->
+                                DropdownMenuItem(
+                                    text = { Text(formatWakewordDisplay(word)) },
+                                    onClick = {
+                                        wakewordExpanded = false
+                                        onConfigChange(
+                                            config.copy(
+                                                voice = config.voice.copy(wakeword = word.name),
+                                            ),
+                                        )
+                                    },
+                                )
+                            }
+                        }
+
+                        // Group: Custom models
+                        if (customModels.isNotEmpty()) {
+                            DropdownMenuItem(
+                                text = { Text("— Custom —", color = GruvboxFg0.copy(alpha = 0.5f)) },
+                                onClick = {},
+                                enabled = false,
+                            )
+                            customModels.forEach { word ->
+                                DropdownMenuItem(
+                                    text = { Text(formatWakewordDisplay(word)) },
+                                    onClick = {
+                                        wakewordExpanded = false
+                                        onConfigChange(
+                                            config.copy(
+                                                voice = config.voice.copy(wakeword = word.name),
+                                            ),
+                                        )
+                                    },
+                                )
+                            }
                         }
                     }
                 }
@@ -321,7 +372,14 @@ fun ConfigForm(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     OutlinedTextField(
-                        value = currentStopWakeword.takeIf { it.isNotBlank() } ?: "None",
+                        value =
+                            currentStopWakeword
+                                .takeIf { it.isNotBlank() }
+                                ?.removeSuffix(
+                                    "*",
+                                )?.replace("_", " ")
+                                ?.replaceFirstChar { it.uppercase() }
+                                ?: "None",
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Stop word") },
@@ -349,19 +407,51 @@ fun ConfigForm(
                                 )
                             },
                         )
-                        wakewordList.forEach { word ->
+                        // Group: Built-in models
+                        val builtinModels = wakewordList.filter { !it.isCustom }
+                        val customModels = wakewordList.filter { it.isCustom }
+
+                        if (builtinModels.isNotEmpty()) {
                             DropdownMenuItem(
-                                text = { Text(word.replace("_", " ").replaceFirstChar { it.uppercase() }) },
-                                onClick = {
-                                    stopWakewordExpanded = false
-                                    onConfigChange(
-                                        config.copy(
-                                            voice =
-                                                config.voice.copy(stopWakeword = word),
-                                        ),
-                                    )
-                                },
+                                text = { Text("— Built-in —", color = GruvboxFg0.copy(alpha = 0.5f)) },
+                                onClick = {},
+                                enabled = false,
                             )
+                            builtinModels.forEach { word ->
+                                DropdownMenuItem(
+                                    text = { Text(formatWakewordDisplay(word)) },
+                                    onClick = {
+                                        stopWakewordExpanded = false
+                                        onConfigChange(
+                                            config.copy(
+                                                voice = config.voice.copy(stopWakeword = word.name),
+                                            ),
+                                        )
+                                    },
+                                )
+                            }
+                        }
+
+                        // Group: Custom models
+                        if (customModels.isNotEmpty()) {
+                            DropdownMenuItem(
+                                text = { Text("— Custom —", color = GruvboxFg0.copy(alpha = 0.5f)) },
+                                onClick = {},
+                                enabled = false,
+                            )
+                            customModels.forEach { word ->
+                                DropdownMenuItem(
+                                    text = { Text(formatWakewordDisplay(word)) },
+                                    onClick = {
+                                        stopWakewordExpanded = false
+                                        onConfigChange(
+                                            config.copy(
+                                                voice = config.voice.copy(stopWakeword = word.name),
+                                            ),
+                                        )
+                                    },
+                                )
+                            }
                         }
                     }
                 }

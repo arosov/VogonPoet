@@ -54,6 +54,9 @@ class MainViewModelTest {
         private val _config = MutableStateFlow<VogonConfig?>(null)
         override val config: StateFlow<VogonConfig?> = _config
 
+        private val _transcription = MutableStateFlow(TranscriptionState())
+        override val transcription: StateFlow<TranscriptionState> = _transcription
+
         var connectCalled = 0
 
         override suspend fun connect() {
@@ -73,7 +76,7 @@ class MainViewModelTest {
 
         override suspend fun listHardware(): List<HardwareDevice> = emptyList()
 
-        override suspend fun listWakewords(): List<String> = emptyList()
+        override suspend fun listWakewords(): List<WakewordInfo> = emptyList()
 
         override suspend fun setMicTest(enabled: Boolean) {}
 

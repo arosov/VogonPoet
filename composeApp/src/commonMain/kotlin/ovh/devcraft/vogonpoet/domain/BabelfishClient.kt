@@ -23,7 +23,7 @@ interface BabelfishClient {
 
     suspend fun listHardware(): List<HardwareDevice>
 
-    suspend fun listWakewords(): List<String>
+    suspend fun listWakewords(): List<WakewordInfo>
 
     suspend fun setMicTest(enabled: Boolean)
 
