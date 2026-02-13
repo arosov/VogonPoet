@@ -24,5 +24,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [x] Track: Architectural Cleanup and Stability Improvements
-*Link: [./conductor/archive/arch_cleanup_20260212/](./conductor/archive/arch_cleanup_20260212/)*
+---
+
+## [~] Track: System Input & Transcription Window
+*Link: [./conductor/tracks/system_input_20260213/](./conductor/tracks/system_input_20260213/)*

@@ -203,7 +203,7 @@ fun AdvancedSettingsPanel(
                                         val isCurrentlyAuto = config.hardware?.autoDetect ?: true
 
                                         // If switching from Auto to the device it's ALREADY using, skip restart.
-                                        val isSameAsActive = isCurrentlyAuto && value == activeDevice
+                                        val isSameAsActive = isCurrentlyAuto && value == activeDevice && value != "cpu"
 
                                         val newConfig =
                                             config.copy(
