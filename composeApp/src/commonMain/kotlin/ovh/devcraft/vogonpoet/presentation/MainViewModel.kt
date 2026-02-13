@@ -79,8 +79,30 @@ class MainViewModel(
 
         viewModelScope.launch {
             config.collectLatest { remoteConfig ->
-                if (remoteConfig != null && _draftConfig.value == null) {
-                    _draftConfig.value = remoteConfig
+                if (remoteConfig != null) {
+                    val currentDraft = _draftConfig.value
+                    if (currentDraft == null) {
+                        _draftConfig.value = remoteConfig
+                    } else {
+                        // Merge runtime-populated fields from remote back into draft.
+                        // This ensures that VRAM stats and calibrated performance profiles
+                        // are reflected in the UI even if the user is currently editing.
+                        _draftConfig.value =
+                            currentDraft.copy(
+                                hardware =
+                                    currentDraft.hardware.copy(
+                                        activeDevice = remoteConfig.hardware.activeDevice,
+                                        activeDeviceName = remoteConfig.hardware.activeDeviceName,
+                                        vramTotalGb = remoteConfig.hardware.vramTotalGb,
+                                        vramUsedBaselineGb = remoteConfig.hardware.vramUsedBaselineGb,
+                                        vramUsedModelGb = remoteConfig.hardware.vramUsedModelGb,
+                                    ),
+                                pipeline =
+                                    currentDraft.pipeline.copy(
+                                        performance = remoteConfig.pipeline.performance,
+                                    ),
+                            )
+                    }
                 }
             }
         }
