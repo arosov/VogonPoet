@@ -2,6 +2,8 @@ name: Release
 
 on:
   push:
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -36,7 +38,7 @@ jobs:
         with:
           command: make site
           agree_to_license: 1
-          signing_key: '"${{ secrets.SIGNING_KEY }}"'
+          signing_key: ${{ secrets.SIGNING_KEY }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
