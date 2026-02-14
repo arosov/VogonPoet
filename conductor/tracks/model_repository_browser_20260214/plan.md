@@ -33,18 +33,18 @@
 
 ## Phase 2: UI Components - Source Selection
 
-### Task 2.1: Create Model Repository Browser Window
-- [~] Create new Composable `ModelRepositoryBrowserWindow`
-- [~] Implement window sizing and positioning
-- [~] Add Gruvbox Dark theme styling
-- [~] Write UI tests for window rendering
+### Task 2.1: Create Model Repository Browser Window [a5d59f1]
+- [x] Create new Composable `ModelRepositoryBrowserWindow`
+- [x] Implement window sizing and positioning
+- [x] Add Gruvbox Dark theme styling
+- [x] Write UI tests for window rendering
 
-### Task 2.2: Implement Source Selection Screen
-- [ ] Create `SourceSelectionScreen` Composable
-- [ ] Display "OpenWakeWord Community - EN" button with icon
-- [ ] Add button click handlers
-- [ ] Implement loading state while fetching model list
-- [ ] Write UI tests for source selection
+### Task 2.2: Implement Source Selection Screen [a5d59f1]
+- [x] Create `SourceSelectionScreen` Composable
+- [x] Display "OpenWakeWord Community - EN" button with icon
+- [x] Add button click handlers
+- [x] Implement loading state while fetching model list
+- [x] Write UI tests for source selection
 
 ### Task 2.3: Conductor - User Manual Verification 'Phase 2'
 - [ ] Verify source selection UI works correctly
