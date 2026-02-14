@@ -19,63 +19,6 @@ class GitHubModelRepositoryClientTest {
     }
 
     @Test
-    fun `findLatestVersion should return highest version from file list`() {
-        val files =
-            listOf(
-                GitHubContentItem("computer_v1.onnx", "file", 100),
-                GitHubContentItem("computer_v1.tflite", "file", 50),
-                GitHubContentItem("computer_v2.onnx", "file", 110),
-                GitHubContentItem("computer_v2.tflite", "file", 55),
-                GitHubContentItem("computer_v3.onnx", "file", 120),
-                GitHubContentItem("computer_v3.tflite", "file", 60),
-            )
-
-        val githubClient = GitHubModelRepositoryClient(HttpClient())
-        val latest = githubClient.findLatestVersion(files, "computer")
-
-        assertEquals(3, latest)
-    }
-
-    @Test
-    fun `findLatestVersion should return null for empty file list`() {
-        val githubClient = GitHubModelRepositoryClient(HttpClient())
-        val latest = githubClient.findLatestVersion(emptyList(), "computer")
-
-        assertNull(latest)
-    }
-
-    @Test
-    fun `findLatestVersion should return null when no matching files`() {
-        val files =
-            listOf(
-                GitHubContentItem("other_v1.onnx", "file", 100),
-                GitHubContentItem("other_v1.tflite", "file", 50),
-            )
-
-        val githubClient = GitHubModelRepositoryClient(HttpClient())
-        val latest = githubClient.findLatestVersion(files, "computer")
-
-        assertNull(latest)
-    }
-
-    @Test
-    fun `findLatestVersion should ignore non-versioned files`() {
-        val files =
-            listOf(
-                GitHubContentItem("computer.onnx", "file", 100),
-                GitHubContentItem("computer.tflite", "file", 50),
-                GitHubContentItem("computer_v1.onnx", "file", 110),
-                GitHubContentItem("computer_v1.tflite", "file", 55),
-            )
-
-        val githubClient = GitHubModelRepositoryClient(HttpClient())
-        val latest = githubClient.findLatestVersion(files, "computer")
-
-        // Should only find versioned files
-        assertEquals(1, latest)
-    }
-
-    @Test
     fun `parseVersionFromFilename should handle edge cases`() {
         val githubClient = GitHubModelRepositoryClient(HttpClient())
 

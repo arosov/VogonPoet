@@ -14,7 +14,8 @@ import ovh.devcraft.vogonpoet.domain.model.RemoteModelSource
 
 /**
  * Client for fetching model information from GitHub repositories.
- * Uses the GitHub Contents API to discover and list available models.
+ * Uses the GitHub Trees API to fetch all repository contents in a single request,
+ * avoiding rate limiting issues.
  */
 class GitHubModelRepositoryClient(
     private val httpClient: HttpClient = createDefaultClient(),
@@ -33,8 +34,8 @@ class GitHubModelRepositoryClient(
 
     /**
      * Fetches all available models from a GitHub repository source.
-     * Returns models that have both .onnx and .tflite files.
-     * Prefers non-versioned files over versioned ones if both exist.
+     * Uses the recursive Trees API to get all files in a single API call,
+     * then parses locally to find models with both .onnx and .tflite files.
      *
      * @param source The remote model source configuration
      * @param path The subdirectory path to search for models (e.g., "en" for English models)
@@ -48,122 +49,183 @@ class GitHubModelRepositoryClient(
             parseGitHubUrl(source.url)
                 ?: throw IllegalArgumentException("Invalid GitHub URL: ${source.url}")
 
-        VogonLogger.i("Parsing repo: owner=${repoInfo.owner}, repo=${repoInfo.repo}")
+        VogonLogger.i("Fetching models from ${repoInfo.owner}/${repoInfo.repo} under path '$path'")
 
-        val contentsUrl = "$GITHUB_API_BASE/repos/${repoInfo.owner}/${repoInfo.repo}/contents/$path"
+        // Try to fetch from main branch first, then master
+        val (branch, tree) =
+            when {
+                fetchTree(repoInfo, "main") != null -> {
+                    Pair("main", fetchTree(repoInfo, "main")!!)
+                }
+
+                fetchTree(repoInfo, "master") != null -> {
+                    Pair("master", fetchTree(repoInfo, "master")!!)
+                }
+
+                else -> {
+                    VogonLogger.e("Failed to fetch tree from both main and master branches")
+                    return emptyList()
+                }
+            }
+
+        VogonLogger.i("Successfully fetched tree from '$branch' branch")
+        return parseModelsFromTree(tree, branch, path, repoInfo, source)
+    }
+
+    /**
+     * Fetches the recursive tree for a specific branch.
+     * Returns null if the branch doesn't exist or request fails.
+     */
+    private suspend fun fetchTree(
+        repoInfo: GitHubRepoInfo,
+        branch: String,
+    ): GitHubTreeResponse? {
+        val treeUrl = "$GITHUB_API_BASE/repos/${repoInfo.owner}/${repoInfo.repo}/git/trees/$branch?recursive=1"
 
         return try {
-            VogonLogger.i("Fetching models from: $contentsUrl")
+            VogonLogger.i("Fetching tree from branch '$branch': $treeUrl")
 
             val response =
-                httpClient.get(contentsUrl) {
+                httpClient.get(treeUrl) {
                     header("User-Agent", "VogonPoet-ModelBrowser/1.0")
                     header("Accept", "application/vnd.github.v3+json")
                 }
 
-            VogonLogger.i("Response status: ${response.status}")
-
-            val items = response.body<List<GitHubContentItem>>()
-            VogonLogger.i("Got ${items.size} items from repository")
-
-            val directories = items.filter { it.type == "dir" }
-            VogonLogger.i("Found ${directories.size} directories")
-
-            val models =
-                directories.mapNotNull { dir ->
-                    VogonLogger.i("Processing directory: ${dir.name}")
-                    fetchModelFromDirectory(repoInfo, path, dir.name, source)
-                }
-
-            VogonLogger.i("Successfully fetched ${models.size} models")
-            models
+            if (response.status.value == 200) {
+                val tree = response.body<GitHubTreeResponse>()
+                VogonLogger.i("Successfully fetched ${tree.tree.size} items from tree")
+                tree
+            } else {
+                VogonLogger.i("Tree fetch failed with status: ${response.status}")
+                null
+            }
         } catch (e: Exception) {
-            VogonLogger.e("Failed to fetch models from $contentsUrl: ${e.message}", e)
-            emptyList()
+            VogonLogger.i("Tree fetch failed for branch '$branch': ${e.message}")
+            null
         }
     }
 
     /**
-     * Fetches model information from a specific directory.
-     * Looks for both versioned and non-versioned .onnx and .tflite files.
-     * Prefers non-versioned files if both exist.
+     * Parses the tree response to find models with both .onnx and .tflite files.
      */
-    private suspend fun fetchModelFromDirectory(
-        repoInfo: GitHubRepoInfo,
+    private fun parseModelsFromTree(
+        tree: GitHubTreeResponse,
+        branch: String,
         path: String,
+        repoInfo: GitHubRepoInfo,
+        source: RemoteModelSource,
+    ): List<RemoteModel> {
+        // Filter for blobs (files) under the specified path
+        val pathPrefix = "$path/"
+        val relevantFiles =
+            tree.tree.filter { item ->
+                item.type == "blob" && item.path.startsWith(pathPrefix)
+            }
+
+        VogonLogger.i("Found ${relevantFiles.size} files under '$path'")
+
+        // Group files by model directory
+        // Path format: en/modelName/filename.ext
+        val filesByModel =
+            relevantFiles
+                .groupBy { item ->
+                    val relativePath = item.path.removePrefix(pathPrefix)
+                    val parts = relativePath.split("/")
+                    if (parts.size >= 1) parts[0] else null
+                }.filterKeys { it != null }
+
+        VogonLogger.i("Found ${filesByModel.size} potential model directories")
+
+        // Process each model directory
+        val models = mutableListOf<RemoteModel>()
+
+        filesByModel.forEach { (modelName, files) ->
+            if (modelName == null) return@forEach
+
+            VogonLogger.i("Processing model '$modelName' with ${files.size} files")
+
+            val model =
+                extractModelFromFiles(
+                    modelName = modelName,
+                    files = files,
+                    branch = branch,
+                    path = path,
+                    repoInfo = repoInfo,
+                    source = source,
+                )
+
+            if (model != null) {
+                models.add(model)
+                VogonLogger.i("Added model: ${model.name} (version: ${model.version ?: "unversioned"})")
+            }
+        }
+
+        return models.sortedBy { it.name }
+    }
+
+    /**
+     * Extracts a model from the list of files in its directory.
+     * Prefers non-versioned files over versioned ones.
+     */
+    private fun extractModelFromFiles(
         modelName: String,
+        files: List<GitHubTreeItem>,
+        branch: String,
+        path: String,
+        repoInfo: GitHubRepoInfo,
         source: RemoteModelSource,
     ): RemoteModel? {
-        val modelUrl = "$GITHUB_API_BASE/repos/${repoInfo.owner}/${repoInfo.repo}/contents/$path/$modelName"
+        // Find all .onnx and .tflite files
+        val onnxFiles = files.filter { it.path.endsWith(".onnx") }
+        val tfliteFiles = files.filter { it.path.endsWith(".tflite") }
 
-        return try {
-            VogonLogger.i("Fetching files from: $modelUrl")
+        if (onnxFiles.isEmpty() || tfliteFiles.isEmpty()) {
+            VogonLogger.i("Model '$modelName' missing required file types: ${onnxFiles.size} .onnx, ${tfliteFiles.size} .tflite")
+            return null
+        }
 
-            val files =
-                httpClient
-                    .get(modelUrl) {
-                        header("User-Agent", "VogonPoet-ModelBrowser/1.0")
-                        header("Accept", "application/vnd.github.v3+json")
-                    }.body<List<GitHubContentItem>>()
+        // Check for non-versioned files first (preferred)
+        val nonVersionedOnnxPath = "$path/$modelName/$modelName.onnx"
+        val nonVersionedTflitePath = "$path/$modelName/$modelName.tflite"
 
-            VogonLogger.i("Directory $modelName contains ${files.size} files: ${files.map { it.name }}")
+        val hasNonVersionedOnnx = onnxFiles.any { it.path == nonVersionedOnnxPath }
+        val hasNonVersionedTflite = tfliteFiles.any { it.path == nonVersionedTflitePath }
 
-            // Find all .onnx and .tflite files
-            val onnxFiles = files.filter { it.name.endsWith(".onnx") }
-            val tfliteFiles = files.filter { it.name.endsWith(".tflite") }
+        if (hasNonVersionedOnnx && hasNonVersionedTflite) {
+            VogonLogger.i("Model '$modelName' using non-versioned files")
+            val (onnxUrl, tfliteUrl) = generateRawUrls(repoInfo, branch, nonVersionedOnnxPath, nonVersionedTflitePath)
+            return RemoteModel(
+                name = modelName,
+                version = null,
+                onnxUrl = onnxUrl,
+                tfliteUrl = tfliteUrl,
+                languageTag = source.language,
+            )
+        }
 
-            VogonLogger.i("$modelName: ${onnxFiles.size} .onnx files, ${tfliteFiles.size} .tflite files")
+        // Fall back to versioned files
+        val latestVersion = findLatestVersion(files, modelName)
 
-            if (onnxFiles.isEmpty() || tfliteFiles.isEmpty()) {
-                VogonLogger.i("$modelName: Missing required file types (.onnx or .tflite), skipping")
-                return null
-            }
-
-            // Check for non-versioned files first (preferred)
-            val nonVersionedOnnx = onnxFiles.find { it.name == "$modelName.onnx" }
-            val nonVersionedTflite = tfliteFiles.find { it.name == "$modelName.tflite" }
-
-            if (nonVersionedOnnx != null && nonVersionedTflite != null) {
-                VogonLogger.i("$modelName: Found non-versioned files, using them")
-                val (onnxUrl, tfliteUrl) = generateDownloadUrls(repoInfo, path, modelName, null)
-                return RemoteModel(
-                    name = modelName,
-                    version = null,
-                    onnxUrl = onnxUrl,
-                    tfliteUrl = tfliteUrl,
-                    languageTag = source.language,
-                )
-            }
-
-            // Fall back to versioned files - find the highest version
-            VogonLogger.i("$modelName: No non-versioned files found, looking for versioned files")
-            val latestVersion = findLatestVersion(files, modelName)
-
-            if (latestVersion != null) {
-                VogonLogger.i("$modelName: Using version $latestVersion")
-                val (onnxUrl, tfliteUrl) = generateDownloadUrls(repoInfo, path, modelName, latestVersion)
-                RemoteModel(
-                    name = modelName,
-                    version = latestVersion,
-                    onnxUrl = onnxUrl,
-                    tfliteUrl = tfliteUrl,
-                    languageTag = source.language,
-                )
-            } else {
-                VogonLogger.i("$modelName: No valid versioned files found")
-                null
-            }
-        } catch (e: Exception) {
-            VogonLogger.e("Failed to fetch model from $modelUrl: ${e.message}", e)
+        return if (latestVersion != null) {
+            VogonLogger.i("Model '$modelName' using version $latestVersion")
+            val versionedOnnxPath = "$path/$modelName/${modelName}_v$latestVersion.onnx"
+            val versionedTflitePath = "$path/$modelName/${modelName}_v$latestVersion.tflite"
+            val (onnxUrl, tfliteUrl) = generateRawUrls(repoInfo, branch, versionedOnnxPath, versionedTflitePath)
+            RemoteModel(
+                name = modelName,
+                version = latestVersion,
+                onnxUrl = onnxUrl,
+                tfliteUrl = tfliteUrl,
+                languageTag = source.language,
+            )
+        } else {
+            VogonLogger.i("Model '$modelName' has no valid versioned files")
             null
         }
     }
 
     /**
      * Parses version number from filename pattern {model_name}_v{N}.onnx or {model_name}_v{N}.tflite
-     *
-     * @param filename The filename to parse
-     * @return The version number, or null if pattern doesn't match
      */
     fun parseVersionFromFilename(filename: String): Int? {
         val pattern = Regex("""_v(\d+)\.(onnx|tflite)$""")
@@ -172,60 +234,42 @@ class GitHubModelRepositoryClient(
     }
 
     /**
-     * Finds the highest version number from a list of GitHub files for a given model.
-     * Only considers versioned files (e.g., model_v1.onnx, not model.onnx).
-     *
-     * @param files List of GitHub content items
-     * @param modelName The base name of the model to search for
-     * @return The highest version number, or null if no valid versions found
+     * Finds the highest version number from a list of tree items for a given model.
      */
-    fun findLatestVersion(
-        files: List<GitHubContentItem>,
+    private fun findLatestVersion(
+        files: List<GitHubTreeItem>,
         modelName: String,
     ): Int? =
         files
-            .filter {
-                it.name.startsWith(modelName) &&
-                    (it.name.endsWith(".onnx") || it.name.endsWith(".tflite"))
-            }.mapNotNull { parseVersionFromFilename(it.name) }
+            .filter { item ->
+                val filename = item.path.substringAfterLast("/")
+                filename.startsWith(modelName) &&
+                    (filename.endsWith(".onnx") || filename.endsWith(".tflite"))
+            }.mapNotNull { parseVersionFromFilename(it.path.substringAfterLast("/")) }
             .maxOrNull()
 
     /**
-     * Generates raw download URLs for ONNX and TFLite model files.
-     * Uses "main" branch as default, with fallback to "master".
-     *
-     * @param repoInfo The GitHub repository information
-     * @param path The path within the repository
-     * @param modelName The name of the model
-     * @param version The version number, or null for non-versioned files
-     * @return Pair of (onnxUrl, tfliteUrl)
+     * Generates raw download URLs for the given file paths.
+     * These URLs use raw.githubusercontent.com and bypass API rate limits.
      */
-    private fun generateDownloadUrls(
+    private fun generateRawUrls(
         repoInfo: GitHubRepoInfo,
-        path: String,
-        modelName: String,
-        version: Int?,
+        branch: String,
+        onnxPath: String,
+        tflitePath: String,
     ): Pair<String, String> {
-        // Use main branch - most modern repos use this
-        val branch = "main"
-        val baseUrl = "$RAW_GITHUB_BASE/${repoInfo.owner}/${repoInfo.repo}/$branch/$path/$modelName"
+        // Use the branch name (main/master) for the URL
+        // This bypasses API rate limits since raw.githubusercontent.com is not rate-limited
+        val baseUrl = "$RAW_GITHUB_BASE/${repoInfo.owner}/${repoInfo.repo}/$branch"
 
-        val onnxFilename = if (version != null) "${modelName}_v$version.onnx" else "$modelName.onnx"
-        val tfliteFilename = if (version != null) "${modelName}_v$version.tflite" else "$modelName.tflite"
-
-        val onnxUrl = "$baseUrl/$onnxFilename"
-        val tfliteUrl = "$baseUrl/$tfliteFilename"
-
-        VogonLogger.i("Generated URLs for $modelName: ONNX=$onnxUrl, TFLite=$tfliteUrl")
+        val onnxUrl = "$baseUrl/$onnxPath"
+        val tfliteUrl = "$baseUrl/$tflitePath"
 
         return Pair(onnxUrl, tfliteUrl)
     }
 
     /**
      * Parses a GitHub URL to extract owner and repository name.
-     *
-     * @param url The GitHub URL (e.g., "https://github.com/owner/repo")
-     * @return GitHubRepoInfo containing owner and repo, or null if parsing fails
      */
     private fun parseGitHubUrl(url: String): GitHubRepoInfo? {
         val pattern = Regex("""github\.com/([^/]+)/([^/]+)""")
@@ -240,7 +284,7 @@ class GitHubModelRepositoryClient(
 }
 
 /**
- * Data class representing parsed GitHub repository information.
+ * GitHub repository information.
  */
 private data class GitHubRepoInfo(
     val owner: String,
@@ -248,11 +292,25 @@ private data class GitHubRepoInfo(
 )
 
 /**
- * Data class representing a GitHub content item from the API.
+ * Response from the GitHub Trees API.
  */
 @Serializable
-data class GitHubContentItem(
-    val name: String,
+data class GitHubTreeResponse(
+    val sha: String,
+    val url: String,
+    val tree: List<GitHubTreeItem>,
+    val truncated: Boolean = false,
+)
+
+/**
+ * Individual item in a GitHub tree response.
+ */
+@Serializable
+data class GitHubTreeItem(
+    val path: String,
+    val mode: String,
     val type: String,
+    val sha: String,
     val size: Long? = null,
+    val url: String? = null,
 )
