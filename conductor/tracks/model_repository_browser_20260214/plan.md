@@ -2,11 +2,11 @@
 
 ## Phase 1: Backend API & Model Discovery
 
-### Task 1.1: Create Repository Browser Service
-- [~] Create domain model for remote model sources
-- [~] Define data class `RemoteModelSource` with name, URL, type (wakeword/stopword), language
-- [~] Define data class `RemoteModel` with name, version, download URLs, language tag
-- [~] Write unit tests for model data classes
+### Task 1.1: Create Repository Browser Service [720e783]
+- [x] Create domain model for remote model sources
+- [x] Define data class `RemoteModelSource` with name, URL, type (wakeword/stopword), language
+- [x] Define data class `RemoteModel` with name, version, download URLs, language tag
+- [x] Write unit tests for model data classes
 
 ### Task 1.2: Implement GitHub API Client
 - [ ] Create `GitHubModelRepositoryClient` class
