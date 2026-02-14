@@ -126,6 +126,8 @@ kotlin {
                 implementation(libs.ktor.client.core)
                 implementation(libs.ktor.client.cio)
                 implementation(libs.ktor.client.websockets)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.compose.runtime)
@@ -145,6 +147,7 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+            implementation(libs.ktor.client.mock)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)

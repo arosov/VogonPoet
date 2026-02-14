@@ -9,13 +9,13 @@
 - [x] Write unit tests for model data classes
 
 ### Task 1.2: Implement GitHub API Client
-- [ ] Create `GitHubModelRepositoryClient` class
-- [ ] Implement directory listing using GitHub Contents API
-- [ ] Parse directory structure to extract model names
-- [ ] Implement version parsing from filenames (extract highest version)
-- [ ] Generate raw download URLs for .onnx and .tflite files
-- [ ] Write unit tests with mocked GitHub API responses
-- [ ] Write integration tests for actual API calls
+- [~] Create `GitHubModelRepositoryClient` class
+- [~] Implement directory listing using GitHub Contents API
+- [~] Parse directory structure to extract model names
+- [~] Implement version parsing from filenames (extract highest version)
+- [~] Generate raw download URLs for .onnx and .tflite files
+- [~] Write unit tests with mocked GitHub API responses
+- [~] Write integration tests for actual API calls
 
 ### Task 1.3: Create Model Download Service
 - [ ] Create `ModelDownloadService` class
