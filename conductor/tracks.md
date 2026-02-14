@@ -26,8 +26,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [x] Track: Custom Wake Word Models
-*Link: [./conductor/tracks/custom_wakeword_models_20260213/](./conductor/tracks/custom_wakeword_models_20260213/)*
-
----
-
+## [~] Track: Model Repository Browser & Downloader
+*Link: [./conductor/tracks/model_repository_browser_20260214/](./conductor/tracks/model_repository_browser_20260214/)*
