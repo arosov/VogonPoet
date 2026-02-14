@@ -47,77 +47,77 @@
 - [x] Write UI tests for source selection
 
 ### Task 2.3: Conductor - User Manual Verification 'Phase 2'
-- [ ] Verify source selection UI works correctly
+- [x] Verify source selection UI works correctly
 
 ---
 
 ## Phase 3: UI Components - Model Selection
 
-### Task 3.1: Create Model List Screen
-- [ ] Create `ModelSelectionScreen` Composable
-- [ ] Implement scrollable list with Material Design 3
-- [ ] Add list header with "Select All" checkbox
-- [ ] Display model name with [en] language tag
-- [ ] Add individual checkboxes for each model
-- [ ] Write UI tests for model list
+### Task 3.1: Create Model List Screen [19625e9]
+- [x] Create `ModelSelectionScreen` Composable
+- [x] Implement scrollable list with Material Design 3
+- [x] Add list header with "Select All" checkbox
+- [x] Display model name with [en] language tag
+- [x] Add individual checkboxes for each model
+- [x] Write UI tests for model list
 
-### Task 3.2: Implement Selection Logic
-- [ ] Create ViewModel for model selection
-- [ ] Implement "Select All" toggle logic
-- [ ] Track selected models state
-- [ ] Handle individual selection/deselection
-- [ ] Write unit tests for selection logic
+### Task 3.2: Implement Selection Logic [19625e9]
+- [x] Create ViewModel for model selection
+- [x] Implement "Select All" toggle logic
+- [x] Track selected models state
+- [x] Handle individual selection/deselection
+- [x] Write unit tests for selection logic
 
-### Task 3.3: Add Navigation Between Screens
-- [ ] Implement navigation from source selection to model list
-- [ ] Add back button to return to source selection
-- [ ] Implement cancel button functionality
-- [ ] Write UI tests for navigation flow
+### Task 3.3: Add Navigation Between Screens [19625e9]
+- [x] Implement navigation from source selection to model list
+- [x] Add back button to return to source selection
+- [x] Implement cancel button functionality
+- [x] Write UI tests for navigation flow
 
 ### Task 3.4: Conductor - User Manual Verification 'Phase 3'
-- [ ] Verify model selection UI works correctly
+- [x] Verify model selection UI works correctly
 
 ---
 
 ## Phase 4: UI Components - Download & Integration
 
-### Task 4.1: Implement Download Progress UI
-- [ ] Create `DownloadProgressScreen` Composable
-- [ ] Display progress for each downloading model
-- [ ] Show success/failure indicators
-- [ ] Add "Done" button to close window when complete
-- [ ] Write UI tests for download progress
+### Task 4.1: Implement Download Progress UI [19625e9]
+- [x] Create `DownloadProgressScreen` Composable
+- [x] Display progress for each downloading model
+- [x] Show success/failure indicators
+- [x] Add "Done" button to close window when complete
+- [x] Write UI tests for download progress
 
-### Task 4.2: Integrate with Settings UI
-- [ ] Add "Browse Model Repositories" button to Advanced Settings
-- [ ] Position button near existing wakeword settings
-- [ ] Wire up button click to open repository browser
-- [ ] Refresh wakeword list after downloads complete
-- [ ] Write UI tests for integration
+### Task 4.2: Integrate with Settings UI [a5d59f1]
+- [x] Add "Browse Model Repositories" button to Advanced Settings
+- [x] Position button near existing wakeword settings
+- [x] Wire up button click to open repository browser
+- [x] Refresh wakeword list after downloads complete
+- [x] Write UI tests for integration
 
-### Task 4.3: Implement Language Tag Display
-- [ ] Update wakeword dropdown to display "[en]" suffix
-- [ ] Ensure downloaded models appear with language tag
-- [ ] Write UI tests for language tag display
+### Task 4.3: Implement Language Tag Display [720e783]
+- [x] Update wakeword dropdown to display "[en]" suffix
+- [x] Ensure downloaded models appear with language tag
+- [x] Write UI tests for language tag display
 
 ### Task 4.4: Conductor - User Manual Verification 'Phase 4'
-- [ ] Verify complete download flow works correctly
+- [x] Verify complete download flow works correctly
 
 ---
 
 ## Phase 5: Polish & Error Handling
 
 ### Task 5.1: Add Error Handling UI
-- [ ] Create error dialog for network failures
-- [ ] Display retry option for failed downloads
-- [ ] Add "Skip" option for individual failed models
-- [ ] Write UI tests for error scenarios
+- [~] Create error dialog for network failures
+- [~] Display retry option for failed downloads
+- [~] Add "Skip" option for individual failed models
+- [~] Write UI tests for error scenarios
 
 ### Task 5.2: Add Loading States
-- [ ] Implement skeleton loading UI while fetching model list
-- [ ] Add shimmer effect for better UX
-- [ ] Disable buttons during loading
-- [ ] Write UI tests for loading states
+- [~] Implement skeleton loading UI while fetching model list
+- [~] Add shimmer effect for better UX
+- [~] Disable buttons during loading
+- [~] Write UI tests for loading states
 
 ### Task 5.3: Final Integration Testing
 - [ ] Test complete flow end-to-end
