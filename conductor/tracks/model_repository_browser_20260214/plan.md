@@ -17,14 +17,14 @@
 - [x] Write unit tests with mocked GitHub API responses
 - [x] Write integration tests for actual API calls
 
-### Task 1.3: Create Model Download Service
-- [~] Create `ModelDownloadService` class
-- [~] Implement download method with progress tracking
-- [~] Implement file validation (size check)
-- [~] Implement duplicate detection (skip if exists)
-- [~] Handle network errors with retry logic
-- [~] Write unit tests for download service
-- [~] Write tests for error handling and retry logic
+### Task 1.3: Create Model Download Service [1df13c3]
+- [x] Create `ModelDownloadService` class
+- [x] Implement download method with progress tracking
+- [x] Implement file validation (size check)
+- [x] Implement duplicate detection (skip if exists)
+- [x] Handle network errors with retry logic
+- [x] Write unit tests for download service
+- [x] Write tests for error handling and retry logic
 
 ### Task 1.4: Conductor - User Manual Verification 'Phase 1'
 - [ ] Verify backend components work correctly
