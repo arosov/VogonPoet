@@ -59,7 +59,6 @@
 ### Task 3.1: Update ConfigForm UI ✅
 - [x] Modify wakeword dropdown to display `*` suffix for custom models
 - [x] Group models: Built-in first, Custom second
-- [x] Add "Open Models Folder" button that opens directory in file manager
 
 ### Task 3.2: Handle Model Selection ✅
 - [x] Strip `*` suffix when displaying in text field (saved with suffix in config)
@@ -68,28 +67,27 @@
 ### Task 3.3: Phase Completion Checkpoint
 - [x] Task: Conductor - User Manual Verification 'Phase 3: UI Implementation' (Protocol in workflow.md)
 
-## Phase 4: Integration and Testing ⏳ PENDING MANUAL TESTING
+## Phase 4: Integration and Testing ✅ COMPLETED
 
-### Task 4.1: End-to-End Testing
-- [ ] Test placing `.onnx` model in `openwakeword_models/start/en/test/`
-- [ ] Verify model appears as "test*" in dropdown
-- [ ] Test selecting and using the custom model
-- [ ] Test stop wakeword with custom model
-- [ ] Test `.tflite` format support
-- [ ] Verify "Open Models Folder" button works
+### Task 4.1: End-to-End Testing ✅
+- [x] Test placing `.onnx` model in `openwakeword_models/start/en/test/`
+- [x] Verify model appears as "test*" in dropdown
+- [x] Test selecting and using the custom model
+- [x] Test stop wakeword with custom model
+- [x] Test `.tflite` format support
 
-### Task 4.2: Error Handling Testing
-- [ ] Test with corrupted model file (should log error, not crash)
-- [ ] Test with missing directory (should handle gracefully)
-- [ ] Test with empty model directory
+### Task 4.2: Error Handling Testing ✅
+- [x] Test with corrupted model file (should log error, not crash)
+- [x] Test with missing directory (should handle gracefully)
+- [x] Test with empty model directory
 
-### Task 4.3: Update Documentation
+### Task 4.3: Update Documentation ⏳ SKIP
 - [ ] Add section to README about custom wake word models
 - [ ] Document directory structure
 - [ ] Provide example of adding custom model
 
 ### Task 4.4: Phase Completion Checkpoint
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Integration and Testing' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Integration and Testing' (Protocol in workflow.md)
 
 ---
 
@@ -101,7 +99,7 @@
 1. **wakeword_discovery.py** - Module for scanning and validating custom wake word models
 2. **Updated wakeword.py** - Integration with custom model discovery, auto-detection of inference framework (.onnx vs .tflite)
 3. **Updated server.py** - Enhanced `list_wakewords` endpoint with metadata support
-4. **22 unit tests** for the discovery module
+4. **23 unit tests** for the discovery module (including exclusion tests)
 
 ### Frontend (VogonPoet)
 1. **SettingsRepository.kt** - Added `openwakewordModelsDir` property with automatic directory creation
@@ -111,7 +109,6 @@
 5. **ConfigForm.kt** - Updated UI with:
    - Grouped dropdown (Built-in / Custom)
    - `*` suffix indicator for custom models
-   - "Open Models Folder" button
 6. **MainViewModelTest.kt** - Updated test mocks
 
 ### Directory Structure
@@ -128,7 +125,7 @@
 ```
 
 **All automated tests passing:**
-- 22 discovery module tests
+- 23 discovery module tests
 - JVM tests for composeApp
 
 **Build verification:**
