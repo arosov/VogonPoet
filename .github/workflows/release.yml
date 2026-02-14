@@ -33,16 +33,12 @@ jobs:
           restore-keys: |
             conveyor-${{ runner.os }}-
 
-      - name: Configure Conveyor Key
-        run: |
-          mkdir -p ~/.config/hydraulic/conveyor
-          echo 'app.signing-key = "${{ secrets.SIGNING_KEY }}"' > ~/.config/hydraulic/conveyor/defaults.conf
-
       - name: Package with Conveyor
         uses: hydraulic-software/conveyor/actions/build@v21.1
         with:
           command: make site
           agree_to_license: 1
+          signing_key: ${{ secrets.SIGNING_KEY }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
