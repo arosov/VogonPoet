@@ -164,4 +164,54 @@ class ModelDownloadServiceTest {
         assertTrue(state.isFailed)
         assertEquals(error, state.error)
     }
+
+    @Test
+    fun `isModelAlreadyDownloaded should work with unversioned models`() {
+        val unversionedModel =
+            RemoteModel(
+                name = "unversioned_model",
+                version = null,
+                onnxUrl = "https://example.com/unversioned_model.onnx",
+                tfliteUrl = "https://example.com/unversioned_model.tflite",
+                languageTag = "en",
+            )
+
+        // Initially should return false
+        assertFalse(downloadService.isModelAlreadyDownloaded(unversionedModel))
+
+        // Create the model directory and files with content
+        val modelDir = File(tempDir, "start/en/unversioned_model")
+        modelDir.mkdirs()
+        File(modelDir, "unversioned_model.onnx").writeText("dummy onnx content")
+        File(modelDir, "unversioned_model.tflite").writeText("dummy tflite content")
+
+        // Now should return true
+        assertTrue(downloadService.isModelAlreadyDownloaded(unversionedModel))
+    }
+
+    @Test
+    fun `getModelDirectory should return same path regardless of version`() {
+        val versionedModel =
+            RemoteModel(
+                name = "model",
+                version = 1,
+                onnxUrl = "https://example.com/model_v1.onnx",
+                tfliteUrl = "https://example.com/model_v1.tflite",
+                languageTag = "en",
+            )
+
+        val unversionedModel =
+            RemoteModel(
+                name = "model",
+                version = null,
+                onnxUrl = "https://example.com/model.onnx",
+                tfliteUrl = "https://example.com/model.tflite",
+                languageTag = "en",
+            )
+
+        // Both should have the same directory (based on name, not version)
+        val versionedDir = downloadService.getModelDirectory(versionedModel)
+        val unversionedDir = downloadService.getModelDirectory(unversionedModel)
+        assertEquals(versionedDir.path, unversionedDir.path)
+    }
 }

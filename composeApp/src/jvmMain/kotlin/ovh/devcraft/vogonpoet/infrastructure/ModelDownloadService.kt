@@ -48,7 +48,8 @@ class ModelDownloadService(
 
             // Check if model already exists
             if (isModelAlreadyDownloaded(model)) {
-                VogonLogger.i("Model ${model.name} v${model.version} already exists, skipping download")
+                val versionStr = model.version?.let { "v$it" } ?: "unversioned"
+                VogonLogger.i("Model ${model.name} ($versionStr) already exists, skipping download")
                 state =
                     state.copy(
                         progress = 100,
@@ -70,7 +71,7 @@ class ModelDownloadService(
                 state = state.copy(status = "Downloading ONNX file...")
                 emit(state)
 
-                val onnxFile = File(modelDir, "${model.name}_v${model.version}.onnx")
+                val onnxFile = File(modelDir, model.onnxFilename)
                 val onnxSize =
                     downloadFileWithProgress(model.onnxUrl, onnxFile) { currentBytes, totalBytes ->
                         val onnxProgress =
@@ -92,7 +93,7 @@ class ModelDownloadService(
                 state = state.copy(status = "Downloading TFLite file...", progress = 50)
                 emit(state)
 
-                val tfliteFile = File(modelDir, "${model.name}_v${model.version}.tflite")
+                val tfliteFile = File(modelDir, model.tfliteFilename)
                 val tfliteSize =
                     downloadFileWithProgress(model.tfliteUrl, tfliteFile) { currentBytes, totalBytes ->
                         val tfliteProgress =
@@ -116,6 +117,7 @@ class ModelDownloadService(
                 }
 
                 // Mark as complete
+                val versionStr = model.version?.let { "v${model.version}" } ?: "unversioned"
                 state =
                     state.copy(
                         progress = 100,
@@ -124,7 +126,7 @@ class ModelDownloadService(
                         totalBytes = onnxSize + tfliteSize,
                         status = "Download complete",
                     )
-                VogonLogger.i("Successfully downloaded model ${model.name} v${model.version}")
+                VogonLogger.i("Successfully downloaded model ${model.name} ($versionStr)")
             } catch (e: Exception) {
                 VogonLogger.e("Failed to download model ${model.name}", e)
                 state =
@@ -187,8 +189,8 @@ class ModelDownloadService(
      */
     fun isModelAlreadyDownloaded(model: RemoteModel): Boolean {
         val modelDir = getModelDirectory(model)
-        val onnxFile = File(modelDir, "${model.name}_v${model.version}.onnx")
-        val tfliteFile = File(modelDir, "${model.name}_v${model.version}.tflite")
+        val onnxFile = File(modelDir, model.onnxFilename)
+        val tfliteFile = File(modelDir, model.tfliteFilename)
 
         return onnxFile.exists() && onnxFile.length() > 0 &&
             tfliteFile.exists() && tfliteFile.length() > 0
@@ -213,8 +215,8 @@ class ModelDownloadService(
         model: RemoteModel,
         modelDir: File,
     ): Boolean {
-        val onnxFile = File(modelDir, "${model.name}_v${model.version}.onnx")
-        val tfliteFile = File(modelDir, "${model.name}_v${model.version}.tflite")
+        val onnxFile = File(modelDir, model.onnxFilename)
+        val tfliteFile = File(modelDir, model.tfliteFilename)
 
         if (!onnxFile.exists() || !tfliteFile.exists()) {
             return false
@@ -241,8 +243,8 @@ class ModelDownloadService(
      */
     private fun getExistingModelSize(model: RemoteModel): Long {
         val modelDir = getModelDirectory(model)
-        val onnxFile = File(modelDir, "${model.name}_v${model.version}.onnx")
-        val tfliteFile = File(modelDir, "${model.name}_v${model.version}.tflite")
+        val onnxFile = File(modelDir, model.onnxFilename)
+        val tfliteFile = File(modelDir, model.tfliteFilename)
 
         var totalSize = 0L
         if (onnxFile.exists()) totalSize += onnxFile.length()
@@ -258,8 +260,8 @@ class ModelDownloadService(
      */
     private fun cleanupPartialDownload(model: RemoteModel) {
         val modelDir = getModelDirectory(model)
-        val onnxFile = File(modelDir, "${model.name}_v${model.version}.onnx")
-        val tfliteFile = File(modelDir, "${model.name}_v${model.version}.tflite")
+        val onnxFile = File(modelDir, model.onnxFilename)
+        val tfliteFile = File(modelDir, model.tfliteFilename)
 
         try {
             if (onnxFile.exists()) onnxFile.delete()

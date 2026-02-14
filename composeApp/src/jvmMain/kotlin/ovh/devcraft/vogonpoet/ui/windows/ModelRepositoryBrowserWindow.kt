@@ -370,7 +370,7 @@ private fun ModelSelectionScreen(
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                                 Text(
-                                    text = "Version ${model.version}",
+                                    text = model.version?.let { "Version $it" } ?: "Latest",
                                     color = GruvboxGray,
                                     style = MaterialTheme.typography.bodySmall,
                                 )

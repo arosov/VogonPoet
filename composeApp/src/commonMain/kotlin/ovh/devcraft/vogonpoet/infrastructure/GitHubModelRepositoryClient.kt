@@ -32,11 +32,12 @@ class GitHubModelRepositoryClient(
 
     /**
      * Fetches all available models from a GitHub repository source.
-     * Only returns the latest version of each model.
+     * Returns models that have both .onnx and .tflite files.
+     * Prefers non-versioned files over versioned ones if both exist.
      *
      * @param source The remote model source configuration
      * @param path The subdirectory path to search for models (e.g., "en" for English models)
-     * @return List of remote models with latest versions only
+     * @return List of remote models
      */
     suspend fun fetchModels(
         source: RemoteModelSource,
@@ -56,7 +57,7 @@ class GitHubModelRepositoryClient(
                     .filter { it.type == "dir" }
 
             directories.mapNotNull { dir ->
-                fetchLatestModelVersion(repoInfo, path, dir.name, source)
+                fetchModelFromDirectory(repoInfo, path, dir.name, source)
             }
         } catch (e: Exception) {
             emptyList()
@@ -64,9 +65,11 @@ class GitHubModelRepositoryClient(
     }
 
     /**
-     * Fetches the latest version of a specific model from the repository.
+     * Fetches model information from a specific directory.
+     * Looks for both versioned and non-versioned .onnx and .tflite files.
+     * Prefers non-versioned files if both exist.
      */
-    private suspend fun fetchLatestModelVersion(
+    private suspend fun fetchModelFromDirectory(
         repoInfo: GitHubRepoInfo,
         path: String,
         modelName: String,
@@ -76,10 +79,35 @@ class GitHubModelRepositoryClient(
 
         return try {
             val files = httpClient.get(modelUrl).body<List<GitHubContentItem>>()
-            val latestVersion = findLatestVersion(files, modelName)
 
+            // Find all .onnx and .tflite files
+            val onnxFiles = files.filter { it.name.endsWith(".onnx") }
+            val tfliteFiles = files.filter { it.name.endsWith(".tflite") }
+
+            if (onnxFiles.isEmpty() || tfliteFiles.isEmpty()) {
+                return null // Model must have both file types
+            }
+
+            // Check for non-versioned files first (preferred)
+            val nonVersionedOnnx = onnxFiles.find { it.name == "$modelName.onnx" }
+            val nonVersionedTflite = tfliteFiles.find { it.name == "$modelName.tflite" }
+
+            if (nonVersionedOnnx != null && nonVersionedTflite != null) {
+                // Use non-versioned files
+                val (onnxUrl, tfliteUrl) = generateDownloadUrls(repoInfo, path, modelName, null)
+                return RemoteModel(
+                    name = modelName,
+                    version = null,
+                    onnxUrl = onnxUrl,
+                    tfliteUrl = tfliteUrl,
+                    languageTag = source.language,
+                )
+            }
+
+            // Fall back to versioned files - find the highest version
+            val latestVersion = findLatestVersion(files, modelName)
             latestVersion?.let { version ->
-                val (onnxUrl, tfliteUrl) = generateDownloadUrls(source, modelName, version, path)
+                val (onnxUrl, tfliteUrl) = generateDownloadUrls(repoInfo, path, modelName, version)
                 RemoteModel(
                     name = modelName,
                     version = version,
@@ -107,6 +135,7 @@ class GitHubModelRepositoryClient(
 
     /**
      * Finds the highest version number from a list of GitHub files for a given model.
+     * Only considers versioned files (e.g., model_v1.onnx, not model.onnx).
      *
      * @param files List of GitHub content items
      * @param modelName The base name of the model to search for
@@ -117,32 +146,34 @@ class GitHubModelRepositoryClient(
         modelName: String,
     ): Int? =
         files
-            .filter { it.name.startsWith(modelName) && (it.name.endsWith(".onnx") || it.name.endsWith(".tflite")) }
-            .mapNotNull { parseVersionFromFilename(it.name) }
+            .filter {
+                it.name.startsWith(modelName) &&
+                    (it.name.endsWith(".onnx") || it.name.endsWith(".tflite"))
+            }.mapNotNull { parseVersionFromFilename(it.name) }
             .maxOrNull()
 
     /**
      * Generates raw download URLs for ONNX and TFLite model files.
      *
-     * @param source The remote model source
-     * @param modelName The name of the model
-     * @param version The version number
+     * @param repoInfo The GitHub repository information
      * @param path The path within the repository
+     * @param modelName The name of the model
+     * @param version The version number, or null for non-versioned files
      * @return Pair of (onnxUrl, tfliteUrl)
      */
-    fun generateDownloadUrls(
-        source: RemoteModelSource,
-        modelName: String,
-        version: Int,
+    private fun generateDownloadUrls(
+        repoInfo: GitHubRepoInfo,
         path: String,
+        modelName: String,
+        version: Int?,
     ): Pair<String, String> {
-        val repoInfo =
-            parseGitHubUrl(source.url)
-                ?: throw IllegalArgumentException("Invalid GitHub URL: ${source.url}")
-
         val baseUrl = "$RAW_GITHUB_BASE/${repoInfo.owner}/${repoInfo.repo}/main/$path/$modelName"
-        val onnxUrl = "$baseUrl/${modelName}_v$version.onnx"
-        val tfliteUrl = "$baseUrl/${modelName}_v$version.tflite"
+
+        val onnxFilename = if (version != null) "${modelName}_v$version.onnx" else "$modelName.onnx"
+        val tfliteFilename = if (version != null) "${modelName}_v$version.tflite" else "$modelName.tflite"
+
+        val onnxUrl = "$baseUrl/$onnxFilename"
+        val tfliteUrl = "$baseUrl/$tfliteFilename"
 
         return Pair(onnxUrl, tfliteUrl)
     }

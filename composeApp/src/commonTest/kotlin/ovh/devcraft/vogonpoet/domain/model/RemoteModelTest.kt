@@ -146,4 +146,35 @@ class RemoteModelTest {
         assertEquals(1, modelV1.version)
         assertEquals(2, modelV2.version)
     }
+
+    @Test
+    fun `RemoteModel should support null version for unversioned models`() {
+        val unversionedModel =
+            RemoteModel(
+                name = "computer",
+                version = null,
+                onnxUrl = "https://example.com/computer.onnx",
+                tfliteUrl = "https://example.com/computer.tflite",
+                languageTag = "en",
+            )
+
+        assertEquals(null, unversionedModel.version)
+        assertEquals("computer.onnx", unversionedModel.onnxFilename)
+        assertEquals("computer.tflite", unversionedModel.tfliteFilename)
+    }
+
+    @Test
+    fun `RemoteModel should generate correct filenames for versioned models`() {
+        val versionedModel =
+            RemoteModel(
+                name = "computer",
+                version = 1,
+                onnxUrl = "https://example.com/computer_v1.onnx",
+                tfliteUrl = "https://example.com/computer_v1.tflite",
+                languageTag = "en",
+            )
+
+        assertEquals("computer_v1.onnx", versionedModel.onnxFilename)
+        assertEquals("computer_v1.tflite", versionedModel.tfliteFilename)
+    }
 }

@@ -30,14 +30,14 @@ data class RemoteModelSource(
  * Represents a remote wake word or stop word model available for download.
  *
  * @property name The name of the model (e.g., "computer", "hey_siri")
- * @property version The version number of the model (e.g., 1, 2)
+ * @property version The version number of the model (e.g., 1, 2), or null if unversioned
  * @property onnxUrl The URL to download the .onnx model file
  * @property tfliteUrl The URL to download the .tflite model file
  * @property languageTag The ISO 639-1 language code for this model (e.g., "en", "fr")
  */
 data class RemoteModel(
     val name: String,
-    val version: Int,
+    val version: Int?,
     val onnxUrl: String,
     val tfliteUrl: String,
     val languageTag: String,
@@ -48,4 +48,16 @@ data class RemoteModel(
      */
     val displayName: String
         get() = "$name [$languageTag]"
+
+    /**
+     * Returns the filename for the ONNX file (with version suffix if applicable).
+     */
+    val onnxFilename: String
+        get() = if (version != null) "${name}_v$version.onnx" else "$name.onnx"
+
+    /**
+     * Returns the filename for the TFLite file (with version suffix if applicable).
+     */
+    val tfliteFilename: String
+        get() = if (version != null) "${name}_v$version.tflite" else "$name.tflite"
 }
