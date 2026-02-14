@@ -8,14 +8,14 @@
 - [x] Define data class `RemoteModel` with name, version, download URLs, language tag
 - [x] Write unit tests for model data classes
 
-### Task 1.2: Implement GitHub API Client
-- [~] Create `GitHubModelRepositoryClient` class
-- [~] Implement directory listing using GitHub Contents API
-- [~] Parse directory structure to extract model names
-- [~] Implement version parsing from filenames (extract highest version)
-- [~] Generate raw download URLs for .onnx and .tflite files
-- [~] Write unit tests with mocked GitHub API responses
-- [~] Write integration tests for actual API calls
+### Task 1.2: Implement GitHub API Client [063ac20]
+- [x] Create `GitHubModelRepositoryClient` class
+- [x] Implement directory listing using GitHub Contents API
+- [x] Parse directory structure to extract model names
+- [x] Implement version parsing from filenames (extract highest version)
+- [x] Generate raw download URLs for .onnx and .tflite files
+- [x] Write unit tests with mocked GitHub API responses
+- [x] Write integration tests for actual API calls
 
 ### Task 1.3: Create Model Download Service
 - [ ] Create `ModelDownloadService` class
