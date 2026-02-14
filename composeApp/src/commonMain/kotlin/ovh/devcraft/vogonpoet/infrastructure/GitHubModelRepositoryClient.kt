@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -47,19 +48,37 @@ class GitHubModelRepositoryClient(
             parseGitHubUrl(source.url)
                 ?: throw IllegalArgumentException("Invalid GitHub URL: ${source.url}")
 
+        VogonLogger.i("Parsing repo: owner=${repoInfo.owner}, repo=${repoInfo.repo}")
+
         val contentsUrl = "$GITHUB_API_BASE/repos/${repoInfo.owner}/${repoInfo.repo}/contents/$path"
 
         return try {
-            val directories =
-                httpClient
-                    .get(contentsUrl)
-                    .body<List<GitHubContentItem>>()
-                    .filter { it.type == "dir" }
+            VogonLogger.i("Fetching models from: $contentsUrl")
 
-            directories.mapNotNull { dir ->
-                fetchModelFromDirectory(repoInfo, path, dir.name, source)
-            }
+            val response =
+                httpClient.get(contentsUrl) {
+                    header("User-Agent", "VogonPoet-ModelBrowser/1.0")
+                    header("Accept", "application/vnd.github.v3+json")
+                }
+
+            VogonLogger.i("Response status: ${response.status}")
+
+            val items = response.body<List<GitHubContentItem>>()
+            VogonLogger.i("Got ${items.size} items from repository")
+
+            val directories = items.filter { it.type == "dir" }
+            VogonLogger.i("Found ${directories.size} directories")
+
+            val models =
+                directories.mapNotNull { dir ->
+                    VogonLogger.i("Processing directory: ${dir.name}")
+                    fetchModelFromDirectory(repoInfo, path, dir.name, source)
+                }
+
+            VogonLogger.i("Successfully fetched ${models.size} models")
+            models
         } catch (e: Exception) {
+            VogonLogger.e("Failed to fetch models from $contentsUrl: ${e.message}", e)
             emptyList()
         }
     }
@@ -78,14 +97,26 @@ class GitHubModelRepositoryClient(
         val modelUrl = "$GITHUB_API_BASE/repos/${repoInfo.owner}/${repoInfo.repo}/contents/$path/$modelName"
 
         return try {
-            val files = httpClient.get(modelUrl).body<List<GitHubContentItem>>()
+            VogonLogger.i("Fetching files from: $modelUrl")
+
+            val files =
+                httpClient
+                    .get(modelUrl) {
+                        header("User-Agent", "VogonPoet-ModelBrowser/1.0")
+                        header("Accept", "application/vnd.github.v3+json")
+                    }.body<List<GitHubContentItem>>()
+
+            VogonLogger.i("Directory $modelName contains ${files.size} files: ${files.map { it.name }}")
 
             // Find all .onnx and .tflite files
             val onnxFiles = files.filter { it.name.endsWith(".onnx") }
             val tfliteFiles = files.filter { it.name.endsWith(".tflite") }
 
+            VogonLogger.i("$modelName: ${onnxFiles.size} .onnx files, ${tfliteFiles.size} .tflite files")
+
             if (onnxFiles.isEmpty() || tfliteFiles.isEmpty()) {
-                return null // Model must have both file types
+                VogonLogger.i("$modelName: Missing required file types (.onnx or .tflite), skipping")
+                return null
             }
 
             // Check for non-versioned files first (preferred)
@@ -93,7 +124,7 @@ class GitHubModelRepositoryClient(
             val nonVersionedTflite = tfliteFiles.find { it.name == "$modelName.tflite" }
 
             if (nonVersionedOnnx != null && nonVersionedTflite != null) {
-                // Use non-versioned files
+                VogonLogger.i("$modelName: Found non-versioned files, using them")
                 val (onnxUrl, tfliteUrl) = generateDownloadUrls(repoInfo, path, modelName, null)
                 return RemoteModel(
                     name = modelName,
@@ -105,18 +136,25 @@ class GitHubModelRepositoryClient(
             }
 
             // Fall back to versioned files - find the highest version
+            VogonLogger.i("$modelName: No non-versioned files found, looking for versioned files")
             val latestVersion = findLatestVersion(files, modelName)
-            latestVersion?.let { version ->
-                val (onnxUrl, tfliteUrl) = generateDownloadUrls(repoInfo, path, modelName, version)
+
+            if (latestVersion != null) {
+                VogonLogger.i("$modelName: Using version $latestVersion")
+                val (onnxUrl, tfliteUrl) = generateDownloadUrls(repoInfo, path, modelName, latestVersion)
                 RemoteModel(
                     name = modelName,
-                    version = version,
+                    version = latestVersion,
                     onnxUrl = onnxUrl,
                     tfliteUrl = tfliteUrl,
                     languageTag = source.language,
                 )
+            } else {
+                VogonLogger.i("$modelName: No valid versioned files found")
+                null
             }
         } catch (e: Exception) {
+            VogonLogger.e("Failed to fetch model from $modelUrl: ${e.message}", e)
             null
         }
     }
@@ -154,6 +192,7 @@ class GitHubModelRepositoryClient(
 
     /**
      * Generates raw download URLs for ONNX and TFLite model files.
+     * Uses "main" branch as default, with fallback to "master".
      *
      * @param repoInfo The GitHub repository information
      * @param path The path within the repository
@@ -167,13 +206,17 @@ class GitHubModelRepositoryClient(
         modelName: String,
         version: Int?,
     ): Pair<String, String> {
-        val baseUrl = "$RAW_GITHUB_BASE/${repoInfo.owner}/${repoInfo.repo}/main/$path/$modelName"
+        // Use main branch - most modern repos use this
+        val branch = "main"
+        val baseUrl = "$RAW_GITHUB_BASE/${repoInfo.owner}/${repoInfo.repo}/$branch/$path/$modelName"
 
         val onnxFilename = if (version != null) "${modelName}_v$version.onnx" else "$modelName.onnx"
         val tfliteFilename = if (version != null) "${modelName}_v$version.tflite" else "$modelName.tflite"
 
         val onnxUrl = "$baseUrl/$onnxFilename"
         val tfliteUrl = "$baseUrl/$tfliteFilename"
+
+        VogonLogger.i("Generated URLs for $modelName: ONNX=$onnxUrl, TFLite=$tfliteUrl")
 
         return Pair(onnxUrl, tfliteUrl)
     }
