@@ -861,6 +861,38 @@ fun AdvancedSettingsPanel(
                     )
                 }
             }
+
+            AdvancedSection(title = "Wake Word Models") {
+                Text(
+                    text = "Download additional wake word models from community repositories.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GruvboxGray,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+
+                var showRepositoryBrowser by remember { mutableStateOf(false) }
+
+                Button(
+                    onClick = { showRepositoryBrowser = true },
+                    enabled = isReady,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = GruvboxBlueDark,
+                            contentColor = GruvboxFg0,
+                            disabledContainerColor = GruvboxBlueDark.copy(alpha = 0.5f),
+                            disabledContentColor = GruvboxFg0.copy(alpha = 0.5f),
+                        ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Browse Model Repositories", style = MaterialTheme.typography.bodySmall)
+                }
+
+                if (showRepositoryBrowser) {
+                    ovh.devcraft.vogonpoet.ui.windows.ModelRepositoryBrowserWindow(
+                        onCloseRequest = { showRepositoryBrowser = false },
+                    )
+                }
+            }
         }
 
         VerticalScrollbar(

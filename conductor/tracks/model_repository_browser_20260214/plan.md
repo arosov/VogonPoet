@@ -34,10 +34,10 @@
 ## Phase 2: UI Components - Source Selection
 
 ### Task 2.1: Create Model Repository Browser Window
-- [ ] Create new Composable `ModelRepositoryBrowserWindow`
-- [ ] Implement window sizing and positioning
-- [ ] Add Gruvbox Dark theme styling
-- [ ] Write UI tests for window rendering
+- [~] Create new Composable `ModelRepositoryBrowserWindow`
+- [~] Implement window sizing and positioning
+- [~] Add Gruvbox Dark theme styling
+- [~] Write UI tests for window rendering
 
 ### Task 2.2: Implement Source Selection Screen
 - [ ] Create `SourceSelectionScreen` Composable
