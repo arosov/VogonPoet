@@ -11,12 +11,12 @@ class UpdateChecker {
                 // Fallback for development: derive from vcs-url or use a default
                 val vcsUrl = System.getProperty("app.vcs-url")
                 if (vcsUrl != null && vcsUrl.contains("github.com")) {
-                    // Convert https://github.com/user/repo to https://user.github.io/repo/releases/latest/download
+                    // Convert https://github.com/user/repo to https://github.com/user/repo/releases/latest/download
                     val match = Regex("github\\.com/([^/]+)/([^/]+)").find(vcsUrl)
                     if (match != null) {
                         val user = match.groupValues[1]
                         val repo = match.groupValues[2]
-                        "https://$user.github.io/$repo/releases/latest/download"
+                        "https://github.com/$user/$repo/releases/latest/download"
                     } else {
                         null
                     }

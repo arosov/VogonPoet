@@ -192,6 +192,12 @@ compose.desktop {
     application {
         mainClass = "ovh.devcraft.vogonpoet.MainKt"
 
+        jvmArgs +=
+            listOf(
+                "-Dapp.vcs-url=https://github.com/arosov/VogonPoet",
+                "-Dapp.version=0.0.1",
+            )
+
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "ovh.devcraft.vogonpoet"
