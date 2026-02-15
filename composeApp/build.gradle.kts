@@ -210,17 +210,11 @@ tasks.register("updateDownloadPageForAppImage") {
     group = "vogonpoet"
     description = "Updates the download.html to include AppImage download option"
 
-    dependsOn("packageAppImage")
-
     val appVersion = version.toString()
     // Use rootProject.file to target the root output directory where Conveyor generates files
     val downloadHtml = rootProject.file("output/download.html")
-    val appImageOutputDir =
-        layout.buildDirectory
-            .dir("appimage/output")
-            .get()
-            .asFile
-    val appImageFile = File(appImageOutputDir, "VogonPoet-x86_64.AppImage")
+    val destAppImageName = "ovh-devcraft-vogonpoet-$appVersion-x86_64.AppImage"
+    val destAppImage = rootProject.file("output/$destAppImageName")
 
     doLast {
         if (!downloadHtml.exists()) {
@@ -228,30 +222,17 @@ tasks.register("updateDownloadPageForAppImage") {
             return@doLast
         }
 
-        if (!appImageFile.exists()) {
-            println("Warning: AppImage not found at ${appImageFile.absolutePath}, skipping AppImage update")
+        if (!destAppImage.exists()) {
+            println("Warning: AppImage not found at ${destAppImage.absolutePath}. Ensure Conveyor has run.")
             return@doLast
         }
-
-        // Copy AppImage to output directory for release artifacts
-        val destAppImageName = "ovh-devcraft-vogonpoet-$appVersion-x86_64.AppImage"
-        val destAppImage = rootProject.file("output/$destAppImageName")
-        appImageFile.copyTo(destAppImage, overwrite = true)
-        println("Copied AppImage to ${destAppImage.absolutePath}")
 
         var html = downloadHtml.readText()
 
         val appImageButton =
             """
             <a href="https://github.com/arosov/VogonPoet/releases/latest/download/$destAppImageName" class="download-button linux-amd64" download>
-                <svg width="2em" height="2em" viewBox="0 0 256 315" version="1.1" xmlns="http://www.w3.org/2000/svg"
-                     xmlns:xlink="http://www.w3.org/1999/xlink" preserveAspectRatio="xMidYMid">
-                    <g>
-                        <path d="M152.796616,167.425369 C147.545671,167.498421 153.790117,170.131199 160.645273,171.186063 C162.538769,169.7075 164.256942,168.211404 165.788102,166.756218 C161.51897,167.802315 157.173864,167.825692 152.796616,167.425369"/>
-                        <path d="M180.979901,160.400733 C184.106507,156.084848 186.385715,151.359874 187.189282,146.474187 C186.487987,149.957285 184.597414,152.964086 182.817877,156.137446 C173.002673,162.317606 181.894506,152.467336 182.812034,148.724175 C172.257546,162.007867 181.362691,156.689715 180.979901,160.400733"/>
-                        <path d="M191.382441,133.330754 C192.016528,123.874962 189.521087,126.864232 188.682455,130.472977 C189.661347,130.981416 190.435693,137.1382 191.382441,133.330754"/>
-                    </g>
-                </svg>
+                <img src="https://cdn.iconscout.com/icon/free/png-512/free-tux-logo-icon-svg-download-png-2364947.png?f=webp&w=256" width="48" height="48" alt="Tux">
                 <span>Download AppImage for AMD64</span>
             </a>
             """.trimIndent()
@@ -260,20 +241,7 @@ tasks.register("updateDownloadPageForAppImage") {
         val linuxAllPattern = """(<div class="linux-all"><br></div>)""".toRegex()
         html = html.replaceFirst(linuxAllPattern, "<br><br>\n$appImageButton\n                $1")
 
-        // Also add AppImage as an alternative format link (like .tar.gz)
-        val tarGzLinkPattern =
-            """(<a class="linux-amd64" href="https://github\.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet-$appVersion-linux-amd64\.tar\.gz"[^>]*>[^<]*</a>)"""
-                .toRegex()
-        val appImageLink =
-            """<a class="linux-amd64" href="https://github.com/arosov/VogonPoet/releases/latest/download/$destAppImageName" download>Download .AppImage</a>"""
-        html = html.replaceFirst(tarGzLinkPattern, "$1\n                        \n                        $appImageLink")
-
         downloadHtml.writeText(html)
         println("Updated download.html to include AppImage")
     }
-}
-
-// Make updateDownloadPageForAppImage run after packageAppImage
-tasks.matching { it.name == "updateDownloadPageForAppImage" }.configureEach {
-    dependsOn("packageAppImage")
 }
