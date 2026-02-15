@@ -21,7 +21,7 @@ plugins {
     id("dev.hydraulic.conveyor") version "1.13"
 }
 
-version = "0.0.5"
+version = "0.0.1"
 
 apply<JSONSchemaCodegenPlugin>()
 
