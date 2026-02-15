@@ -8,12 +8,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.window.ApplicationScope
+import androidx.compose.ui.window.Notification
 import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.rememberTrayState
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.VadState
+import ovh.devcraft.vogonpoet.infrastructure.UpdateInfo
 import vogonpoet.composeapp.generated.resources.Res
 import vogonpoet.composeapp.generated.resources.tray_disconnected
 import vogonpoet.composeapp.generated.resources.tray_error
@@ -32,19 +34,18 @@ fun ApplicationScope.VogonPoetTray(
     onOpenVadWindow: () -> Unit,
     onOpenTranscriptionWindow: () -> Unit,
     onOpenProtocolLog: () -> Unit,
+    updateInfo: UpdateInfo? = null,
+    onOpenDownload: () -> Unit = {},
 ) {
     val trayState = rememberTrayState()
 
-    // Load all icons using painterResource
     val idleIcon = painterResource(Res.drawable.tray_idle)
     val listeningIcon = painterResource(Res.drawable.tray_listening)
     val disconnectedIcon = painterResource(Res.drawable.tray_disconnected)
     val errorIcon = painterResource(Res.drawable.tray_error)
 
-    // Track current icon based on state
     var currentIcon by remember { mutableStateOf(defaultIcon) }
 
-    // Update icon when state changes
     LaunchedEffect(connectionState, vadState) {
         currentIcon =
             when (connectionState) {
@@ -74,6 +75,25 @@ fun ApplicationScope.VogonPoetTray(
             }
     }
 
+    var notificationShown by remember { mutableStateOf(false) }
+
+    LaunchedEffect(updateInfo) {
+        if (updateInfo != null && !notificationShown) {
+            notificationShown = true
+            try {
+                trayState.sendNotification(
+                    notification =
+                        Notification(
+                            title = "VogonPoet Update Available",
+                            message = "Version ${updateInfo.latestVersion} is available. Click to download.",
+                        ),
+                )
+            } catch (e: Exception) {
+                // Notification may not be supported on all platforms
+            }
+        }
+    }
+
     val tooltip =
         when (connectionState) {
             is ConnectionState.Disconnected -> "VogonPoet: Starting..."
@@ -94,6 +114,13 @@ fun ApplicationScope.VogonPoetTray(
             // onAction is often called when the tray icon is clicked (especially on macOS/Windows)
         },
         menu = {
+            if (updateInfo != null) {
+                Item("Download Update (${updateInfo.latestVersion})", onClick = {
+                    isMenuOpen = false
+                    onOpenDownload()
+                })
+                Separator()
+            }
             Item("Settings", onClick = {
                 isMenuOpen = false
                 onOpenSettings()

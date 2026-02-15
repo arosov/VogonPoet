@@ -9,8 +9,8 @@ import androidx.compose.ui.window.rememberWindowState
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.KoinContext
 import org.koin.compose.viewmodel.koinViewModel
@@ -18,6 +18,8 @@ import org.koin.core.context.startKoin
 import ovh.devcraft.vogonpoet.di.appModule
 import ovh.devcraft.vogonpoet.infrastructure.BackendManager
 import ovh.devcraft.vogonpoet.infrastructure.SettingsRepository
+import ovh.devcraft.vogonpoet.infrastructure.UpdateChecker
+import ovh.devcraft.vogonpoet.infrastructure.UpdateInfo
 import ovh.devcraft.vogonpoet.infrastructure.VogonLogger
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.VogonPoetTray
@@ -27,10 +29,14 @@ import ovh.devcraft.vogonpoet.ui.windows.TranscriptionWindow
 import ovh.devcraft.vogonpoet.ui.windows.VadWindow
 import vogonpoet.composeapp.generated.resources.Res
 import vogonpoet.composeapp.generated.resources.compose_multiplatform
+import java.awt.Desktop
+import java.net.URI
 
 fun main() {
     val settings = runBlocking { SettingsRepository.load() }
-
+    if (!settings.isFirstBoot) {
+        BackendManager.startBackend()
+    }
     startKoin {
         modules(appModule)
     }
@@ -78,6 +84,16 @@ fun main() {
                     var showTranscriptionWindow by remember { mutableStateOf(false) }
                     var showProtocolLog by remember { mutableStateOf(false) }
 
+                    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+                    var dismissedUpdates by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+                    LaunchedEffect(Unit) {
+                        updateInfo =
+                            withContext(Dispatchers.IO) {
+                                UpdateChecker().checkForUpdate()
+                            }
+                    }
+
                     // Settings Window State - compact height to fit content
                     // Add 15dp to account for title bar on Linux (window size includes decorations)
                     val settingsWindowState =
@@ -116,7 +132,27 @@ fun main() {
                             state = settingsWindowState,
                             resizable = false,
                         ) {
-                            App(viewModel)
+                            val currentUpdateInfo =
+                                updateInfo?.let { info ->
+                                    if (info.latestVersion in dismissedUpdates) {
+                                        null
+                                    } else {
+                                        info
+                                    }
+                                }
+
+                            App(
+                                viewModel = viewModel,
+                                updateInfo = currentUpdateInfo,
+                                onDismissUpdate = {
+                                    updateInfo?.let { info ->
+                                        dismissedUpdates = dismissedUpdates + info.latestVersion
+                                    }
+                                },
+                                onOpenDownloadUrl = { url ->
+                                    Desktop.getDesktop().browse(URI(url))
+                                },
+                            )
                         }
                     }
 
@@ -154,6 +190,12 @@ fun main() {
                         onOpenVadWindow = { showVadWindow = true },
                         onOpenTranscriptionWindow = { showTranscriptionWindow = true },
                         onOpenProtocolLog = { showProtocolLog = true },
+                        updateInfo = updateInfo,
+                        onOpenDownload = {
+                            updateInfo?.let { info ->
+                                Desktop.getDesktop().browse(URI(info.siteUrl))
+                            }
+                        },
                     )
                 }
             }
