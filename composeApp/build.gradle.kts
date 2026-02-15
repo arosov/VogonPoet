@@ -220,11 +220,11 @@ apply(from = "../gradle/scripts/appimage-package.gradle.kts")
 // --- Generate Download Page from Template ---
 tasks.register("generateDownloadPage") {
     group = "vogonpoet"
-    description = "Generates download.html from template, replacing version placeholders"
+    description = "Generates custom-download.html from template, replacing version placeholders"
 
     val appVersion = version.toString()
     val templateFile = project.file("src/jvmMain/resources/download-template.html")
-    val outputFile = rootProject.file("output/download.html")
+    val outputFile = rootProject.file("output/custom-download.html")
 
     doLast {
         if (!templateFile.exists()) {
@@ -241,6 +241,6 @@ tasks.register("generateDownloadPage") {
         outputFile.parentFile?.mkdirs()
 
         outputFile.writeText(template)
-        println("Generated download.html with version $appVersion")
+        println("Generated custom-download.html with version $appVersion")
     }
 }
