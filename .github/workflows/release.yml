@@ -43,7 +43,7 @@ jobs:
         env:
           OAUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          command: make site
+          command: make site --overwrite
           agree_to_license: 1
           signing_key: ${{ secrets.SIGNING_KEY }}
 
@@ -55,7 +55,7 @@ jobs:
         env:
           OAUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          command: make copied-site
+          command: make copied-site --overwrite
           agree_to_license: 1
           signing_key: ${{ secrets.SIGNING_KEY }}
 
