@@ -1,8 +1,0 @@
-{
-  "track_id": "use_secret_for_signing_key_20260212",
-  "type": "chore",
-  "status": "in_progress",
-  "created_at": "2026-02-12T22:15:00Z",
-  "updated_at": "2026-02-12T22:15:00Z",
-  "description": "Use GitHub Secret for Conveyor Signing Key"
-}

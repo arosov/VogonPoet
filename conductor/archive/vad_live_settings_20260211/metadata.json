@@ -1,8 +1,0 @@
-{
-  "track_id": "vad_live_settings_20260211",
-  "type": "refactor",
-  "status": "new",
-  "created_at": "2026-02-11T12:00:00Z",
-  "updated_at": "2026-02-11T12:00:00Z",
-  "description": "Fix VAD window latency and refactor settings to be live (no save button), moving critical settings to advanced panel."
-}

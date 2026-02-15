@@ -1,9 +1,0 @@
-{
-  "packageName": "ovh.devcraft.vogonpoet.infrastructure.model",
-  "decimalClassName": "kotlin.Double",
-  "annotations": {
-    "classes": {
-      "kotlinx.serialization.Serializable": null
-    }
-  }
-}

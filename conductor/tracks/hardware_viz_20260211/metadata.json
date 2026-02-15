@@ -1,8 +1,0 @@
-{
-  "track_id": "hardware_viz_20260211",
-  "type": "feature",
-  "status": "completed",
-  "created_at": "2026-02-11T12:00:00Z",
-  "updated_at": "2026-02-11T23:30:00Z",
-  "description": "Unified VRAM visualization and smart restart logic for all platforms."
-}

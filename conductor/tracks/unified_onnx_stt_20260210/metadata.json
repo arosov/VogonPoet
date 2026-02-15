@@ -1,8 +1,0 @@
-{
-  "track_id": "unified_onnx_stt_20260210",
-  "type": "feature",
-  "status": "in_progress",
-  "created_at": "2026-02-10T14:30:00Z",
-  "updated_at": "2026-02-10T14:30:00Z",
-  "description": "Unified ONNX STT Implementation for NVIDIA, AMD, and Intel"
-}
