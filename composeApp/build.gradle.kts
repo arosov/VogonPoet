@@ -268,13 +268,16 @@ tasks.register("updateDownloadPageForAppImage") {
             </a>
             """.trimIndent()
 
-        // Insert AppImage button after the .deb button, before the linux-all div
-        val linuxAllPattern = """(<div class="linux-all"><br></div>)"""
-        html = html.replaceFirst(linuxAllPattern, "$appImageButton\n                $1")
+        // Insert AppImage button after the .deb button, before the linux-all div (with <br><br> like macOS)
+        val linuxAllPattern = """(<div class="linux-all"><br></div>)""".toRegex()
+        html = html.replaceFirst(linuxAllPattern, "<br><br>\n$appImageButton\n                $1")
 
         // Also add AppImage as an alternative format link (like .tar.gz)
-        val tarGzLinkPattern = """(<a class="linux-amd64" href="https://github\.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet-$appVersion-linux-amd64\.tar\.gz"[^>]*>[^<]*</a>)"""
-        val appImageLink = """<a class="linux-amd64" href="https://github.com/arosov/VogonPoet/releases/latest/download/$destAppImageName" download>Download .AppImage</a>"""
+        val tarGzLinkPattern =
+            """(<a class="linux-amd64" href="https://github\.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet-$appVersion-linux-amd64\.tar\.gz"[^>]*>[^<]*</a>)"""
+                .toRegex()
+        val appImageLink =
+            """<a class="linux-amd64" href="https://github.com/arosov/VogonPoet/releases/latest/download/$destAppImageName" download>Download .AppImage</a>"""
         html = html.replaceFirst(tarGzLinkPattern, "$1\n                        \n                        $appImageLink")
 
         downloadHtml.writeText(html)
