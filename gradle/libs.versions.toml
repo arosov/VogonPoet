@@ -14,6 +14,7 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 ktor = "3.1.1"
 material3 = "1.10.0-alpha05"
 lwjgl = "3.3.4"
+conveyor-control = "1.1"
 
 [libraries]
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
@@ -39,9 +40,9 @@ koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
 koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
 json-kotlin-gradle = { module = "net.pwall.json:json-kotlin-gradle", version.ref = "json-kotlin-gradle" }
 json-kotlin-schema-codegen = { module = "net.pwall.json:json-kotlin-schema-codegen", version.ref = "json-kotlin-schema-codegen" }
-
 lwjgl = { module = "org.lwjgl:lwjgl", version.ref = "lwjgl" }
 lwjgl-tinyfd = { module = "org.lwjgl:lwjgl-tinyfd", version.ref = "lwjgl" }
+conveyor-control = { module = "dev.hydraulic.conveyor:conveyor-control", version.ref = "conveyor-control" }
 
 [plugins]
 composeHotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "composeHotReload" }

@@ -154,6 +154,8 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
 
+            implementation(libs.conveyor.control)
+
             implementation(libs.lwjgl)
             implementation(libs.lwjgl.tinyfd)
             runtimeOnly("org.lwjgl:lwjgl:${libs.versions.lwjgl.get()}:natives-linux")
