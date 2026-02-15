@@ -20,7 +20,8 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
     id("dev.hydraulic.conveyor") version "1.13"
 }
-version = "0.0.1"
+
+version = "0.0.2"
 apply<JSONSchemaCodegenPlugin>()
 
 java {
