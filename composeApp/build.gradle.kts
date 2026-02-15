@@ -21,7 +21,7 @@ plugins {
     id("dev.hydraulic.conveyor") version "1.13"
 }
 
-version = "0.0.1"
+version = "0.0.5"
 
 apply<JSONSchemaCodegenPlugin>()
 
@@ -205,43 +205,30 @@ configure<JSONSchemaCodegen> {
 
 apply(from = "../gradle/scripts/appimage-package.gradle.kts")
 
-// --- Update Download Page for AppImage ---
-tasks.register("updateDownloadPageForAppImage") {
+// --- Generate Download Page from Template ---
+tasks.register("generateDownloadPage") {
     group = "vogonpoet"
-    description = "Updates the download.html to include AppImage download option"
+    description = "Generates download.html from template, replacing version placeholders"
 
     val appVersion = version.toString()
-    // Use rootProject.file to target the root output directory where Conveyor generates files
-    val downloadHtml = rootProject.file("output/download.html")
-    val destAppImageName = "ovh-devcraft-vogonpoet-$appVersion-x86_64.AppImage"
-    val destAppImage = rootProject.file("output/$destAppImageName")
+    val templateFile = project.file("src/jvmMain/resources/download-template.html")
+    val outputFile = rootProject.file("output/download.html")
 
     doLast {
-        if (!downloadHtml.exists()) {
-            println("Warning: output/download.html not found, skipping AppImage update")
+        if (!templateFile.exists()) {
+            println("Warning: download-template.html not found at ${templateFile.absolutePath}")
             return@doLast
         }
 
-        if (!destAppImage.exists()) {
-            println("Warning: AppImage not found at ${destAppImage.absolutePath}. Ensure Conveyor has run.")
-            return@doLast
-        }
+        var template = templateFile.readText()
 
-        var html = downloadHtml.readText()
+        // Replace @VERSION@ placeholder with actual version
+        template = template.replace("@VERSION@", appVersion)
 
-        val appImageButton =
-            """
-            <a href="https://github.com/arosov/VogonPoet/releases/latest/download/$destAppImageName" class="download-button linux-amd64" download>
-                <img src="https://cdn.iconscout.com/icon/free/png-512/free-tux-logo-icon-svg-download-png-2364947.png?f=webp&w=256" width="48" height="48" alt="Tux">
-                <span>Download AppImage for AMD64</span>
-            </a>
-            """.trimIndent()
+        // Ensure output directory exists
+        outputFile.parentFile?.mkdirs()
 
-        // Insert AppImage button after the .deb button, before the linux-all div (with <br><br> like macOS)
-        val linuxAllPattern = """(<div class="linux-all"><br></div>)""".toRegex()
-        html = html.replaceFirst(linuxAllPattern, "<br><br>\n$appImageButton\n                $1")
-
-        downloadHtml.writeText(html)
-        println("Updated download.html to include AppImage")
+        outputFile.writeText(template)
+        println("Generated download.html with version $appVersion")
     }
 }
