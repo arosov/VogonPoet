@@ -5,9 +5,30 @@ import java.net.URL
 import java.util.Properties
 
 class UpdateChecker {
-    private val repositoryUrl: String? = System.getProperty("app.repositoryUrl")
+    private val repositoryUrl: String? =
+        System.getProperty("app.repositoryUrl")
+            ?: run {
+                // Fallback for development: derive from vcs-url or use a default
+                val vcsUrl = System.getProperty("app.vcs-url")
+                if (vcsUrl != null && vcsUrl.contains("github.com")) {
+                    // Convert https://github.com/user/repo to https://user.github.io/repo/releases/latest/download
+                    val match = Regex("github\\.com/([^/]+)/([^/]+)").find(vcsUrl)
+                    if (match != null) {
+                        val user = match.groupValues[1]
+                        val repo = match.groupValues[2]
+                        "https://$user.github.io/$repo/releases/latest/download"
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+            }
 
-    fun getCurrentVersion(): String = System.getProperty("app.version") ?: "unknown"
+    fun getCurrentVersion(): String =
+        System.getProperty("app.version")
+            ?: System.getProperty("app.version.from.conveyor")
+            ?: "unknown"
 
     fun canTriggerUpdate(): Boolean {
         val controller = SoftwareUpdateController.getInstance()
