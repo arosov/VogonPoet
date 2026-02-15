@@ -224,7 +224,11 @@ tasks.register("generateDownloadPage") {
 
     val appVersion = version.toString()
     val templateFile = project.file("src/jvmMain/resources/download-template.html")
-    val outputFile = rootProject.file("output/custom-download.html")
+    val outputFile =
+        project.layout.buildDirectory
+            .file("custom-download.html")
+            .get()
+            .asFile
 
     doLast {
         if (!templateFile.exists()) {
@@ -241,6 +245,6 @@ tasks.register("generateDownloadPage") {
         outputFile.parentFile?.mkdirs()
 
         outputFile.writeText(template)
-        println("Generated custom-download.html with version $appVersion")
+        println("Generated custom-download.html with version $appVersion to ${outputFile.absolutePath}")
     }
 }
