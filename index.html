@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VogonPoet - Download</title>
+    <style>
+        :root {
+            --backdrop: #f8f8f8;
+            --foreground: #1a1a1a;
+            --accent: #01e675;
+            --accent-hover: #00c85e;
+            --card-bg: #ffffff;
+            --text-secondary: #666666;
+            --border: #e0e0e0;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --backdrop: #0d1117;
+                --foreground: #e6e6e6;
+                --accent: #07e73f;
+                --accent-hover: #05c933;
+                --card-bg: #161b22;
+                --text-secondary: #8b949e;
+                --border: #30363d;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            background-color: var(--backdrop);
+            color: var(--foreground);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 4rem 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .tagline {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .description {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .description p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .feature {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .feature-desc {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .download-section {
+            text-align: center;
+        }
+
+        .download-btn {
+            display: inline-block;
+            background-color: var(--accent);
+            color: #000;
+            font-weight: 600;
+            padding: 1rem 3rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .download-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .download-btn:active {
+            transform: scale(0.98);
+        }
+
+        .download-note {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        footer {
+            margin-top: auto;
+            padding-top: 4rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>VogonPoet</h1>
+            <p class="tagline">Minimalist STT Desktop Frontend</p>
+        </header>
+
+        <section class="description">
+            <p>
+                VogonPoet is a lightweight, high-performance desktop application that serves as a visual bridge for the Babelfish speech-to-text server. It provides essential controls and real-time visualization for a seamless system-wide dictation experience.
+            </p>
+        </section>
+
+        <section class="features">
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-title">Low Latency</div>
+                <div class="feature-desc">Optimized for instant visual feedback on audio events</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🎯</div>
+                <div class="feature-title">Minimalist</div>
+                <div class="feature-desc">Clean interface focused on essential controls only</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🔗</div>
+                <div class="feature-title">Cross-Platform</div>
+                <div class="feature-desc">Works on Windows, Linux, and macOS</div>
+            </div>
+        </section>
+
+        <section class="download-section">
+            <a href="download.html" class="download-btn">Download Now</a>
+            <p class="download-note">Available for Windows, macOS, and Linux</p>
+        </section>
+
+        <footer>
+            <p>Built with <a href="https://kotlinlang.org/">Kotlin</a> and <a href="https://www.jetbrains.com/compose/">JetBrains Compose</a></p>
+            <p>Packaged with <a href="https://www.hydraulic.software/">Hydraulic Conveyor</a></p>
+        </footer>
+    </div>
+</body>
+</html>
