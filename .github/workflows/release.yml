@@ -47,8 +47,8 @@ jobs:
           agree_to_license: 1
           signing_key: ${{ secrets.SIGNING_KEY }}
 
-      - name: Update Download Page for AppImage
-        run: ./gradlew :composeApp:updateDownloadPageForAppImage
+      - name: Generate Download Page
+        run: ./gradlew :composeApp:generateDownloadPage
 
       - name: Publish with Conveyor
         uses: hydraulic-software/conveyor/actions/build@v21.1
