@@ -83,7 +83,7 @@ data class VogonConfig(
 
     data class Server(
         val host: String = "127.0.0.1",
-        val port: Long = 8123,
+        val port: Long = 8124,
     )
 
     data class Cache(

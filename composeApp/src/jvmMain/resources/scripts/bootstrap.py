@@ -481,19 +481,14 @@ class BootstrapServer:
                         f"Linux: Set LD_LIBRARY_PATH to include {len(ld_paths)} paths"
                     )
 
-            args = [UV_CMD, "run", "babelfish"]
+            args = [UV_CMD, "run", "babelfish", "--port", "8124"]
             if hw_mode == "cpu" and (
                 env_forces_cpu or (not auto_detect and config_device == "cpu")
             ):
                 args.append("--cpu")
 
             if sys.platform == "win32":
-                logger.info("Closing bootstrap server and waiting for port release...")
-                _ws_server.close()
-                await _ws_server.wait_closed()
-                await asyncio.sleep(2.0)
-
-                logger.info("Starting Babelfish...")
+                logger.info("Starting Babelfish on port 8124...")
                 subprocess.call(args, env=env)
                 sys.exit(0)
             else:
@@ -510,12 +505,6 @@ async def main():
     args = parser.parse_args()
 
     models_dir = Path(args.models_dir) if args.models_dir else None
-
-    if sys.platform != "win32":
-        try:
-            subprocess.run(["fuser", "-k", f"{PORT}/tcp"], stderr=subprocess.DEVNULL)
-        except Exception:
-            pass
 
     server = BootstrapServer(asyncio.get_event_loop(), models_dir=models_dir)
     global _ws_server

@@ -69,7 +69,13 @@ class BabelfishClient(
     private val logMutex = Mutex()
 
     companion object {
-        private const val DEFAULT_SERVER_URL = "ws://127.0.0.1:8123/config"
+        private const val BOOTSTRAP_PORT = 8123
+    }
+
+    private fun getServerUrl(): String {
+        val status = backendRepository.serverStatus.value
+        val port = if (status == ServerStatus.BOOTSTRAPPING) BOOTSTRAP_PORT else _config.value?.server?.port?.toInt() ?: 8124
+        return "ws://127.0.0.1:$port/config"
     }
 
     override suspend fun connect() {
@@ -114,11 +120,12 @@ class BabelfishClient(
                         continue
                     }
 
+                    val serverUrl = getServerUrl()
                     _connectionState.value = ConnectionState.Connecting
-                    VogonLogger.i("Attempting to connect to Babelfish at $DEFAULT_SERVER_URL...")
+                    VogonLogger.i("Attempting to connect to Babelfish at $serverUrl...")
 
                     try {
-                        client.webSocket(DEFAULT_SERVER_URL) {
+                        client.webSocket(serverUrl) {
                             session = this
 
                             val status = backendRepository.serverStatus.value
