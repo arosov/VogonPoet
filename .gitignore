@@ -18,3 +18,5 @@ captures
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
 .conveyor/
+composeApp/src/jvmMain/resources/babelfish.zip
+composeApp/src/jvmMain/resources/babelfish_version.txt
