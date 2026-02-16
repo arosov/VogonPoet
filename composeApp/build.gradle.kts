@@ -12,17 +12,22 @@ buildscript {
     }
 }
 
-
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.kotlinSerialization)
-    id("dev.hydraulic.conveyor") version "1.13"
+    alias(libs.plugins.conveyor)
+    alias(libs.plugins.gmazzoBuildconfig)
 }
+val version = System.getenv("VERSION") ?: "0.0.0"
+project.version = version.toString()
 
-version = "0.0.1"
+buildConfig {
+    useKotlinOutput()
+    buildConfigField("String", "APP_VERSION", "\"$version\"")
+}
 
 apply<JSONSchemaCodegenPlugin>()
 
@@ -69,7 +74,7 @@ tasks.register("bundleBabelfish") {
                     ?.get(1)
                     ?.trim()
                     ?.removeSurrounding("\"")
-                    ?.removeSurrounding("'") ?: "0.0.0"
+                    ?.removeSurrounding("'") ?: version
             }
 
             // Exclude heavy/unnecessary dirs
@@ -194,8 +199,8 @@ compose.desktop {
 
         jvmArgs +=
             listOf(
-                "-Dapp.vcs-url=https://github.com/arosov/VogonPoet",
-                "-Dapp.version=0.0.1",
+                "-Dapp.vcs-url=https://github.com/arosov/VogonPoet/releases/latest/download",
+                "-Dapp.version=$version",
             )
 
         nativeDistributions {

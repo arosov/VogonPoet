@@ -10,6 +10,8 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.KoinContext
@@ -33,9 +35,13 @@ import java.awt.Desktop
 import java.net.URI
 
 fun main() {
-    val settings = runBlocking { SettingsRepository.load() }
-    if (!settings.isFirstBoot) {
-        BackendManager.startBackend()
+    val isFirstBoot: Boolean
+    runBlocking {
+        val settings = SettingsRepository.load()
+        isFirstBoot = settings.isFirstBoot
+        if (!isFirstBoot) {
+            BackendManager.startBackend()
+        }
     }
     startKoin {
         modules(appModule)
@@ -50,7 +56,7 @@ fun main() {
 
         CompositionLocalProvider(LocalViewModelStoreOwner provides viewModelStoreOwner) {
             KoinContext {
-                var isFirstBoot by remember { mutableStateOf(settings.isFirstBoot) }
+                var isFirstBoot by remember { mutableStateOf(isFirstBoot) }
                 val scope = rememberCoroutineScope()
 
                 if (isFirstBoot) {

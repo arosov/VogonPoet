@@ -14,7 +14,9 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 ktor = "3.1.1"
 material3 = "1.10.0-alpha05"
 lwjgl = "3.3.4"
+conveyor = "1.13"
 conveyor-control = "1.1"
+gmazzo-buildconfig = "6.0.7"
 
 [libraries]
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
@@ -53,3 +55,5 @@ composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMul
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+conveyor = { id = "dev.hydraulic.conveyor", version.ref = "conveyor" }
+gmazzoBuildconfig = { id = "com.github.gmazzo.buildconfig", version.ref = "gmazzo-buildconfig" }

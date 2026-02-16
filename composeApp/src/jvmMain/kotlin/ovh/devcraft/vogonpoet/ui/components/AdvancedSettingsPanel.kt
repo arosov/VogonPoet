@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 import ovh.devcraft.vogonpoet.domain.model.VogonConfig
+import ovh.devcraft.vogonpoet.infrastructure.AppVersion
 import ovh.devcraft.vogonpoet.infrastructure.SettingsRepository
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
 import ovh.devcraft.vogonpoet.ui.theme.*
@@ -135,12 +136,20 @@ fun AdvancedSettingsPanel(
                     .fillMaxSize()
                     .verticalScroll(scrollState)
                     .padding(end = 12.dp), // Add padding for scrollbar
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = "Advanced Settings",
                 style = MaterialTheme.typography.titleLarge,
                 color = GruvboxFg0,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Text(
+                text = "v${AppVersion.version}",
+                style = MaterialTheme.typography.bodySmall,
+                color = GruvboxGray.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
