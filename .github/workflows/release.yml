@@ -34,6 +34,16 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
+      - name: Fetch Babelfish Asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download --repo arosov/babelfish -p "babelfish.zip" --output babelfish.zip
+          echo "BABELFISH_ZIP=$(pwd)/babelfish.zip" >> $GITHUB_ENV
+          
+      - name: Bundle Babelfish
+        run: ./gradlew :composeApp:bundleBabelfish
+
       - name: Build with Gradle
         run: ./gradlew :composeApp:packageUberJarForCurrentOS
 
@@ -81,3 +91,12 @@ jobs:
         with:
           name: distributions
           path: output/
+
+      - name: Update Release Notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BABELFISH_VER=$(cat composeApp/src/jvmMain/resources/babelfish_version.txt)
+          gh release view ${{ github.ref_name }} --json body --jq .body > release_body.md
+          echo -e "\n\n### Bundled Components\n- Babelfish v$BABELFISH_VER" >> release_body.md
+          gh release edit ${{ github.ref_name }} --notes-file release_body.md

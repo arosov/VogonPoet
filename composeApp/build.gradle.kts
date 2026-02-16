@@ -42,76 +42,127 @@ tasks.register("bundleBabelfish") {
     group = "vogonpoet"
     description = "Zips the babelfish backend for distribution"
 
+    val babelfishZipPath = System.getenv("BABELFISH_ZIP")
     val babelfishDir = file("../../babelfish")
     val outputDir = file("src/jvmMain/resources")
     val outputFile = file("$outputDir/babelfish.zip")
 
-    inputs.dir(babelfishDir)
+    // Define inputs/outputs for incremental build
+    if (babelfishZipPath != null) {
+        val zipFile = file(babelfishZipPath)
+        if (zipFile.exists()) {
+            inputs.file(zipFile)
+        }
+    } else if (babelfishDir.exists()) {
+        inputs.dir(babelfishDir)
+    }
     outputs.file(outputFile)
 
     doLast {
-        if (!babelfishDir.exists()) {
-            throw GradleException("Babelfish directory not found at ${babelfishDir.absolutePath}")
+        // Create a temporary staging directory
+        val stagingDir =
+            layout.buildDirectory
+                .dir("tmp/babelfish_bundle")
+                .get()
+                .asFile
+        if (stagingDir.exists()) stagingDir.deleteRecursively()
+        stagingDir.mkdirs()
+
+        var version = "0.0.0"
+
+        if (babelfishZipPath != null) {
+            val zipFile = file(babelfishZipPath)
+            if (!zipFile.exists()) {
+                throw GradleException("Specified BABELFISH_ZIP not found: ${zipFile.absolutePath}")
+            }
+            println("Extracting Babelfish from zip: ${zipFile.absolutePath}")
+            copy {
+                from(zipTree(zipFile))
+                into(stagingDir)
+            }
+        } else {
+            if (!babelfishDir.exists()) {
+                throw GradleException("Babelfish directory not found at ${babelfishDir.absolutePath}")
+            }
+            println("Copying Babelfish from local dir: ${babelfishDir.absolutePath}")
+            copy {
+                from(babelfishDir)
+                into(stagingDir)
+                exclude(
+                    ".venv/**",
+                    "models/**",
+                    "tmp_extraction/**",
+                    ".git/**",
+                    "__pycache__/**",
+                    "tests/**",
+                    "*.log",
+                    "uv.lock",
+                    "test_output.txt",
+                )
+            }
         }
+
+        // Handle potential nested directory (if zip was created with a root folder)
+        var contentDir = stagingDir
+        val children = stagingDir.listFiles()?.filter { it.isDirectory }
+        // If we have exactly one directory and no files in the root, assume it's a wrapper dir
+        if (children?.size == 1 && (stagingDir.listFiles()?.filter { it.isFile }?.isEmpty() == true)) {
+            contentDir = children.first()
+            println("Detected nested directory structure. Using content from: ${contentDir.name}")
+        }
+
+        // Parse version
+        val pyprojectFile = File(contentDir, "pyproject.toml")
+        if (pyprojectFile.exists()) {
+            val versionLine = pyprojectFile.readLines().find { it.trim().startsWith("version =") }
+            version = versionLine
+                ?.split("=")
+                ?.get(1)
+                ?.trim()
+                ?.removeSurrounding("\"")
+                ?.removeSurrounding("'") ?: version
+        } else {
+            println("Warning: pyproject.toml not found in ${contentDir.absolutePath}")
+        }
+
+        // Inject bootstrap.py
+        val bootstrapFile = file("src/jvmMain/resources/scripts/bootstrap.py")
+        if (bootstrapFile.exists()) {
+            val targetScriptsDir = File(contentDir, "scripts")
+            targetScriptsDir.mkdirs()
+            copy {
+                from(bootstrapFile)
+                into(targetScriptsDir)
+            }
+        }
+
+        // Create the final zip
         if (!outputDir.exists()) {
             outputDir.mkdirs()
         }
 
-        println("Bundling Babelfish from ${babelfishDir.absolutePath}...")
+        println("Creating final bundle at ${outputFile.absolutePath} (version $version)")
 
-        var totalUncompressedSize: Long = 0
         val zipOut = ZipOutputStream(outputFile.outputStream())
-        var version = version.toString()
+        var totalUncompressedSize: Long = 0
 
-        // 1. Zip the backend source
-        babelfishDir.walkTopDown().forEach { file ->
-            val relativePath = file.relativeTo(babelfishDir).path
-
-            if (relativePath == "pyproject.toml") {
-                val versionLine = file.readLines().find { it.trim().startsWith("version =") }
-                version = versionLine
-                    ?.split("=")
-                    ?.get(1)
-                    ?.trim()
-                    ?.removeSurrounding("\"")
-                    ?.removeSurrounding("'") ?: version
-            }
-
-            // Exclude heavy/unnecessary dirs
-            val isExcluded =
-                relativePath.startsWith(".venv") ||
-                    relativePath.startsWith("models") ||
-                    relativePath.startsWith("tmp_extraction") ||
-                    relativePath.startsWith(".git") ||
-                    relativePath.contains("__pycache__") ||
-                    relativePath.startsWith("tests") ||
-                    relativePath.endsWith(".log") ||
-                    relativePath.isEmpty()
-
-            if (!isExcluded && file.isFile) {
+        contentDir.walkTopDown().forEach { file ->
+            val relativePath = file.relativeTo(contentDir).path
+            // Avoid adding the root dir itself as an entry if it's empty or causing issues,
+            // but usually walkTopDown handles this. We just ensure we don't add directory entries or empty paths.
+            if (file.isFile && relativePath.isNotEmpty()) {
                 totalUncompressedSize += file.length()
                 zipOut.putNextEntry(ZipEntry(relativePath))
                 file.inputStream().use { it.copyTo(zipOut) }
                 zipOut.closeEntry()
             }
         }
-
-        // 2. Also include the bootstrap script into the zip at scripts/bootstrap.py
-        val bootstrapFile = file("src/jvmMain/resources/scripts/bootstrap.py")
-        if (bootstrapFile.exists()) {
-            totalUncompressedSize += bootstrapFile.length()
-            zipOut.putNextEntry(ZipEntry("scripts/bootstrap.py"))
-            bootstrapFile.inputStream().use { it.copyTo(zipOut) }
-            zipOut.closeEntry()
-        }
-
         zipOut.close()
 
         file("$outputDir/babelfish_version.txt").writeText(version)
 
-        val compressedSize = outputFile.length()
         println("Babelfish bundled successfully (v$version):")
-        println("  - Compressed size: ${compressedSize / 1024} KB")
+        println("  - Compressed size: ${outputFile.length() / 1024} KB")
         println("  - Uncompressed size: ${totalUncompressedSize / 1024} KB")
     }
 }
