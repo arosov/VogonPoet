@@ -266,16 +266,16 @@ fun AdvancedSettingsPanel(
                             val osName = System.getProperty("os.name").lowercase()
                             when {
                                 osName.contains("win") -> {
-                                    System.getenv("LOCALAPPDATA")?.let { "$it\\VogonPoet" }
-                                        ?: "$home\\AppData\\Local\\VogonPoet"
+                                    System.getenv("LOCALAPPDATA")?.let { "$it\\VogonPoet\\Cache" }
+                                        ?: "$home\\AppData\\Local\\VogonPoet\\Cache"
                                 }
 
                                 osName.contains("mac") -> {
-                                    "$home/Library/Application Support/VogonPoet"
+                                    "$home/Library/Caches/VogonPoet"
                                 }
 
                                 else -> {
-                                    "$home/.local/share/vogonpoet"
+                                    "$home/.cache/vogonpoet"
                                 }
                             }
                         }
