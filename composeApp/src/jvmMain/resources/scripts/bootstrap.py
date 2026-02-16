@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 # --- Configuration ---
 PORT = 8123
+_ws_server = None
 
 # Multilingual Parakeet-TDT v3 (25 languages)
 MODEL_REPO = "istupakov/parakeet-tdt-0.6b-v3-onnx"
@@ -487,6 +488,9 @@ class BootstrapServer:
                 args.append("--cpu")
 
             if sys.platform == "win32":
+                logger.info("Closing bootstrap server and waiting for port release...")
+                _ws_server.close()
+                await asyncio.sleep(1.5)
                 subprocess.call(args, env=env)
                 sys.exit(0)
             else:
@@ -511,7 +515,9 @@ async def main():
             pass
 
     server = BootstrapServer(asyncio.get_event_loop(), models_dir=models_dir)
-    async with websockets.serve(server.handle_connection, "127.0.0.1", PORT):
+    global _ws_server
+    _ws_server = websockets.serve(server.handle_connection, "127.0.0.1", PORT)
+    async with _ws_server:
         logger.info(f"BOOTSTRAP SERVER STARTED port={PORT}")
         await asyncio.Future()
 
