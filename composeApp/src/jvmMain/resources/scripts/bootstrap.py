@@ -490,8 +490,23 @@ class BootstrapServer:
             if sys.platform == "win32":
                 logger.info("Closing bootstrap server and waiting for port release...")
                 _ws_server.close()
-                await asyncio.sleep(1.5)
-                subprocess.call(args, env=env)
+                await _ws_server.wait_closed()
+                await asyncio.sleep(2.0)
+                
+                max_retries = 3
+                retry_delay = 2.0
+                for attempt in range(max_retries):
+                    try:
+                        logger.info(f"Attempting to start Babelfish (attempt {attempt + 1}/{max_retries})...")
+                        subprocess.call(args, env=env)
+                        break
+                    except OSError as e:
+                        if attempt < max_retries - 1 and e.errno == 10048:
+                            logger.warning(f"Port {PORT} still in use, waiting {retry_delay}s before retry...")
+                            await asyncio.sleep(retry_delay)
+                            retry_delay *= 1.5
+                        else:
+                            raise
                 sys.exit(0)
             else:
                 os.execvpe(UV_CMD, args, env)

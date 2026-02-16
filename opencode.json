@@ -5,7 +5,7 @@
     },
     "permission": {
         "external_directory": {
-            "~/dev/VogonPoet/babelfish/**": "allow"
+            "/mnt/f/dev/babelfish/**": "allow"
         },
         "lsp": "allow"
     },
