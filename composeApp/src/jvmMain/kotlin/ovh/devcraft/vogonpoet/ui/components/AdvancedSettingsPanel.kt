@@ -530,9 +530,7 @@ fun AdvancedSettingsPanel(
 
                 val inputEnabled = config.systemInput.enabled
                 val typeGhost = config.systemInput.typeGhost
-                val currentStrategy = config.systemInput.strategy
 
-                // Enable Input Toggle
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -606,65 +604,6 @@ fun AdvancedSettingsPanel(
                                 checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
                             ),
                     )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Injection Strategy Dropdown
-                var strategyExpanded by remember { mutableStateOf(false) }
-                val strategyOptions =
-                    listOf(
-                        VogonConfig.InputStrategy.CLIPBOARD to "Clipboard Paste (Reliable)",
-                        VogonConfig.InputStrategy.DIRECT to "Direct Input (Fast)",
-                        VogonConfig.InputStrategy.HYBRID to "Hybrid (Smart)",
-                        VogonConfig.InputStrategy.NATIVE to "Native Tool (OS Specific)",
-                    )
-
-                ExposedDropdownMenuBox(
-                    expanded = strategyExpanded && isReady && inputEnabled,
-                    onExpandedChange = { if (isReady && inputEnabled) strategyExpanded = it },
-                ) {
-                    OutlinedTextField(
-                        value = strategyOptions.find { it.first == currentStrategy }?.second ?: currentStrategy.name,
-                        onValueChange = {},
-                        enabled = isReady && inputEnabled,
-                        readOnly = true,
-                        label = { Text("Injection Strategy") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = strategyExpanded) },
-                        modifier =
-                            Modifier
-                                .menuAnchor(
-                                    ExposedDropdownMenuAnchorType.PrimaryNotEditable,
-                                    enabled = isReady && inputEnabled,
-                                ).fillMaxWidth(),
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GruvboxGreenDark,
-                                focusedLabelColor = GruvboxGreenDark,
-                                disabledBorderColor = GruvboxGray.copy(alpha = 0.5f),
-                                disabledLabelColor = GruvboxGray,
-                                disabledTextColor = GruvboxFg0.copy(alpha = 0.5f),
-                            ),
-                    )
-                    ExposedDropdownMenu(
-                        expanded = strategyExpanded,
-                        onDismissRequest = { strategyExpanded = false },
-                    ) {
-                        strategyOptions.forEach { (strategy, label) ->
-                            DropdownMenuItem(
-                                text = { Text(label) },
-                                onClick = {
-                                    strategyExpanded = false
-                                    onConfigChange(
-                                        config.copy(
-                                            systemInput =
-                                                config.systemInput.copy(strategy = strategy),
-                                        ),
-                                    )
-                                },
-                            )
-                        }
-                    }
                 }
             }
 

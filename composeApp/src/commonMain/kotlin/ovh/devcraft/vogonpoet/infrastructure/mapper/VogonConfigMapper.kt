@@ -42,8 +42,6 @@ fun Babelfish.toDomain(): VogonConfig =
                 VogonConfig.SystemInput(
                     enabled = si.enabled,
                     typeGhost = si.type_ghost,
-                    strategy =
-                        VogonConfig.InputStrategy.entries.find { it.value == si.strategy.name } ?: VogonConfig.InputStrategy.CLIPBOARD,
                 )
             } ?: VogonConfig.SystemInput(),
         voice =
@@ -138,7 +136,6 @@ fun VogonConfig.toInfrastructure(): Babelfish =
                 Babelfish.System_input(
                     enabled = si.enabled,
                     type_ghost = si.typeGhost,
-                    strategy = Babelfish.Strategy.valueOf(si.strategy.value),
                 )
             },
         voice =

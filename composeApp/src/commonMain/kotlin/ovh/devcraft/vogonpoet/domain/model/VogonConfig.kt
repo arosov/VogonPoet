@@ -48,17 +48,7 @@ data class VogonConfig(
     data class SystemInput(
         val enabled: Boolean = false,
         val typeGhost: Boolean = false,
-        val strategy: InputStrategy = InputStrategy.CLIPBOARD,
     )
-
-    enum class InputStrategy(
-        val value: String,
-    ) {
-        DIRECT("direct"),
-        CLIPBOARD("clipboard"),
-        NATIVE("native"),
-        HYBRID("hybrid"),
-    }
 
     data class Voice(
         val wakeword: String? = null,
