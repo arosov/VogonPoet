@@ -96,7 +96,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          TAG_NAME="v$VERSION"
+          echo "Target Release Tag: $TAG_NAME"
+          
+          # Ensure release exists (create if missing)
+          gh release create "$TAG_NAME" --title "$TAG_NAME" --generate-notes || echo "Release $TAG_NAME likely exists, proceeding to update notes"
+
           BABELFISH_VER=$(cat composeApp/src/jvmMain/resources/babelfish_version.txt)
-          gh release view ${{ github.ref_name }} --json body --jq .body > release_body.md
+          gh release view "$TAG_NAME" --json body --jq .body > release_body.md
           echo -e "\n\n### Bundled Components\n- Babelfish v$BABELFISH_VER" >> release_body.md
-          gh release edit ${{ github.ref_name }} --notes-file release_body.md
+          gh release edit "$TAG_NAME" --notes-file release_body.md
