@@ -485,6 +485,15 @@ async def main():
     parser.add_argument("--models-dir", type=str)
     args = parser.parse_args()
 
+    # Write PID file for robust cleanup
+    app_data_dir = os.environ.get("VOGON_APP_DATA_DIR")
+    if app_data_dir:
+        pid_file = Path(app_data_dir) / "babelfish.pid"
+        try:
+            pid_file.write_text(str(os.getpid()))
+        except Exception as e:
+            logger.warning(f"Failed to write PID file: {e}")
+
     models_dir = Path(args.models_dir) if args.models_dir else None
     server = BootstrapServer(models_dir)
 

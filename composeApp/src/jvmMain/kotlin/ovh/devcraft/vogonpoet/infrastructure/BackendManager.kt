@@ -204,6 +204,51 @@ object BackendManager {
         return null
     }
 
+    private fun cleanupStaleProcess() {
+        val pidFile = File(SettingsRepository.appDataDir, "babelfish.pid")
+        if (pidFile.exists()) {
+            try {
+                val pidStr = pidFile.readText().trim()
+                if (pidStr.isNotBlank()) {
+                    val pid = pidStr.toLong()
+                    logVogon("Found stale PID file: $pid")
+
+                    ProcessHandle.of(pid).ifPresent { handle ->
+                        if (handle.isAlive) {
+                            val cmd = handle.info().command().orElse("").lowercase()
+                            // Basic safety check to ensure we don't kill a random system process
+                            // Python processes often look like "python.exe" or "uv.exe"
+                            if (cmd.contains("python") || cmd.contains("uv") || cmd.contains("babelfish")) {
+                                logVogon("Killing stale process $pid ($cmd)...")
+                                try {
+                                    handle.descendants().forEach { it.destroy() }
+                                    handle.destroy()
+                                    if (!handle.onExit().get(5, TimeUnit.SECONDS).isAlive) {
+                                        logVogon("Stale process killed gracefully.")
+                                    } else {
+                                        handle.descendants().forEach { it.destroyForcibly() }
+                                        handle.destroyForcibly()
+                                        logVogon("Stale process killed forcibly.")
+                                    }
+                                } catch (e: Exception) {
+                                    logVogon("Error killing stale process: ${e.message}")
+                                }
+                            } else {
+                                logVogon("Process $pid exists but command '$cmd' does not match target. Skipping.")
+                            }
+                        } else {
+                            logVogon("Process $pid is not alive.")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                logVogon("Error reading/processing PID file: ${e.message}")
+            } finally {
+                pidFile.delete()
+            }
+        }
+    }
+
     suspend fun startBackend() =
         withContext(Dispatchers.IO) {
             if (process != null && process!!.isAlive) {
@@ -214,6 +259,9 @@ object BackendManager {
             if (vogonLog == null) {
                 initLogging()
             }
+
+            // Proactive cleanup of previous instances using PID file
+            cleanupStaleProcess()
 
             val workingDir = File(System.getProperty("user.dir"))
             logVogon("Current working directory: ${workingDir.absolutePath}")
