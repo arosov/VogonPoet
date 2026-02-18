@@ -330,7 +330,7 @@ class BootstrapServer:
                     )
                     if sys.platform == "win32":
                         hw_mode = "nvidia_win"
-                        extra_to_install = "windows-gpu"
+                        extra_to_install = "nvidia-win"
                     else:
                         hw_mode = "nvidia_linux"
                         extra_to_install = "nvidia-linux"
@@ -420,6 +420,8 @@ class BootstrapServer:
                 cmd.extend(["--reinstall-package", "onnxruntime"])
             elif extra_to_install == "nvidia-linux":
                 cmd.extend(["--reinstall-package", "onnxruntime-gpu"])
+            elif extra_to_install == "nvidia-win":
+                cmd.extend(["--reinstall-package", "onnxruntime-gpu"])
             elif extra_to_install == "amd-linux":
                 cmd.extend(["--reinstall-package", "onnxruntime-rocm"])
             elif extra_to_install == "windows-gpu":
@@ -451,35 +453,71 @@ class BootstrapServer:
             os.chdir(BABELFISH_DIR)
 
             env = os.environ.copy()
-            if hw_mode != "cpu" and sys.platform == "linux":
-                # Ensure onnxruntime and nvidia shared libraries are in LD_LIBRARY_PATH for Linux
-                ld_paths = []
 
-                # ORT CAPI
-                venv_capi = list(
+            # --- DLL Path Fix for NVIDIA on Windows & Linux ---
+            if (
+                hw_mode in ("nvidia_win", "nvidia_linux", "amd_linux")
+                and hw_mode != "cpu"
+            ):
+                # Ensure onnxruntime and shared libraries are visible
+                libs_paths = []
+
+                # 1. ORT CAPI
+                # Linux Path
+                venv_capi_linux = list(
                     BABELFISH_DIR.glob(
                         ".venv/lib/python*/site-packages/onnxruntime/capi"
                     )
                 )
-                if venv_capi:
-                    ld_paths.append(str(venv_capi[0].resolve()))
+                if venv_capi_linux:
+                    libs_paths.append(str(venv_capi_linux[0].resolve()))
 
-                # NVIDIA libraries (if installed via pip)
-                nvidia_libs = list(
-                    BABELFISH_DIR.glob(".venv/lib/python*/site-packages/nvidia/*/lib")
-                )
-                for lib_path in nvidia_libs:
-                    ld_paths.append(str(lib_path.resolve()))
+                # Windows Path (Lib instead of lib)
+                if sys.platform == "win32":
+                    venv_capi_win = list(
+                        BABELFISH_DIR.glob(".venv/Lib/site-packages/onnxruntime/capi")
+                    )
+                    if venv_capi_win:
+                        libs_paths.append(str(venv_capi_win[0].resolve()))
 
-                if ld_paths:
-                    current_ld = env.get("LD_LIBRARY_PATH", "")
-                    new_ld = ":".join(ld_paths)
-                    env["LD_LIBRARY_PATH"] = (
-                        f"{new_ld}:{current_ld}" if current_ld else new_ld
-                    )
-                    logger.info(
-                        f"Linux: Set LD_LIBRARY_PATH to include {len(ld_paths)} paths"
-                    )
+                # 2. NVIDIA libraries (if installed via pip)
+                # We search for any directory inside 'nvidia' package that contains .dll (Win) or .so (Linux)
+                site_packages_glob_linux = ".venv/lib/python*/site-packages/nvidia"
+                site_packages_glob_win = ".venv/Lib/site-packages/nvidia"
+
+                nvidia_root = list(BABELFISH_DIR.glob(site_packages_glob_linux))
+                if not nvidia_root and sys.platform == "win32":
+                    nvidia_root = list(BABELFISH_DIR.glob(site_packages_glob_win))
+
+                if nvidia_root:
+                    # Recursively find dirs with DLLs/SOs
+                    # For performance, limit depth if needed, but rglob is usually fine
+                    ext = "*.dll" if sys.platform == "win32" else "*.so*"
+                    found_dirs = set()
+                    for path in nvidia_root[0].rglob(ext):
+                        parent = str(path.parent.resolve())
+                        if parent not in found_dirs:
+                            found_dirs.add(parent)
+                            libs_paths.append(parent)
+
+                # 3. Apply to Environment
+                if libs_paths:
+                    if sys.platform == "win32":
+                        # On Windows, add to PATH
+                        current_path = env.get("PATH", "")
+                        new_path = ";".join(libs_paths)
+                        env["PATH"] = f"{new_path};{current_path}"
+                        logger.info(f"Windows: Added {len(libs_paths)} paths to PATH")
+                    else:
+                        # On Linux, add to LD_LIBRARY_PATH
+                        current_ld = env.get("LD_LIBRARY_PATH", "")
+                        new_ld = ":".join(libs_paths)
+                        env["LD_LIBRARY_PATH"] = (
+                            f"{new_ld}:{current_ld}" if current_ld else new_ld
+                        )
+                        logger.info(
+                            f"Linux: Added {len(libs_paths)} paths to LD_LIBRARY_PATH"
+                        )
 
             args = [UV_CMD, "run", "babelfish", "--port", "8124"]
             if hw_mode == "cpu" and (

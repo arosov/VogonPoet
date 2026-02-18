@@ -326,13 +326,25 @@ object BackendManager {
 
     suspend fun stopBackend() =
         withContext(Dispatchers.IO) {
-            process?.let {
-                if (it.isAlive) {
+            process?.let { proc ->
+                if (proc.isAlive) {
                     logVogon("Stopping backend...")
-                    it.destroy()
-                    if (!it.waitFor(5, TimeUnit.SECONDS)) {
+
+                    // 1. Kill the entire process tree (critical for Windows)
+                    // graceful attempt first, then forceful
+                    proc.toHandle().descendants().forEach { child ->
+                        child.destroy()
+                    }
+
+                    // 2. Kill the parent process
+                    proc.destroy()
+
+                    // 3. Wait and Force if necessary
+                    if (!proc.waitFor(5, TimeUnit.SECONDS)) {
                         logVogon("Backend did not stop, forcing...")
-                        it.destroyForcibly()
+                        // Force kill tree again just in case
+                        proc.toHandle().descendants().forEach { it.destroyForcibly() }
+                        proc.destroyForcibly()
                     }
                 }
             }
