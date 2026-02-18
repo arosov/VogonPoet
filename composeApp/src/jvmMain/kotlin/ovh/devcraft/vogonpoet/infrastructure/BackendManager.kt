@@ -305,11 +305,9 @@ object BackendManager {
                             // Parse for status
                             if (line.contains("BOOTSTRAP SERVER STARTED")) {
                                 _serverStatus.value = ServerStatus.BOOTSTRAPPING
-                            } else if (line.contains("Exec-ing Babelfish")) {
+                            } else if (line.contains("Exec-ing Babelfish") || line.contains("Launching Babelfish")) {
                                 _serverStatus.value = ServerStatus.STARTING
-                            } else if (line.contains("SERVER: WebSockets running on") ||
-                                line.contains("babelfish_stt.server:Starting WebSocket server")
-                            ) {
+                            } else if (line.contains("SERVER: WebSockets running on")) {
                                 // If we see this, it's the real Babelfish server.
                                 _serverStatus.value = ServerStatus.READY
                             }

@@ -349,6 +349,10 @@ class BootstrapServer:
         self.models_dir = models_dir or (BABELFISH_DIR / "models")
         self.detector = HardwareDetector()
         self.env_manager = EnvironmentManager(BABELFISH_DIR)
+        self.completion_future = None
+
+    def set_completion_future(self, future):
+        self.completion_future = future
 
     async def handle_connection(self, websocket):
         if self.websocket:
@@ -464,18 +468,16 @@ class BootstrapServer:
         if self.websocket:
             await self.websocket.close()
 
-        # Final Launch
+        # Final Launch Preparation
         launch_env = self.env_manager.get_env_with_dll_injection(hw_mode)
-        args = [UV_CMD, "run", "babelfish", "--port", "8124"]
+        # Use the same PORT for the actual server
+        args = [UV_CMD, "run", "babelfish", "--port", str(PORT)]
         if hw_mode == "cpu":
             args.append("--cpu")
 
-        os.chdir(BABELFISH_DIR)
-        if sys.platform == "win32":
-            subprocess.call(args, env=launch_env)
-            sys.exit(0)
-        else:
-            os.execvpe(UV_CMD, args, launch_env)
+        # Signal completion to the main loop
+        if self.completion_future and not self.completion_future.done():
+            self.completion_future.set_result((args, launch_env))
 
 
 async def main():
@@ -486,9 +488,27 @@ async def main():
     models_dir = Path(args.models_dir) if args.models_dir else None
     server = BootstrapServer(models_dir)
 
+    # Create a Future to signal completion
+    loop = asyncio.get_running_loop()
+    completion_future = loop.create_future()
+    server.set_completion_future(completion_future)
+
     async with websockets.serve(server.handle_connection, "127.0.0.1", PORT):
         logger.info(f"BOOTSTRAP SERVER STARTED port={PORT}")
-        await asyncio.Future()
+        # Wait for the bootstrap to finish and return the launch command
+        launch_args, launch_env = await completion_future
+
+    # Server is now closed, port should be free
+    logger.info(f"Bootstrap server stopped. Launching Babelfish on port {PORT}...")
+
+    os.chdir(BABELFISH_DIR)
+    if sys.platform == "win32":
+        # subprocess.call is blocking, so the script waits for Babelfish to exit
+        subprocess.call(launch_args, env=launch_env)
+        sys.exit(0)
+    else:
+        # On Linux/Unix, replace the current process
+        os.execvpe(UV_CMD, launch_args, launch_env)
 
 
 if __name__ == "__main__":

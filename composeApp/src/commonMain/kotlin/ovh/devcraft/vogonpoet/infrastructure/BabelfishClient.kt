@@ -69,12 +69,11 @@ class BabelfishClient(
     private val logMutex = Mutex()
 
     companion object {
-        private const val BOOTSTRAP_PORT = 8123
+        private const val DEFAULT_PORT = 8123
     }
 
     private fun getServerUrl(): String {
-        val status = backendRepository.serverStatus.value
-        val port = if (status == ServerStatus.BOOTSTRAPPING) BOOTSTRAP_PORT else _config.value?.server?.port?.toInt() ?: 8124
+        val port = _config.value?.server?.port?.toInt() ?: DEFAULT_PORT
         return "ws://127.0.0.1:$port/config"
     }
 
