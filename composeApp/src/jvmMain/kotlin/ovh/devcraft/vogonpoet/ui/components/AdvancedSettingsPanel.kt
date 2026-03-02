@@ -923,12 +923,13 @@ fun VramUsageBar(
                 Box(Modifier.fillMaxHeight().weight(modelWeight).background(GruvboxYellowDark))
             }
             if (freeWeight > 0) {
-                Box(Modifier.fillMaxHeight().weight(freeWeight).background(GruvboxGray.copy(alpha = 0.2f)))
+                Box(Modifier.fillMaxHeight().weight(freeWeight).background(GruvboxGreen))
             }
         }
         Row(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             LegendItem("System", GruvboxBlueDark)
             LegendItem("Babelfish", GruvboxYellowDark)
+            LegendItem("Free", GruvboxGreen)
         }
     }
 }
