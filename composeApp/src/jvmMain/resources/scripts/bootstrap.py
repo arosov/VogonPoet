@@ -341,6 +341,8 @@ class EnvironmentManager:
 
     def get_env_with_dll_injection(self, hw_mode: str) -> Dict[str, str]:
         env = os.environ.copy()
+        # Clear VIRTUAL_ENV so uv uses the project .venv instead of bootstrap env
+        env.pop("VIRTUAL_ENV", None)
         if hw_mode == "cpu":
             return env
 
@@ -517,7 +519,7 @@ class BootstrapServer:
         # Final Launch Preparation
         launch_env = self.env_manager.get_env_with_dll_injection(hw_mode)
         # Use the same PORT for the actual server
-        args = [UV_CMD, "run", "babelfish", "--port", str(PORT)]
+        args = [UV_CMD, "run", "--no-sync", "babelfish", "--port", str(PORT)]
         if hw_mode == "cpu":
             args.append("--cpu")
 

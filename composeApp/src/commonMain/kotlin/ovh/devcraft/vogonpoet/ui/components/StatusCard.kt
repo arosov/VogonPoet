@@ -179,11 +179,13 @@ fun StatusCard(
                 style = MaterialTheme.typography.headlineMedium,
             )
 
-            if (connectionState is ConnectionState.Connected && vadState != VadState.Listening) {
-                val deviceName = config?.hardware?.activeDeviceName ?: config?.hardware?.activeDevice
-                deviceName?.let { device ->
+            if (connectionState is ConnectionState.Connected) {
+                val activeDevice = config?.hardware?.activeDevice
+                val activeDeviceName = config?.hardware?.activeDeviceName
+                val displayString = activeDeviceName ?: activeDevice
+                displayString?.let { text ->
                     OutlinedStatusText(
-                        text = "Running on ${device.uppercase()}",
+                        text = "Running on $text",
                         style = MaterialTheme.typography.labelMedium,
                         color = GruvboxFg0.copy(alpha = 0.7f),
                         modifier = Modifier.padding(top = 4.dp),
