@@ -144,7 +144,6 @@ class HardwareDetector:
 
         # Config/Env check
         config_device = "auto"
-        auto_detect = True
         app_data_dir = os.environ.get("VOGON_APP_DATA_DIR")
         if app_data_dir:
             config_path = Path(app_data_dir) / "babelfish.config.json"
@@ -154,7 +153,6 @@ class HardwareDetector:
                         data = json.load(f)
                         hw_config = data.get("hardware", {})
                         config_device = hw_config.get("device", "auto")
-                        auto_detect = hw_config.get("auto_detect", True)
                 except Exception as e:
                     logger.warning(f"Failed to read config: {e}")
 
@@ -165,10 +163,10 @@ class HardwareDetector:
             "on",
         )
 
-        if env_forces_cpu or (not auto_detect and config_device == "cpu"):
+        if env_forces_cpu or config_device == "cpu":
             return {"hw_mode": "cpu", "extra": "cpu", "desc": "CPU (Forced)"}
 
-        if not auto_detect and config_device != "auto":
+        if config_device != "auto":
             # Specific mapping
             if config_device.startswith("cuda"):
                 if sys.platform == "win32":
@@ -194,7 +192,7 @@ class HardwareDetector:
                     "extra": "cpu",
                     "desc": "Apple Metal (Config)",
                 }
-            if config_device == "dml":
+            if config_device.startswith("dml"):
                 return {
                     "hw_mode": "windows_gpu",
                     "extra": "windows-gpu",
