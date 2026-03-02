@@ -104,21 +104,30 @@ class HardwareDetector:
         gpus = []
         try:
             if sys.platform == "win32":
+                # Using powershell to avoid localized headers in wmic output
                 out = (
                     subprocess.check_output(
-                        "wmic path win32_VideoController get name", shell=True
+                        [
+                            "powershell",
+                            "-Command",
+                            "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name",
+                        ],
+                        stderr=subprocess.DEVNULL,
                     )
                     .decode()
                     .strip()
                     .split("\n")
                 )
-                for line in out[1:]:
+                for line in out:
                     name = line.strip()
                     if name:
                         gpus.append(name)
             elif sys.platform == "linux":
                 if shutil.which("lspci"):
-                    out = subprocess.check_output(["lspci"]).decode().lower()
+                    # Force English output for lspci
+                    env = os.environ.copy()
+                    env["LC_ALL"] = "C"
+                    out = subprocess.check_output(["lspci"], env=env).decode().lower()
                     for line in out.split("\n"):
                         if "vga" in line or "3d controller" in line:
                             if "nvidia" in line:
