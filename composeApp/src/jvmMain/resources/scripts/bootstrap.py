@@ -51,6 +51,9 @@ if not BABELFISH_DIR.exists():
 
 UV_CMD = "uv"
 
+D3D12INFO_VERSION = "3.16.0"
+D3D12INFO_URL = f"https://github.com/sawickiap/D3d12info/releases/download/v{D3D12INFO_VERSION}/D3d12info.zip"
+
 
 class HardwareDetector:
     @staticmethod
@@ -269,6 +272,41 @@ class EnvironmentManager:
     def __init__(self, babelfish_dir: Path):
         self.babelfish_dir = babelfish_dir
         self.marker_file = babelfish_dir / ".last_hw_mode"
+        self.d3d12info_dir = babelfish_dir / ".d3d12info"
+
+    def ensure_d3d12info(self) -> Optional[Path]:
+        """Download and extract d3d12info CLI tool for GPU detection on Windows."""
+        if sys.platform != "win32":
+            return None
+
+        d3d12info_exe = self.d3d12info_dir / "D3d12info.exe"
+        if d3d12info_exe.exists():
+            return d3d12info_exe
+
+        import urllib.request
+        import zipfile
+
+        logger.info(f"Downloading d3d12info v{D3D12INFO_VERSION}...")
+        try:
+            zip_path = self.babelfish_dir / f"d3d12info-{D3D12INFO_VERSION}.zip"
+            urllib.request.urlretrieve(D3D12INFO_URL, zip_path)
+
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                for member in zf.namelist():
+                    if member.endswith("D3d12info.exe"):
+                        source = zf.open(member)
+                        target_path = d3d12info_exe
+                        with open(target_path, "wb") as target:
+                            target.write(source.read())
+                        target_path.chmod(0o755)
+                        break
+
+            zip_path.unlink()
+            logger.info(f"d3d12info installed to {d3d12info_exe}")
+            return d3d12info_exe
+        except Exception as e:
+            logger.warning(f"Failed to download d3d12info: {e}")
+            return None
 
     def check_marker(self, hw_mode: str) -> bool:
         if self.marker_file.exists():
@@ -357,6 +395,7 @@ class BootstrapServer:
         self.detector = HardwareDetector()
         self.env_manager = EnvironmentManager(BABELFISH_DIR)
         self.completion_future = None
+        self.env_manager.ensure_d3d12info()
 
     def set_completion_future(self, future):
         self.completion_future = future
