@@ -20,7 +20,6 @@ data class VogonConfig(
 ) {
     data class Hardware(
         val device: String = "auto",
-        val autoDetect: Boolean = true,
         val microphoneName: String? = null,
         val onnxModelDir: String? = null,
         val onnxExecutionProvider: String? = null,

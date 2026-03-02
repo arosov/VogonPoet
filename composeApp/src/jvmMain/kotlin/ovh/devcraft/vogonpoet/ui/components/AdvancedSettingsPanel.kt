@@ -161,7 +161,6 @@ fun AdvancedSettingsPanel(
                 // Hardware Acceleration
                 var expanded by remember { mutableStateOf(false) }
                 val rawDevice = config.hardware.device
-                val isAutoDetect = config.hardware.autoDetect
 
                 // Combine dynamic hardware with auto and cpu options
                 val hardwareOptions =
@@ -171,7 +170,6 @@ fun AdvancedSettingsPanel(
                 // Safe current device selection:
                 val currentDevice =
                     when {
-                        isAutoDetect -> "auto"
                         hardwareOptions.any { it.first == rawDevice } -> rawDevice
                         else -> "auto"
                     }
@@ -209,17 +207,15 @@ fun AdvancedSettingsPanel(
                                     onDismiss()
                                     if (value != currentDevice) {
                                         val activeDevice = config.hardware.activeDevice
-                                        val isCurrentlyAuto = config.hardware.autoDetect
 
                                         // If switching from Auto to the device it's ALREADY using, skip restart.
-                                        val isSameAsActive = isCurrentlyAuto && value == activeDevice && value != "cpu"
+                                        val isSameAsActive = (currentDevice == "auto" && value == activeDevice && value != "cpu")
 
                                         val newConfig =
                                             config.copy(
                                                 hardware =
                                                     config.hardware.copy(
-                                                        device = if (value == "auto") "auto" else value,
-                                                        autoDetect = value == "auto",
+                                                        device = value,
                                                     ),
                                             )
 

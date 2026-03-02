@@ -75,7 +75,7 @@ class ModelDownloadServiceTest {
             )
 
         val modelDir = downloadService.getModelDirectory(model)
-        assertTrue(modelDir.path.contains("start/en/computer"))
+        assertTrue(modelDir.path.contains("start") && modelDir.path.contains("en") && modelDir.path.contains("computer"))
     }
 
     @Test

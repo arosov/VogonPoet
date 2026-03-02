@@ -9,7 +9,6 @@ fun Babelfish.toDomain(): VogonConfig =
             hardware?.let { h ->
                 VogonConfig.Hardware(
                     device = h.device,
-                    autoDetect = h.auto_detect,
                     microphoneName = h.microphone_name,
                     onnxModelDir = h.onnx_model_dir,
                     onnxExecutionProvider = h.onnx_execution_provider,
@@ -103,7 +102,6 @@ fun VogonConfig.toInfrastructure(): Babelfish =
             hardware.let { h ->
                 Babelfish.Hardware(
                     device = h.device,
-                    auto_detect = h.autoDetect,
                     microphone_name = h.microphoneName,
                     onnx_model_dir = h.onnxModelDir,
                     onnx_execution_provider = h.onnxExecutionProvider,
