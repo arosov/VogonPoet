@@ -184,7 +184,7 @@ class BabelfishClient(
                             
                             // Manually inject restart_required until code generation catches up
                             val restartRequired = element["restart_required"]?.jsonPrimitive?.boolean == true
-                            VogonLogger.d("Received config. restart_required=$restartRequired")
+                            VogonLogger.i("Received config. restart_required=$restartRequired")
                             _config.value = domainConfig.copy(restartRequired = restartRequired)
 
                             if (restartRequired) {
@@ -196,7 +196,7 @@ class BabelfishClient(
                                         backendRepository.restart()
                                     }
                                 } else {
-                                    VogonLogger.d("Restart ignored: Already bootstrapping.")
+                                    VogonLogger.i("Restart ignored: Already bootstrapping.")
                                 }
                             }
                         }
