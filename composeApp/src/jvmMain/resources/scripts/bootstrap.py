@@ -181,9 +181,12 @@ class HardwareDetector:
                                 )
                                 == 0
                             ):
-                                name = desc.Description.strip()
-                                if name:
-                                    gpus.append(name)
+                                # Filter out software renderers (Microsoft Basic Render Driver)
+                                # DXGI_ADAPTER_FLAG_SOFTWARE = 2
+                                if not (desc.Flags & 2):
+                                    name = desc.Description.strip()
+                                    if name:
+                                        gpus.append(name)
 
                             get_func(p_adapter, 2, [])(p_adapter)  # Release
                         get_func(p_factory, 2, [])(p_factory)  # Release
