@@ -56,8 +56,6 @@ fun Babelfish.toDomain(): VogonConfig =
         ui =
             ui?.let { u ->
                 VogonConfig.Ui(
-                    verbose = u.verbose,
-                    showTimestamps = u.show_timestamps,
                     notifications = u.notifications,
                     shortcuts =
                         u.shortcuts?.let { s ->
@@ -149,8 +147,6 @@ fun VogonConfig.toInfrastructure(): Babelfish =
         ui =
             ui.let { u ->
                 Babelfish.Ui(
-                    verbose = u.verbose,
-                    show_timestamps = u.showTimestamps,
                     notifications = u.notifications,
                     shortcuts =
                         u.shortcuts.let { s ->

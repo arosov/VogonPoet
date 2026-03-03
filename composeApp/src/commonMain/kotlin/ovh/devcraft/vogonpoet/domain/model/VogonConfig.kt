@@ -58,8 +58,6 @@ data class VogonConfig(
     )
 
     data class Ui(
-        val verbose: Boolean = false,
-        val showTimestamps: Boolean = true,
         val notifications: Boolean = true,
         val shortcuts: Shortcuts = Shortcuts(),
         val activationDetection: ActivationDetection = ActivationDetection(),
