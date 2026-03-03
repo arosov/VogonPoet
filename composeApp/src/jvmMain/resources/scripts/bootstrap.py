@@ -191,7 +191,7 @@ class HardwareDetector:
 
         all_gpu_names = self.get_all_gpus()
 
-        # Config/Env check
+        # Check for user preference in config (specifically for DML vs CUDA on Windows)
         config_device = "auto"
         app_data_dir = os.environ.get("VOGON_APP_DATA_DIR")
         if app_data_dir:
@@ -200,55 +200,14 @@ class HardwareDetector:
                 try:
                     with open(config_path, "r") as f:
                         data = json.load(f)
-                        hw_config = data.get("hardware", {})
-                        config_device = hw_config.get("device", "auto")
-                except Exception as e:
-                    logger.warning(f"Failed to read config: {e}")
+                        config_device = data.get("hardware", {}).get("device", "auto")
+                except Exception:
+                    pass
 
-        env_forces_cpu = str(os.environ.get("VOGON_FORCE_CPU", "")).lower() in (
-            "1",
-            "true",
-            "yes",
-            "on",
-        )
-
-        if env_forces_cpu or config_device == "cpu":
-            return {"hw_mode": "cpu", "extra": "cpu", "desc": "CPU (Forced)"}
-
-        if config_device != "auto":
-            # Specific mapping
-            if config_device.startswith("cuda"):
-                if sys.platform == "win32":
-                    return {
-                        "hw_mode": "nvidia_win",
-                        "extra": "nvidia-win",
-                        "desc": "NVIDIA (Config)",
-                    }
-                return {
-                    "hw_mode": "nvidia_linux",
-                    "extra": "nvidia-linux",
-                    "desc": "NVIDIA (Config)",
-                }
-            if config_device == "rocm":
-                return {
-                    "hw_mode": "amd_linux",
-                    "extra": "amd-linux",
-                    "desc": "AMD ROCm (Config)",
-                }
-            if config_device == "metal":
-                return {
-                    "hw_mode": "metal",
-                    "extra": "cpu",
-                    "desc": "Apple Metal (Config)",
-                }
-            if config_device.startswith("dml"):
-                return {
-                    "hw_mode": "windows_gpu",
-                    "extra": "windows-gpu",
-                    "desc": "DirectML (Config)",
-                }
-
-        # Auto-detection
+        # Hardware-based Auto-detection
+        # We always prefer the best available GPU environment for the hardware,
+        # even if the user currently requested CPU mode in the config.
+        # This avoids re-syncing environments when switching between CPU/GPU.
         is_nvidia = "NVIDIA" in detected_caps or any(
             "nvidia" in g.lower() for g in all_gpu_names
         )
@@ -258,6 +217,15 @@ class HardwareDetector:
 
         if is_nvidia:
             if sys.platform == "win32":
+                # On Windows, NVIDIA can run either CUDA or DirectML.
+                # DirectML requires a different onnxruntime package.
+                # If the user explicitly requested DML, we must use the windows_gpu environment.
+                if config_device.startswith("dml"):
+                    return {
+                        "hw_mode": "windows_gpu",
+                        "extra": "windows-gpu",
+                        "desc": "NVIDIA GPU (DirectML mode)",
+                    }
                 return {
                     "hw_mode": "nvidia_win",
                     "extra": "nvidia-win",
@@ -268,7 +236,14 @@ class HardwareDetector:
                 "extra": "nvidia-linux",
                 "desc": "NVIDIA GPU",
             }
+
         if is_amd:
+            if sys.platform == "win32":
+                return {
+                    "hw_mode": "windows_gpu",
+                    "extra": "windows-gpu",
+                    "desc": "AMD GPU (DirectML)",
+                }
             return {
                 "hw_mode": "amd_linux",
                 "extra": "amd-linux",
@@ -559,7 +534,28 @@ class BootstrapServer:
         launch_env = self.env_manager.get_env_with_dll_injection(hw_mode)
         # Use the same PORT for the actual server
         args = [UV_CMD, "run", "--no-sync", "babelfish", "--port", str(PORT)]
-        if hw_mode == "cpu":
+
+        # Check if we should force CPU mode at RUNTIME (not SYNC time)
+        force_cpu = str(os.environ.get("VOGON_FORCE_CPU", "")).lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+        if not force_cpu:
+            app_data_dir = os.environ.get("VOGON_APP_DATA_DIR")
+            if app_data_dir:
+                config_path = Path(app_data_dir) / "babelfish.config.json"
+                if config_path.exists():
+                    try:
+                        with open(config_path, "r") as f:
+                            data = json.load(f)
+                            if data.get("hardware", {}).get("device") == "cpu":
+                                force_cpu = True
+                    except Exception:
+                        pass
+
+        if force_cpu or hw_mode == "cpu":
             args.append("--cpu")
 
         # Signal completion to the main loop
