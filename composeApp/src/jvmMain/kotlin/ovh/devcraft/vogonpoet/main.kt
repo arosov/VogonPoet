@@ -105,7 +105,7 @@ fun main() {
                     val settingsWindowState =
                         rememberWindowState(
                             width = 630.dp,
-                            height = 670.dp,
+                            height = 800.dp,
                         )
 
                     // Enforce window size constraints - reset to bounds if resized outside
@@ -114,8 +114,8 @@ fun main() {
                         val height = settingsWindowState.size.height
                         val minWidth = 629.dp
                         val maxWidth = 731.dp
-                        val minHeight = 669.dp
-                        val maxHeight = 671.dp
+                        val minHeight = 799.dp
+                        val maxHeight = 801.dp
 
                         VogonLogger.i("[Window Resize] Settings window: ${width.value.toInt()}dp x ${height.value.toInt()}dp")
 

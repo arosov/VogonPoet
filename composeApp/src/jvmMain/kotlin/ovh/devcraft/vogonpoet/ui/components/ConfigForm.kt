@@ -239,14 +239,115 @@ fun ConfigForm(
             }
         }
 
-        // Column 2: Voice Triggers (Wakeword + Stop word + Stop words list)
-        OutlinedCard(
+        // Column 2: System-wide Input (Top) + Voice Triggers (Bottom)
+        Column(
             modifier = Modifier.weight(1f),
-            colors =
-                CardDefaults.outlinedCardColors(
-                    containerColor = GruvboxBg1.copy(alpha = 0.5f),
-                ),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // System-wide Input Card
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                    CardDefaults.outlinedCardColors(
+                        containerColor = GruvboxBg1.copy(alpha = 0.5f),
+                    ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = "System-wide Input",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = GruvboxGreenDark,
+                    )
+
+                    val inputEnabled = config.systemInput.enabled
+                    val typeGhost = config.systemInput.typeGhost
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Enable System Input",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = GruvboxFg0,
+                            )
+                            Text(
+                                text = "Type text into focused window",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = GruvboxFg0.copy(alpha = 0.6f),
+                            )
+                        }
+                        Switch(
+                            checked = inputEnabled,
+                            onCheckedChange = {
+                                onConfigChange(
+                                    config.copy(
+                                        systemInput =
+                                            config.systemInput.copy(enabled = it),
+                                    ),
+                                )
+                            },
+                            enabled = isReady,
+                            colors =
+                                SwitchDefaults.colors(
+                                    checkedThumbColor = GruvboxGreenDark,
+                                    checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                                ),
+                        )
+                    }
+
+                    // Type Ghost Toggle
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Type Ghost Output",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = GruvboxFg0,
+                            )
+                            Text(
+                                text = "Show real-time typing",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = GruvboxFg0.copy(alpha = 0.6f),
+                            )
+                        }
+                        Switch(
+                            checked = typeGhost,
+                            onCheckedChange = {
+                                onConfigChange(
+                                    config.copy(
+                                        systemInput =
+                                            config.systemInput.copy(typeGhost = it),
+                                    ),
+                                )
+                            },
+                            enabled = isReady && inputEnabled,
+                            colors =
+                                SwitchDefaults.colors(
+                                    checkedThumbColor = GruvboxGreenDark,
+                                    checkedTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                                ),
+                        )
+                    }
+                }
+            }
+
+            // Voice Triggers Card
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                    CardDefaults.outlinedCardColors(
+                        containerColor = GruvboxBg1.copy(alpha = 0.5f),
+                    ),
+            ) {
             Column(
                 modifier = Modifier.padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -516,4 +617,5 @@ fun ConfigForm(
             }
         }
     }
+}
 }
