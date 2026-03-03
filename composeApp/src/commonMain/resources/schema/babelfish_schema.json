@@ -347,8 +347,14 @@
     },
     "cache": {
       "$ref": "#/$defs/CacheConfig"
+    },
+    "restart_required": {
+      "default": false,
+      "title": "Restart Required",
+      "type": "boolean"
     }
   },
+
   "title": "BabelfishConfig",
   "type": "object"
 }

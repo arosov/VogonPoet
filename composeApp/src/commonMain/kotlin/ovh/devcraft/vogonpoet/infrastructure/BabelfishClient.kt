@@ -180,14 +180,11 @@ class BabelfishClient(
                         val configData = element["data"]
                         if (configData != null) {
                             val config = json.decodeFromJsonElement<Babelfish>(configData)
-                            _config.value = config.toDomain()
-                        }
-                        val restartRequired = element["restart_required"]?.jsonPrimitive?.boolean == true
-                        if (restartRequired) {
-                            VogonLogger.i("Backend restart required for hardware change")
-                            scope.launch {
-                                backendRepository.restart()
-                            }
+                            val domainConfig = config.toDomain()
+                            
+                            // Manually inject restart_required until code generation catches up
+                            val restartRequired = element["restart_required"]?.jsonPrimitive?.boolean == true
+                            _config.value = domainConfig.copy(restartRequired = restartRequired)
                         }
                     }
 

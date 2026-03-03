@@ -17,6 +17,7 @@ data class VogonConfig(
     val ui: Ui = Ui(),
     val server: Server = Server(),
     val cache: Cache = Cache(),
+    val restartRequired: Boolean = false,
 ) {
     data class Hardware(
         val device: String = "auto",
