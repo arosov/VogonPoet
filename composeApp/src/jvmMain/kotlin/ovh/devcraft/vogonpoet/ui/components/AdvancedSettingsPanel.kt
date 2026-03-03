@@ -205,20 +205,28 @@ fun AdvancedSettingsPanel(
                                 onClick = {
                                     expanded = false
                                     onDismiss()
-                                        if (value != currentDevice) {
-                                            val newConfig =
-                                                config.copy(
-                                                    hardware =
-                                                        config.hardware.copy(
-                                                            device = value,
-                                                        ),
-                                                )
+                                    if (value != currentDevice) {
+                                        val activeDevice = config.hardware.activeDevice
 
-                                            // The backend will decide if it needs a restart or if it can hot-reload.
-                                            // The BabelfishClient will trigger the restart automatically if needed.
+                                        // If switching from Auto to the device it's ALREADY using, skip restart.
+                                        val isSameAsActive = (currentDevice == "auto" && value == activeDevice && value != "cpu")
+
+                                        val newConfig =
+                                            config.copy(
+                                                hardware =
+                                                    config.hardware.copy(
+                                                        device = value,
+                                                    ),
+                                            )
+
+                                        if (isSameAsActive) {
+                                            viewModel.saveConfig(newConfig)
+                                        } else {
+                                            // Let the backend decide if it needs a restart or if it can hot-reload.
+                                            // The backend will broadcast 'restart_required' if needed.
                                             viewModel.saveConfig(newConfig)
                                         }
-
+                                    }
                                 },
                             )
                         }
@@ -237,6 +245,35 @@ fun AdvancedSettingsPanel(
                             deviceName = config.hardware.activeDeviceName ?: config.hardware.activeDevice,
                             modifier = Modifier.padding(vertical = 4.dp),
                         )
+                    }
+                }
+
+                if (config.restartRequired) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = GruvboxRedDark.copy(alpha = 0.2f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                "Restart Required",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = GruvboxRedDark
+                            )
+                            Text(
+                                "A process restart is needed to apply these hardware changes.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = GruvboxFg0
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = { viewModel.restartBackend() },
+                                colors = ButtonDefaults.buttonColors(containerColor = GruvboxRedDark),
+                                modifier = Modifier.fillMaxWidth().height(32.dp)
+                            ) {
+                                Text("Restart Now", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
                     }
                 }
 
