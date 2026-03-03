@@ -94,7 +94,6 @@ fun Babelfish.toDomain(): VogonConfig =
                     cacheDir = c.cache_dir,
                 )
             } ?: VogonConfig.Cache(),
-        restartRequired = restart_required ?: false,
     )
 
 fun VogonConfig.toInfrastructure(): Babelfish =
