@@ -39,9 +39,6 @@ fun main() {
     runBlocking {
         val settings = SettingsRepository.load()
         isFirstBoot = settings.isFirstBoot
-        if (!isFirstBoot) {
-            BackendManager.startBackend()
-        }
     }
     startKoin {
         modules(appModule)

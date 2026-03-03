@@ -26,6 +26,12 @@ logger = logging.getLogger(__name__)
 # --- Configuration ---
 PORT = 8123
 
+# Log UV cache for debugging
+uv_cache = os.environ.get("UV_CACHE_DIR", "System Default")
+uv_python = os.environ.get("UV_PYTHON_INSTALL_DIR", "System Default")
+logger.info(f"Active UV Cache: {uv_cache}")
+logger.info(f"Active UV Python Install Dir: {uv_python}")
+
 # Multilingual Parakeet-TDT v3 (25 languages)
 MODEL_REPO = "istupakov/parakeet-tdt-0.6b-v3-onnx"
 MODEL_DIR_NAME = "nemo-parakeet-tdt-0.6b-v3"
@@ -49,7 +55,7 @@ if not BABELFISH_DIR.exists():
             logger.info(f"Found dev babelfish dir at: {BABELFISH_DIR}")
             break
 
-UV_CMD = "uv"
+UV_CMD = os.environ.get("UV_CMD", "uv")
 
 # --- Windows DXGI Structures for in-process GPU detection ---
 if sys.platform == "win32":
@@ -242,6 +248,7 @@ class HardwareDetector:
             detected_caps.append("Apple Metal")
 
         all_gpu_names = self.get_all_gpus()
+        logger.info(f"Hardware Detection: Caps={detected_caps}, GPUs={all_gpu_names}")
 
         # Check for user preference in config (specifically for DML vs CUDA on Windows)
         config_device = "auto"
@@ -273,16 +280,19 @@ class HardwareDetector:
                 # DirectML requires a different onnxruntime package.
                 # If the user explicitly requested DML, we must use the windows_gpu environment.
                 if config_device.startswith("dml"):
+                    logger.info(f"NVIDIA GPU detected but user requested DirectML ({config_device}). Using windows-gpu extra.")
                     return {
                         "hw_mode": "windows_gpu",
                         "extra": "windows-gpu",
                         "desc": "NVIDIA GPU (DirectML mode)",
                     }
+                logger.info("NVIDIA GPU detected. Using nvidia-win extra.")
                 return {
                     "hw_mode": "nvidia_win",
                     "extra": "nvidia-win",
                     "desc": "NVIDIA GPU",
                 }
+            logger.info("NVIDIA GPU detected. Using nvidia-linux extra.")
             return {
                 "hw_mode": "nvidia_linux",
                 "extra": "nvidia-linux",
@@ -352,6 +362,8 @@ class EnvironmentManager:
                 pass
 
     def check_marker(self, hw_mode: str) -> bool:
+        if not (self.babelfish_dir / "uv.lock").exists():
+            return False
         if self.marker_file.exists():
             return self.marker_file.read_text().strip() == hw_mode
         return False
@@ -469,6 +481,11 @@ class BootstrapServer:
             pass
 
     async def run_command(self, cmd, cwd=None, env=None):
+        if env is None:
+            env = os.environ.copy()
+        # Remove VIRTUAL_ENV to ensure the child uv process targets the project .venv correctly
+        env.pop("VIRTUAL_ENV", None)
+
         process = await asyncio.create_subprocess_exec(
             *cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd, env=env
         )
@@ -512,18 +529,6 @@ class BootstrapServer:
         if not self.env_manager.check_marker(hw_mode):
             await self.send_update(f"Syncing dependencies for {hw_mode}...")
 
-            # Conflict resolution
-            ort_variants = [
-                "onnxruntime",
-                "onnxruntime-gpu",
-                "onnxruntime-directml",
-                "onnxruntime-rocm",
-                "onnxruntime-openvino",
-            ]
-            await self.run_command(
-                [UV_CMD, "pip", "uninstall", *ort_variants], cwd=BABELFISH_DIR
-            )
-
             cmd = [UV_CMD, "sync", "--extra", extra]
             # Force reinstall of correct ORT
             ort_map = {
@@ -537,14 +542,7 @@ class BootstrapServer:
             if hw_mode in ort_map:
                 cmd.extend(["--reinstall-package", ort_map[hw_mode]])
 
-            env = os.environ.copy()
-            env["UV_INDEX_PYTORCH_URL"] = (
-                "https://download.pytorch.org/whl/rocm6.2"
-                if hw_mode == "amd_linux"
-                else "https://download.pytorch.org/whl/cpu"
-            )
-
-            ret = await self.run_command(cmd, cwd=BABELFISH_DIR, env=env)
+            ret = await self.run_command(cmd, cwd=BABELFISH_DIR)
             if ret == 0:
                 self.env_manager.write_marker(hw_mode)
             else:

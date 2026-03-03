@@ -4,7 +4,17 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ovh.devcraft.vogonpoet.domain.model.ServerStatus
+import ovh.devcraft.vogonpoet.uvdownloader.domain.model.UvDownloadStatus
+import ovh.devcraft.vogonpoet.uvdownloader.domain.usecase.DownloadUvUseCase
+import ovh.devcraft.vogonpoet.uvdownloader.infrastructure.UvRepositoryImpl
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.PrintWriter
 import java.time.LocalDateTime
@@ -14,6 +24,7 @@ import java.util.zip.ZipInputStream
 
 object BackendManager {
     private var process: Process? = null
+    private val startMutex = Mutex()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val _serverStatus = MutableStateFlow(ServerStatus.STOPPED)
@@ -25,6 +36,14 @@ object BackendManager {
 
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
     private val dirFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")
+
+    private val httpClient = HttpClient(CIO) {
+        install(ContentNegotiation) {
+            json(Json { ignoreUnknownKeys = true })
+        }
+    }
+    private val uvDownloader = UvRepositoryImpl(httpClient)
+    private val uvDownloadUseCase = DownloadUvUseCase(uvDownloader)
 
     private val shutdownHook =
         Thread {
@@ -247,23 +266,193 @@ object BackendManager {
                 pidFile.delete()
             }
         }
+
+        // Port-based cleanup for Windows
+        if (System.getProperty("os.name").lowercase().contains("win")) {
+            cleanupPortWindows(8123)
+        }
     }
 
-    suspend fun startBackend() =
+    private fun cleanupPortWindows(port: Int) {
+        try {
+            val process = Runtime.getRuntime().exec("cmd /c netstat -ano | findstr :$port")
+            val output = process.inputStream.bufferedReader().readText()
+            output.lines().forEach { line ->
+                if (line.contains("LISTENING")) {
+                    val parts = line.trim().split(Regex("\\s+"))
+                    val pid = parts.lastOrNull()
+                    if (pid != null && pid != "0" && pid.all { it.isDigit() }) {
+                        logVogon("Port $port is occupied by PID $pid. Attempting to terminate...")
+                        Runtime.getRuntime().exec("taskkill /F /PID $pid")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            logVogon("Warning: Failed to cleanup port $port: ${e.message}")
+        }
+    }
+
+    private suspend fun ensureUvInstalled(): File? {
+        logVogon("Ensuring uv is installed...")
+        val targetDir = SettingsRepository.uvBinDir
+        var installedFile: File? = null
+
+        uvDownloadUseCase(targetDir).collect { status ->
+            when (status) {
+                is UvDownloadStatus.Downloading -> {
+                    if (status.progress % 10 == 0 || status.progress == 1) {
+                        logVogon("Downloading uv: ${status.progress}% (${status.bytesDownloaded / 1024} KB)")
+                    }
+                }
+                is UvDownloadStatus.Extracting -> {
+                    logVogon("Extracting uv...")
+                }
+                is UvDownloadStatus.Success -> {
+                    logVogon("uv is ready at ${status.executable.absolutePath}")
+                    installedFile = status.executable
+                }
+                is UvDownloadStatus.Error -> {
+                    logVogon("Error installing uv: ${status.message}")
+                }
+                UvDownloadStatus.Idle -> {}
+            }
+        }
+        return installedFile
+    }
+
+    private fun checkVenvIsolation(backendDir: File) {
+        val venvDir = File(backendDir, ".venv")
+        val cfgFile = File(venvDir, "pyvenv.cfg")
+        if (cfgFile.exists()) {
+            try {
+                val content = cfgFile.readText()
+                // If the venv points to the old Roaming path, it's not isolated
+                if (content.contains("AppData\\Roaming\\uv")) {
+                    logVogon("Detected non-isolated virtual environment. Wiping for migration...")
+                    venvDir.deleteRecursively()
+                    val lockFile = File(backendDir, "uv.lock")
+                    if (lockFile.exists()) lockFile.delete()
+                }
+            } catch (e: Exception) {
+                logVogon("Warning: Failed to check venv isolation: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun ensurePythonInstalled(
+        uvPath: String,
+        backendDir: File,
+        force: Boolean = false,
+    ): Boolean =
         withContext(Dispatchers.IO) {
-            if (process != null && process!!.isAlive) {
-                logVogon("Backend already running.")
+            logVogon("Ensuring Python 3.12.8 is available for uv (force=$force)...")
+            try {
+                if (force) {
+                    // Remove local steering files that might confuse uv
+                    val steeringFiles = listOf(".python-version", "uv.lock", ".last_hw_mode")
+                    steeringFiles.forEach { fileName ->
+                        val file = File(backendDir, fileName)
+                        if (file.exists()) {
+                            logVogon("Removing $fileName to avoid version conflicts.")
+                            file.delete()
+                        }
+                    }
+
+                    // Also check in the cache dir
+                    val markerInCache = File(SettingsRepository.appCacheDir, ".last_hw_mode")
+                    if (markerInCache.exists()) {
+                        markerInCache.delete()
+                    }
+                }
+
+                val args = mutableListOf("python", "install", "3.12.8")
+                if (force) {
+                    args.add("--reinstall")
+                }
+
+                val pb = UvExecutor.createProcess(args, backendDir)
+                pb.redirectErrorStream(true)
+
+                val process = pb.start()
+                process.inputStream.bufferedReader().use { reader ->
+                    reader.forEachLine { line -> logBabel("[uv-python] $line") }
+                }
+                val exitCode = process.waitFor()
+                logVogon("Python installation finished with exit code $exitCode")
+                exitCode == 0
+            } catch (e: Exception) {
+                logVogon("Error ensuring Python: ${e.message}")
+                false
+            }
+        }
+
+    private suspend fun warmupCache(backendDir: File) =
+        withContext(Dispatchers.IO) {
+            val marker = File(UvExecutor.getEffectiveCachePath(), ".warmup_done")
+            if (marker.exists()) {
                 return@withContext
             }
 
-            if (vogonLog == null) {
-                initLogging()
+            logVogon("Hardware cache not found. Priming for all modes (this may take a few minutes)...")
+            try {
+                // Phase 1: CUDA
+                logVogon("  - Pre-fetching NVIDIA/CUDA libraries...")
+                val pbCuda =
+                    UvExecutor.createProcess(
+                        listOf("sync", "--extra", "nvidia-win", "--no-install-project", "--refresh"),
+                        backendDir,
+                    )
+                pbCuda.redirectErrorStream(true)
+                val procCuda = pbCuda.start()
+                procCuda.inputStream.bufferedReader().use { reader ->
+                    reader.forEachLine { line -> logBabel("[warmup-cuda] $line") }
+                }
+                val exitCuda = procCuda.waitFor()
+
+                // Phase 2: DirectML
+                logVogon("  - Pre-fetching DirectML libraries...")
+                val pbDml =
+                    UvExecutor.createProcess(
+                        listOf("sync", "--extra", "windows-gpu", "--no-install-project", "--refresh"),
+                        backendDir,
+                    )
+                pbDml.redirectErrorStream(true)
+                val procDml = pbDml.start()
+                procDml.inputStream.bufferedReader().use { reader ->
+                    reader.forEachLine { line -> logBabel("[warmup-dml] $line") }
+                }
+                val exitDml = procDml.waitFor()
+
+                if (exitCuda == 0 && exitDml == 0) {
+                    marker.createNewFile()
+                    logVogon("Hardware cache primed successfully.")
+                } else {
+                    logVogon("Warning: Hardware cache priming incomplete (CUDA: $exitCuda, DML: $exitDml).")
+                }
+            } catch (e: Exception) {
+                logVogon("Warning: Hardware cache warmup failed: ${e.message}")
             }
+        }
 
-            // Proactive cleanup of previous instances using PID file
-            cleanupStaleProcess()
+    suspend fun startBackend() =
+        startMutex.withLock {
+            withContext(Dispatchers.IO) {
+                if (process != null && process!!.isAlive) {
+                    logVogon("Backend already running.")
+                    return@withContext
+                }
 
-            val workingDir = File(System.getProperty("user.dir"))
+                if (vogonLog == null) {
+                    initLogging()
+                }
+
+                // Proactive cleanup of previous instances using PID file
+                cleanupStaleProcess()
+
+                // Load settings early to prime the cache
+                val settings = SettingsRepository.load()
+
+                val workingDir = File(System.getProperty("user.dir"))
             logVogon("Current working directory: ${workingDir.absolutePath}")
 
             // --- Locate Backend & Bootstrap ---
@@ -310,67 +499,111 @@ object BackendManager {
             var uvPath = "uv"
             val bundledUv = File(workingDir, "bin/uv")
             val bundledUvExe = File(workingDir, "bin/uv.exe")
+            val cachedUv = File(SettingsRepository.uvBinDir, "uv.exe")
 
             if (bundledUv.exists()) {
                 uvPath = bundledUv.absolutePath
             } else if (bundledUvExe.exists()) {
                 uvPath = bundledUvExe.absolutePath
+            } else if (cachedUv.exists()) {
+                uvPath = cachedUv.absolutePath
+            } else {
+                // Not found in typical locations, try to download
+                val downloadedUv = ensureUvInstalled()
+                if (downloadedUv != null) {
+                    uvPath = downloadedUv.absolutePath
+                } else {
+                    logVogon("uv not found and download failed. Attempting to use system 'uv'...")
+                }
             }
 
             logVogon("Using uv at $uvPath")
             logVogon("Using backend at ${backendDir.absolutePath}")
 
-            val settings = SettingsRepository.load()
+            // Enforce isolation by wiping old venvs
+            checkVenvIsolation(backendDir)
+
+            // Pre-run toolchain cleanup and installation
+            ensurePythonInstalled(uvPath, backendDir)
+
+            // Priming the hardware cache (internal check for marker)
+            warmupCache(backendDir)
 
             _serverStatus.value = ServerStatus.INITIALIZING
 
-            try {
-                val cmd = mutableListOf(uvPath, "run", actualBootstrap.absolutePath)
-                settings.modelsDir?.let {
-                    cmd.add("--models-dir")
-                    cmd.add(it)
+            var attempt = 1
+            val maxAttempts = 2
+            var success = false
+
+            while (attempt <= maxAttempts && !success) {
+                if (attempt > 1) {
+                    logVogon("Retry attempt $attempt/$maxAttempts...")
+                    // If retry, force python reinstall to fix potentially broken global toolchain metadata
+                    ensurePythonInstalled(uvPath, backendDir, force = true)
                 }
 
-                val pb = ProcessBuilder(cmd)
-                pb.directory(backendDir) // Run from backend dir
-                pb.redirectErrorStream(true)
+                try {
+                    val args = mutableListOf("run", "--no-project", "--python", "3.12.8", actualBootstrap.absolutePath)
+                    settings.modelsDir?.let {
+                        args.add("--models-dir")
+                        args.add(it)
+                    }
 
-                settings.uvCacheDir?.let {
-                    pb.environment()["UV_CACHE_DIR"] = it
-                }
+                    val pb = UvExecutor.createProcess(args, backendDir)
+                    pb.redirectErrorStream(true)
 
-                pb.environment()["PYTHONUNBUFFERED"] = "1"
-                pb.environment()["VOGON_APP_DATA_DIR"] = SettingsRepository.appDataDir.absolutePath
-                val userCacheDir = settings.modelsDir?.let { File(it).parentFile?.absolutePath }
-                pb.environment()["VOGON_APP_CACHE_DIR"] = userCacheDir ?: SettingsRepository.appCacheDir.absolutePath
+                    process = pb.start()
+                    logVogon("Backend process started (PID: ${process!!.pid()})")
 
-                process = pb.start()
-                logVogon("Backend process started (PID: ${process!!.pid()})")
+                    var detectedBrokenPython = false
+                    val job = scope.launch {
+                        process!!.inputStream.bufferedReader().use { reader ->
+                            reader.forEachLine { line ->
+                                logBabel(line)
 
-                scope.launch {
-                    process!!.inputStream.bufferedReader().use { reader ->
-                        reader.forEachLine { line ->
-                            logBabel(line)
+                                if (line.contains("No Python at") || line.contains("not found in path")) {
+                                    detectedBrokenPython = true
+                                }
 
-                            // Parse for status
-                            if (line.contains("BOOTSTRAP SERVER STARTED")) {
-                                _serverStatus.value = ServerStatus.BOOTSTRAPPING
-                            } else if (line.contains("Exec-ing Babelfish") || line.contains("Launching Babelfish")) {
-                                _serverStatus.value = ServerStatus.STARTING
-                            } else if (line.contains("SERVER: WebSockets running on")) {
-                                // If we see this, it's the real Babelfish server.
-                                _serverStatus.value = ServerStatus.READY
+                                // Parse for status
+                                if (line.contains("BOOTSTRAP SERVER STARTED")) {
+                                    _serverStatus.value = ServerStatus.BOOTSTRAPPING
+                                } else if (line.contains("Exec-ing Babelfish") || line.contains("Launching Babelfish")) {
+                                    _serverStatus.value = ServerStatus.STARTING
+                                } else if (line.contains("SERVER: WebSockets running on")) {
+                                    _serverStatus.value = ServerStatus.READY
+                                }
                             }
                         }
+                        _serverStatus.value = ServerStatus.STOPPED
+                        logVogon("Backend process exited.")
                     }
+
+                    // Wait a bit to see if it crashes immediately
+                    delay(2000)
+
+                    if (!process!!.isAlive && detectedBrokenPython && attempt < maxAttempts) {
+                        logVogon("Detected broken Python environment. Cleaning up .venv and retrying...")
+                        val venvDir = File(backendDir, ".venv")
+                        if (venvDir.exists()) {
+                            venvDir.deleteRecursively()
+                        }
+                        val uvLock = File(backendDir, "uv.lock")
+                        if (uvLock.exists()) {
+                            uvLock.delete()
+                        }
+                        attempt++
+                    } else {
+                        success = true
+                    }
+                } catch (e: Exception) {
+                    logVogon("Error: Failed to start backend: ${e.message}")
                     _serverStatus.value = ServerStatus.STOPPED
-                    logVogon("Backend process exited.")
+                    break
                 }
-            } catch (e: Exception) {
-                logVogon("Error: Failed to start backend: ${e.message}")
-                _serverStatus.value = ServerStatus.STOPPED
             }
         }
+    }
 
     suspend fun stopBackend() =
         withContext(Dispatchers.IO) {

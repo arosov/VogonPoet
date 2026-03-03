@@ -63,6 +63,14 @@ actual object SettingsRepository {
         dir
     }
 
+    val uvBinDir: File by lazy {
+        val dir = File(appCacheDir, "bin")
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
+        dir
+    }
+
     val openwakewordModelsDir: File by lazy {
         val dir = File(appDataDir, "openwakeword_models")
         if (!dir.exists()) {
@@ -99,14 +107,21 @@ actual object SettingsRepository {
         File(appDataDir, "vogon.config.json")
     }
 
+    private var cachedSettings: VogonSettings? = null
+
     actual suspend fun load(): VogonSettings =
         withContext(Dispatchers.IO) {
+            cachedSettings?.let { return@withContext it }
             try {
                 if (settingsFile.exists()) {
                     val content = settingsFile.readText()
-                    json.decodeFromString<VogonSettings>(content)
+                    val settings = json.decodeFromString<VogonSettings>(content)
+                    cachedSettings = settings
+                    settings
                 } else {
-                    VogonSettings()
+                    val settings = VogonSettings()
+                    cachedSettings = settings
+                    settings
                 }
             } catch (e: Exception) {
                 VogonLogger.e("Error loading settings", e)
@@ -117,6 +132,7 @@ actual object SettingsRepository {
     actual suspend fun save(settings: VogonSettings) {
         withContext(Dispatchers.IO) {
             try {
+                cachedSettings = settings
                 val content = json.encodeToString(VogonSettings.serializer(), settings)
                 settingsFile.writeText(content)
             } catch (e: Exception) {
