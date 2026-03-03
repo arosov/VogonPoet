@@ -1,355 +1,362 @@
 <!DOCTYPE html>
-<!--suppress ALL -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-
-
-
-    <!-- Curious what created these downloads? Check out https://hydraulic/dev -->
-    <meta name="generator" content="Conveyor: 21.1"/>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VogonPoet - Download</title>
     <link rel=icon href="icon.svg" sizes="any" type="image/svg+xml">
-    
-
-    <title>VogonPoet</title>
 
     <style>
         :root {
             --backdrop: #f8f8f8;
-            --foreground: black;
-            --button-text: white;
-            --button-face: #01e675;
-            --pane-color: #fff;
-            --no-go-color: #f3f3f3;
-            --note-text: #3d3d3d;
+            --foreground: #1a1a1a;
+            --accent: #01e675;
+            --accent-hover: #00c85e;
+            --card-bg: #ffffff;
+            --text-secondary: #666666;
+            --border: #e0e0e0;
+            --terminal-bg: #000000;
+            --terminal-fg: #ffffff;
         }
 
-        
         @media (prefers-color-scheme: dark) {
-        
-        
-        :root {
-            --backdrop: #44475A;
-            --foreground: #F8F8F2;
-            --button-text: #F8F8F2;
-            --button-face: #07e73f;
-            --pane-color: #282A36;
-            --no-go-color: #282A36;
-            --note-text: #c3c3c3;
+            :root {
+                --backdrop: #0d1117;
+                --foreground: #e6e6e6;
+                --accent: #07e73f;
+                --accent-hover: #05c933;
+                --card-bg: #161b22;
+                --text-secondary: #8b949e;
+                --border: #30363d;
+                --terminal-bg: #0d1117;
+                --terminal-fg: #e6e6e6;
+            }
         }
-        
-        
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-            font-size: x-large;
             background-color: var(--backdrop);
             color: var(--foreground);
-        }
-
-        /* Only set dimensions if needed for flex centering */
-        html {
-            height: 100%;
-        }
-        body {
-            min-height: 100%;
-            margin: 0;
-        }
-
-        .download-button > svg > g > path {
-            fill: var(--button-text);
-        }
-
-        .download-button > svg {
-            padding-right: 1em
-        }
-
-         .download-button:hover {
-            filter: brightness(1.02);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 4rem 2rem;
         }
 
         .container {
-            display: flex;
-            align-items: center;
-            flex-direction: column;
-            justify-content: center;
-            text-align: center;
+            max-width: 800px;
             width: 100%;
-            height: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
         }
 
         #logo {
-            padding: 2em;
-            padding-top: 2.5em;
+            margin-bottom: 1.5rem;
+        }
+
+        #logo img {
+            width: 128px;
+            height: 128px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .version-badge {
+            display: inline-block;
+            background: var(--border);
+            color: var(--foreground);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 2rem;
+        }
+
+        .pane {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2.5rem 2rem;
             text-align: center;
+            margin-bottom: 2rem;
+            display: none;
+        }
+        
+        #panes {
+            display: block;
+            background: transparent;
+            border: none;
+            padding: 0;
         }
 
-        @media only screen and (min-device-width: 768px) {
-            .download-button {
-                align-items: center;
-                background-color: var(--button-face);
-                border-radius: 80px;
-                color: var(--button-text) !important;
-                cursor: pointer;
-                display: inline-flex;
-                font-weight: 500;
-                justify-content: center;
-                letter-spacing: 0.071em;
-                padding: 25px 45px;
-                text-decoration: none;
-                text-transform: uppercase;
-                white-space: nowrap;
-                width: 23em;
-            }
-
-            .pane {
-                align-items: center;
-                background-color: var(--pane-color);
-                border-radius: 4px;
-                box-shadow: 0px 2px 1px -1px rgba(0, 0, 0, 0.2),0px 1px 1px 0px rgba(0, 0, 0, 0.14),0px 1px 3px 0px rgba(0,0,0,.3);
-                box-sizing: border-box;
-                display: flex;
-                flex-direction: column;
-                padding: 2em;
-                margin: 1em;
-            }
-
-            #version {
-                color: darkgrey;
-            }
-
-            .alternative-downloads, .alternative-downloads a {
-                padding-top: 2em;
-            }
-
-            .alternative-downloads a {
-                padding-right: 1em;
-            }
-
-            #no-go {
-                display: none;
-            }
-        }
-
-        @media only screen and (max-device-width: 768px) {
-            /** Mobile. */
-            .container {
-                font-size: xx-large;
-            }
-
-            #panes, #conveyor-logo {
-                display: none;
-            }
-        }
-
-        .smaller-fonts, .smaller-fonts a {
-            font-size: medium;
-            color: #666666;
+        .pane.active-pane {
+            display: block;
         }
 
         #no-go {
-            padding: 2em;
-            margin-top: 2em;
-            background-color: var(--no-go-color);
+            display: none;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
         }
 
-        #version {
-            margin-bottom: 2em;
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--accent);
+            color: #000;
+            font-weight: 600;
+            padding: 1rem 2.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            transition: background-color 0.2s, transform 0.1s;
+            margin-bottom: 1.5rem;
+            gap: 0.75rem;
+            width: 100%;
+            max-width: 350px;
         }
 
-        .terminal {
-            background-color: black;
-            border-radius: 10px;
-            white-space: pre-line;
-            text-align: left;
-            padding: 1em;
+        .download-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .download-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .download-btn svg {
+            fill: currentColor;
+            width: 24px;
+            height: 24px;
+        }
+        
+        .download-btn img {
+            width: 24px;
+            height: 24px;
+        }
+
+        .download-row {
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
-            color: white;
-            font-weight: bold;
+            justify-content: center;
+            gap: 1rem;
         }
 
-        .terminal a {
-            color: white;
+        .secondary-downloads {
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
         }
 
-        .terminal-icon-container {
-            flex-grow: 1;
+        .secondary-downloads a {
+            color: var(--accent);
+            text-decoration: none;
+            margin: 0 0.5rem;
         }
 
-        .terminal-icon-container > .tooltip {
-            float: right;
-            display: flex;
-            align-items: center;
-        }
-
-        /* This class lets us simulate a <br> inside a flexbox. */
-        .flex-line-break {
-            flex-basis: 100%;
-            height: 0;
-        }
-
-        .note {
-            line-height: 200%;
-            text-align: left;
-            display: block;
-            color: var(--note-text);
-        }
-
-        .note > * {
-            vertical-align: middle;
-        }
-
-        .note a {
-            color: #395ee7;
-        }
-
-        .help-pane {
-            text-align: left;
+        .secondary-downloads a:hover {
+            text-decoration: underline;
         }
 
         .cli-instructions {
-            padding-top: 1em;
+            margin-top: 2rem;
+            text-align: left;
+        }
+
+        .cli-instructions p {
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .terminal {
+            background-color: var(--terminal-bg);
+            color: var(--terminal-fg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            overflow-x: auto;
+        }
+
+        .terminal-code {
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        .terminal-prompt {
+            user-select: none;
+            color: var(--text-secondary);
+            margin-right: 0.5rem;
         }
 
         .copy-button {
-            padding-left: 40px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            color: var(--text-secondary);
+            border-radius: 4px;
+            transition: color 0.2s, background-color 0.2s;
+            margin-left: 1rem;
+        }
+
+        .copy-button:hover {
+            color: var(--accent);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .copy-button svg {
+            fill: currentColor;
+            width: 20px;
+            height: 20px;
+        }
+
+        .alternative-downloads {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .alternative-downloads a {
+            color: var(--foreground);
+            text-decoration: none;
+            margin: 0 0.5rem;
+            font-weight: 500;
             cursor: pointer;
         }
 
-        /** See here: https://blog.logrocket.com/creating-beautiful-tooltips-with-only-css/ - thanks LogRocket! */
+        .alternative-downloads a:hover {
+            color: var(--accent);
+        }
+
+        footer {
+            margin-top: auto;
+            padding-top: 3rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
 
         .tooltip {
-            position: relative; /* making the .tooltip span a container for the tooltip text */
-            border-bottom: 1px dashed #000; /* little indicater to indicate it's hoverable */
+            position: relative;
         }
 
         .tooltip:before {
-            content: attr(data-text); /* here's the magic */
+            content: attr(data-text);
             position: absolute;
-            font-family: sans-serif;
-            font-size: smaller;
-
-            top: 50%;
-            transform: translateY(-70%);
-
-            left: 100%;
-            margin-left: 15px; /* and add a small left margin */
-
-            /* basic styles */
-            width: fit-content;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: var(--foreground);
+            color: var(--backdrop);
+            font-size: 12px;
             white-space: nowrap;
-            padding: 10px;
-            border-radius: 10px;
-            background: #555;
-            color: #fff;
-            text-align: center;
-
             opacity: 0;
-            transition: .3s opacity;
+            transition: 0.2s;
+            pointer-events: none;
         }
 
-        .tooltip:after {
-            content: "";
-            position: absolute;
-
-            left: 100%;
-            margin-left: -5px;
-
-            top: 50%;
-            transform: translateY(-70%);
-
-            /* the arrow */
-            border: 10px solid #000;
-            border-color: transparent #555 transparent transparent;
-
-            opacity: 0;
-            transition: .3s;
-        }
-
-        .tooltip:hover:before, .tooltip:hover:after {
-            display: block;
+        .tooltip.show-tooltip:before {
+            opacity: 1;
         }
     </style>
-
-    
-
-
 </head>
 <body>
-<div class="container">
-    <div style="min-width: 55%; min-height: 80%">
-        <div id="no-go" class="pane">
+    <div class="container">
+        <header>
+            <div id="logo">
+                <img src="icon.svg" alt="VogonPoet Logo">
+            </div>
+            <h1>VogonPoet</h1>
+            <div class="version-badge">Version 0.0.7</div>
+        </header>
+
+        <div id="no-go">
             <p>Sorry, this application is not available on your current operating system.</p>
             <p>Try downloading it from a desktop or laptop.</p>
         </div>
 
-        <div id="panes" class="pane" >
-            <div id="logo">
-                <img width="256" height="256" src="icon.svg">
-            </div>
-
-            <h1 id="title">VogonPoet</h1>
-
-            <span id="version">Version <span>0.0.6</span></span>
-
-            <div id="pane-win">
+        <div id="panes">
+            <!-- Windows Pane -->
+            <div id="pane-win" class="pane">
+                <h2>Download for Windows</h2>
+                <p style="margin-bottom: 2rem; color: var(--text-secondary);">Minimalist STT Desktop Frontend</p>
                 
+                <a href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet.exe" class="download-btn" download>
+                    <svg viewBox="0 0 256 315" xmlns="http://www.w3.org/2000/svg">
+                        <g transform="translate(0,30)">
+                            <path d="M0,36.3573818 L104.619084,22.1093454 L104.664817,123.02292 L0.0955693151,123.618411 L0,36.3573818 Z M104.569248,134.650129 L104.650452,235.651651 L0.0812046021,221.274919 L0.0753414539,133.972642 L104.569248,134.650129 Z M117.25153,20.2454506 L255.967753,6.21724894e-15 L255.967753,121.739477 L117.25153,122.840723 L117.25153,20.2454506 Z M256,135.599959 L255.96746,256.791232 L117.251237,237.213007 L117.056874,135.373055 L256,135.599959 Z"/>
+                        </g>
+                    </svg>
+                    <span>Install and Launch</span>
+                </a>
 
-                <!-- Windows -->
-                
-                    <a href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet.exe" class="download-button" download>
-                        <svg width="2em" height="2em" viewBox="0 0 256 315" version="1.1" xmlns="http://www.w3.org/2000/svg"
-                             xmlns:xlink="http://www.w3.org/1999/xlink" preserveAspectRatio="xMidYMid">
-                            <g transform="translate(0,30)">
-                                <path d="M0,36.3573818 L104.619084,22.1093454 L104.664817,123.02292 L0.0955693151,123.618411 L0,36.3573818 Z M104.569248,134.650129 L104.650452,235.651651 L0.0812046021,221.274919 L0.0753414539,133.972642 L104.569248,134.650129 Z M117.25153,20.2454506 L255.967753,6.21724894e-15 L255.967753,121.739477 L117.25153,122.840723 L117.25153,20.2454506 Z M256,135.599959 L255.96746,256.791232 L117.251237,237.213007 L117.056874,135.373055 L256,135.599959 Z"/>
-                            </g>
-                        </svg>
-                        <span>Install and launch</span>
-                    </a>
-                
-                <div id="win-amd64">
-                    
-                        <p class="smaller-fonts" style="line-height: 200%" id="windows-download-options">
-                            <span id="amd-title">Intel: &nbsp;&nbsp;</span>
-                            <a href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet-0.0.6-windows-amd64.zip" download>Download .zip</a> &nbsp;&nbsp;
-                            <a href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet-0.0.6.x64.msix" download>Download .msix</a> &nbsp;&nbsp;
-                            <a href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet.appinstaller" download>Download .appinstaller</a>
-                        </p>
-                    
-
-                    
+                <div id="win-amd64" class="secondary-downloads">
+                    <span>Intel:</span>
+                    <a href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet-0.0.7-windows-amd64.zip" download>.zip</a> • 
+                    <a href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet-0.0.7.x64.msix" download>.msix</a> • 
+                    <a href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet.appinstaller" download>.appinstaller</a>
                 </div>
 
-                
+                <div id="win-aarch64"></div>
 
-                <!-- Windows ARM -->
-                <div id="win-aarch64">
-                    
-
-                    
-                </div>
-
-                
-
-                <div class="alternative-downloads smaller-fonts">
+                <div class="alternative-downloads">
                     <span>Other platforms:</span>
-                    <a href="javascript:showOS('win')">Windows</a>
-                    <a href="javascript:showOS('mac')">macOS</a>
+                    <a onclick="showOS('mac')">macOS</a>
+                    <a onclick="showOS('linux')">Linux</a>
                 </div>
             </div>
 
-            <div id="pane-linux">
-                
-                    <!-- Linux AMD64 -->
-                    <a id="linux-amd64" href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet_0.0.6_amd64.deb" class="download-button linux-amd64" download>
-                        <svg width="2em" height="2em" viewBox="0 0 256 315" version="1.1" xmlns="http://www.w3.org/2000/svg"
-                             xmlns:xlink="http://www.w3.org/1999/xlink" preserveAspectRatio="xMidYMid">
-                            <g>
+            <!-- Linux Pane -->
+            <div id="pane-linux" class="pane">
+                <h2>Download for Linux</h2>
+                <p style="margin-bottom: 2rem; color: var(--text-secondary);">Minimalist STT Desktop Frontend</p>
+
+                <div id="linux-amd64">
+                    <div class="download-row">
+                        <a href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet_0.0.7_amd64.deb" class="download-btn" download>
+                            <svg viewBox="0 0 256 315" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M152.796616,167.425369 C147.545671,167.498421 153.790117,170.131199 160.645273,171.186063 C162.538769,169.7075 164.256942,168.211404 165.788102,166.756218 C161.51897,167.802315 157.173864,167.825692 152.796616,167.425369"/>
                                 <path d="M180.979901,160.400733 C184.106507,156.084848 186.385715,151.359874 187.189282,146.474187 C186.487987,149.957285 184.597414,152.964086 182.817877,156.137446 C173.002673,162.317606 181.894506,152.467336 182.812034,148.724175 C172.257546,162.007867 181.362691,156.689715 180.979901,160.400733"/>
                                 <path d="M191.382441,133.330754 C192.016528,123.874962 189.521087,126.864232 188.682455,130.472977 C189.661347,130.981416 190.435693,137.1382 191.382441,133.330754"/>
@@ -362,287 +369,179 @@
                                 <path d="M133.923019,1.56914713 C137.473324,0.268829677 142.651217,0.856164081 146.417755,0 C141.508691,0.412010701 136.623004,0.657463884 131.79868,1.27986303 L133.923019,1.56914713"/>
                                 <path d="M9.2824769,67.8473509 C10.1006542,75.4213348 3.58445657,78.3609288 10.7259754,73.3671253 C14.5538762,64.7441213 9.22987977,70.9856451 9.2824769,67.8473509"/>
                                 <path d="M0.890315672,102.900403 C2.53543641,97.8510804 2.83348671,94.8179803 3.46172998,91.8959186 C-1.08499804,97.7078994 1.3695338,98.9468536 0.890315672,102.900403"/>
-                            </g>
-                        </svg>
-                        <span>Download a .deb for AMD64</span>
-                    </a>
+                            </svg>
+                            <span>Download .deb</span>
+                        </a>
 
-                    
-                <br><br>
-                <a href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet-0.0.6-x86_64.AppImage" class="download-button linux-amd64" download>
-                    <img src="tux-icon.png" width="48" height="48" alt="Tux" style="filter: brightness(0) invert(1); margin-right: 0.8em;">
-                    <span>Download AppImage for AMD64</span>
-                </a>
-                <div class="linux-all"><br></div>
-                
+                        <a href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet-0.0.7-x86_64.AppImage" class="download-btn" download>
+                            <img src="tux-icon.png" alt="Tux" style="filter: brightness(0); width: 24px; height: 24px;">
+                            <span>Download AppImage</span>
+                        </a>
+                    </div>
 
-                <p class="smaller-fonts">
-                    
-                        <span class="linux-all">&nbsp;&nbsp; AMD64: &nbsp;&nbsp;</span>
-                        <a class="linux-amd64" href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet-0.0.6-linux-amd64.tar.gz" download>Download .tar.gz</a>
-                    
-                    
-                </p>
+                    <div class="secondary-downloads">
+                        <span>Archive:</span>
+                        <a href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet-0.0.7-linux-amd64.tar.gz" download>.tar.gz</a>
+                    </div>
+                </div>
 
                 <div class="cli-instructions">
-                    <p>Or install it from the command line:</p>
-                    <code class="terminal"><div id="linux-code"><span style="user-select: none">$&nbsp;</span><span>CPU=$(dpkg --print-architecture)</span>
-                    <span style="user-select: none">$&nbsp;</span><span>wget https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet_0.0.6_${CPU}.deb</span>
-                    <span style="user-select: none">$&nbsp;</span><span>sudo apt install ./ovh-devcraft-vogonpoet_0.0.6_${CPU}.deb</span>
-                    </div><span class="terminal-icon-container"><span data-text="Copied to the clipboard" class="tooltip"><svg viewbox="0 0 896 1024" width="32" height="32" xmlns="http://www.w3.org/2000/svg" class="copy-button"><path fill="white" d="M128 768h256v64H128v-64z m320-384H128v64h320v-64z m128 192V448L384 640l192 192V704h320V576H576z m-288-64H128v64h160v-64zM128 704h160v-64H128v64z m576 64h64v128c-1 18-7 33-19 45s-27 18-45 19H64c-35 0-64-29-64-64V192c0-35 29-64 64-64h192C256 57 313 0 384 0s128 57 128 128h192c35 0 64 29 64 64v320h-64V320H64v576h640V768zM128 256h512c0-35-29-64-64-64h-64c-35 0-64-29-64-64s-29-64-64-64-64 29-64 64-29 64-64 64h-64c-35 0-64 29-64 64z"/></svg></span></span></code>
+                    <p>Or install from the command line:</p>
+                    <div class="terminal">
+                        <div class="terminal-code">
+<span class="terminal-prompt">$</span><span>CPU=$(dpkg --print-architecture)</span>
+<span class="terminal-prompt">$</span><span>wget https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet_0.0.7_${CPU}.deb</span>
+<span class="terminal-prompt">$</span><span>sudo apt install ./ovh-devcraft-vogonpoet_0.0.7_${CPU}.deb</span>
+                        </div>
+                        <div class="tooltip" data-text="Copied!">
+                            <button class="copy-button" aria-label="Copy code">
+                                <svg viewBox="0 0 24 24"><path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"/></svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="alternative-downloads smaller-fonts">
+                <div class="alternative-downloads">
                     <span>Other platforms:</span>
-                    <a href="javascript:showOS('win')">Windows</a>
-                    <a href="javascript:showOS('mac')">macOS</a>
+                    <a onclick="showOS('win')">Windows</a>
+                    <a onclick="showOS('mac')">macOS</a>
                 </div>
             </div>
-        </div>
-            </div>
 
-            <div id="pane-mac">
-                
-                    <!-- Mac AMD64 -->
-                    <a id="mac-amd64" href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet-0.0.6-mac-amd64.zip" class="download-button">
-                        <svg width="2em" height="2em" viewBox="0 0 256 315" version="1.1" xmlns="http://www.w3.org/2000/svg"
-                             xmlns:xlink="http://www.w3.org/1999/xlink" preserveAspectRatio="xMidYMid" style="overflow:visible;">
+            <!-- macOS Pane -->
+            <div id="pane-mac" class="pane">
+                <h2>Download for macOS</h2>
+                <p style="margin-bottom: 2rem; color: var(--text-secondary);">Minimalist STT Desktop Frontend</p>
+
+                <div id="mac-amd64">
+                    <a href="https://github.com/arosov/VogonPoet/releases/latest/download/ovh-devcraft-vogonpoet-0.0.7-mac-amd64.zip" class="download-btn" download>
+                        <svg viewBox="0 0 256 315" xmlns="http://www.w3.org/2000/svg">
                             <g transform="translate(0,-30)">
                                 <path d="M213.803394,167.030943 C214.2452,214.609646 255.542482,230.442639 256,230.644727 C255.650812,231.761357 249.401383,253.208293 234.24263,275.361446 C221.138555,294.513969 207.538253,313.596333 186.113759,313.991545 C165.062051,314.379442 158.292752,301.507828 134.22469,301.507828 C110.163898,301.507828 102.642899,313.596301 82.7151126,314.379442 C62.0350407,315.16201 46.2873831,293.668525 33.0744079,274.586162 C6.07529317,235.552544 -14.5576169,164.286328 13.147166,116.18047 C26.9103111,92.2909053 51.5060917,77.1630356 78.2026125,76.7751096 C98.5099145,76.3877456 117.677594,90.4371851 130.091705,90.4371851 C142.497945,90.4371851 165.790755,73.5415029 190.277627,76.0228474 C200.528668,76.4495055 229.303509,80.1636878 247.780625,107.209389 C246.291825,108.132333 213.446350,127.253405 213.803394,167.030988 M174.239142,50.1987033 C185.218331,36.9088319 192.607958,18.4081019 190.591988,0 C174.766312,0.636050225 155.629514,10.5457909 144.278109,23.8283506 C134.10507,35.5906758 125.195775,54.4170275 127.599657,72.4607932 C145.239231,73.8255433 163.259413,63.4970262 174.239142,50.1987249"/>
                             </g>
                         </svg>
                         <span>Download for Intel Mac</span>
                     </a>
+                </div>
+                
+                <div id="mac-aarch64"></div>
 
-                    
-                <div class="alternative-downloads smaller-fonts">
+                <div class="alternative-downloads">
                     <span>Other platforms:</span>
-                    <a href="javascript:showOS('win')">Windows</a>
-                    <a href="javascript:showOS('linux')">Linux</a>
+                    <a onclick="showOS('win')">Windows</a>
+                    <a onclick="showOS('linux')">Linux</a>
                 </div>
             </div>
         </div>
 
-                <div class="alternative-downloads smaller-fonts">
-                    <span>Other platforms:</span>
-                    <a href="javascript:showOS('win')">Windows</a>
-                    <a href="javascript:showOS('mac')">macOS</a>
-                </div>
-            </div>
-        </div>
-
-        <div id="conveyor-logo" style="text-align: right; margin-right: 1em">
-            <a href="https://www.hydraulic.dev">
-                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="width: 10em" viewBox="0 0 152 20"
-                     role="img" aria-label="Packaged with Conveyor"><title>Packaged with: Conveyor</title>
-                    <linearGradient id="s" x2="0" y2="100%">
-                        <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
-                        <stop offset="1" stop-opacity=".1"/>
-                    </linearGradient>
-                    <clipPath id="r">
-                        <rect width="152" height="20" rx="3" fill="#fff"/>
-                    </clipPath>
-                    <g clip-path="url(#r)">
-                        <rect width="89" height="20" fill="#555"/>
-                        <rect x="89" width="63" height="20" fill="#007ec6"/>
-                        <rect width="152" height="20" fill="url(#s)"/>
-                    </g>
-                    <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif"
-                       text-rendering="geometricPrecision" font-size="110">
-                        <text aria-hidden="true" x="455" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="790">
-                            Packaged with
-                        </text>
-                        <text x="455" y="140" transform="scale(.1)" fill="#fff" textLength="790">Packaged with</text>
-                        <text aria-hidden="true" x="1195" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="530">
-                            Conveyor
-                        </text>
-                        <text x="1195" y="140" transform="scale(.1)" fill="#fff" textLength="530">Conveyor</text>
-                    </g>
-                </svg>
-            </a>
-        </div>
+        <footer>
+            <p>Built with <a href="https://kotlinlang.org/">Kotlin</a> and <a href="https://www.jetbrains.com/compose/">JetBrains Compose</a></p>
+            <p>Packaged with <a href="https://www.hydraulic.software/">Hydraulic Conveyor</a></p>
+        </footer>
     </div>
 
     <script>
         function unavailable() {
-            document.getElementById("no-go").style = "display: block";
-            document.getElementById("panes").style = "display: none";
+            document.getElementById("no-go").style.display = "block";
+            document.getElementById("panes").style.display = "none";
         }
 
         function showOS(os, arch) {
-            // Hide the elements with id pane-* so only the one with id pane-os is shown.
+            // Hide all panes
             for (const o of ["win", "mac", "linux"]) {
-                var s = ""
-                if (o != os)
-                    s = "display: none";
-                let pane = document.getElementById("pane-" + o);
-                if (pane)
-                    pane.style = s;
+                const pane = document.getElementById("pane-" + o);
+                if (pane) pane.classList.remove("active-pane");
             }
 
+            // Show selected pane
+            const activePane = document.getElementById("pane-" + os);
+            if (activePane) activePane.classList.add("active-pane");
+
             // Ensure the user sees the right button for their CPU arch, if we know it.
-            if (os == "mac") {
-                if (arch == "amd64") {
+            if (os === "mac") {
+                if (arch === "amd64") {
                     let el = document.getElementById("mac-aarch64");
-                    if (el) {
-                        el.style = "display: none";
-                        // If we only have ARM builds, show the unavailable message
-                        let amd = document.getElementById("mac-amd64");
-                        if (!amd) {
-                            let unavail = document.getElementById("mac-unavailable");
-                            if (unavail) unavail.style = "display: block";
-                        }
-                    }
-                } else if (arch == "aarch64") {
+                    if (el) el.style.display = "none";
+                } else if (arch === "aarch64") {
                     let el = document.getElementById("mac-amd64");
-                    if (el) {
-                        el.style = "display: none";
-                        // If we only have Intel builds, show the unavailable message
-                        let arm = document.getElementById("mac-aarch64");
-                        if (!arm) {
-                            let unavail = document.getElementById("mac-unavailable");
-                            if (unavail) unavail.style = "display: block";
-                        }
-                    }
+                    if (el) el.style.display = "none";
                 }
-            } else if (os == "linux") {
-                if (arch == "amd64") {
-                    for(const el of document.getElementsByClassName("linux-aarch64")) {
-                      el.style = "display: none";
-                    }
-                    for(const el of document.getElementsByClassName("linux-all")) {
-                      el.style = "display: none";
-                    }
-                } else if (arch == "aarch64") {
-                    for(const el of document.getElementsByClassName("linux-amd64")) {
-                      el.style = "display: none";
-                    }
-                    for(const el of document.getElementsByClassName("linux-all")) {
-                      el.style = "display: none";
-                    }
-                }
-            } else if (os == "win") {
-                
+            } else if (os === "linux") {
+                // Keep everything showing for linux since we have a combined row
+            } else if (os === "win") {
                 var hasWinArm = false;
-                if (arch == "aarch64" && hasWinArm) {
+                if (arch === "aarch64" && hasWinArm) {
                     let el = document.getElementById("win-amd64");
-                    if (el) {
-                        el.style = "display: none";
-                        let title = document.getElementById("arm-title");
-                        if (title) title.style = "display: none";
-                        let zipTitle = document.getElementById("winzip-arm-title");
-                        if (zipTitle) zipTitle.style = "display: none";
-                        let divider = document.getElementById("win-divider");
-                        if (divider) divider.style = "display: none";
-                    }
-                } else if (arch == "amd64" || !hasWinArm) {
+                    if (el) el.style.display = "none";
+                } else if (arch === "amd64" || !hasWinArm) {
                     let el = document.getElementById("win-aarch64");
-                    if (el) {
-                        el.style = "display: none";
-                        let title = document.getElementById("amd-title");
-                        if (title) title.style = "display: none";
-                        let zipTitle = document.getElementById("winzip-amd-title");
-                        if (zipTitle) zipTitle.style = "display: none";
-                        let divider = document.getElementById("win-divider");
-                        if (divider) divider.style = "display: none";
-                    }
+                    if (el) el.style.display = "none";
                 }
             }
         }
 
         function afterProbe(isUnavailable, os, arch) {
-            if (os == "other" || isUnavailable) {
+            if (os === "other" || isUnavailable) {
                 unavailable();
             } else {
                 showOS(os, arch);
             }
         }
 
-        const panes = document.getElementById("panes");
-        if (panes.children.length == 1) {
-            // Only one OS supported. Show the single pane.
-            for (const o of ["win", "mac", "linux"]) {
-                let pane = document.getElementById("pane-" + o);
-                if (pane) {
-                    pane.style = "";  // Make visible
-                    break;
-                }
-            }
-        } else if (document.location.hash) {
-            showOS(document.location.hash.substring(1));
-        } else {
-            // Auto detect.
-            const uaData = navigator.userAgentData;
-            if (uaData != undefined) {
-                // This is a new API. It's the future of user-agent sniffing and also usefully exposes the underlying CPU architecture which
-                // we need to serve efficient downloads. Unfortunately both CPU arch and OS are considered "high entropy" for some reason
-                // and the API to get it is asynchronous even though it returns immediately. Additionally it doesn't expose the version of
-                // Windows the user has, and Safari doesn't support it. But it's all we're offered.
-                navigator.userAgentData.getHighEntropyValues(["architecture", "bitness", "platform"]).then(uaData => {
-                    const platform = uaData.platform;
+        document.addEventListener("DOMContentLoaded", () => {
+            if (document.location.hash) {
+                showOS(document.location.hash.substring(1));
+            } else {
+                // Auto detect.
+                const uaData = navigator.userAgentData;
+                if (uaData !== undefined) {
+                    navigator.userAgentData.getHighEntropyValues(["architecture", "bitness", "platform"]).then(uaData => {
+                        const platform = uaData.platform;
 
-                    var arch = "amd64";
-                    if (uaData.architecture == "arm")
-                        arch = "aarch64"
+                        var arch = "amd64";
+                        if (uaData.architecture === "arm") arch = "aarch64";
 
-                    // Valid values are: "Android", "Chrome OS", "iOS", "Linux", "macOS", "Windows", or "Unknown".
+                        var os;
+                        if (platform === "Windows") os = "win";
+                        else if (platform === "macOS") os = "mac";
+                        else if (platform === "Linux") os = "linux";
+                        else os = "other";
+
+                        let isUnavailable = navigator.userAgentData.mobile;
+                        afterProbe(isUnavailable, os, arch);
+                    });
+                } else {
+                    let appVersion = navigator.appVersion;
                     var os;
-                    if (platform == "Windows") {
-                        os = "win";
-                    } else if (platform == "macOS") {
-                        os = "mac"
-                    } else if (platform == "Linux") {
-                        os = "linux"
-                    }
+                    if (appVersion.indexOf("Win") !== -1) os = "win";
+                    else if (appVersion.indexOf("Mac") !== -1) os = "mac";
+                    else if (appVersion.indexOf("X11") !== -1 || appVersion.indexOf("Linux") !== -1) os = "linux";
                     else os = "other";
 
-                    // Not available on mobile platforms currently.
-                    let isUnavailable = navigator.userAgentData.mobile;
-                    afterProbe(isUnavailable, os, arch);
-                });
-            } else {
-                // Older way.
-                let appVersion = navigator.appVersion;
-                var os;
-                if (appVersion.indexOf("Win") !== -1) os = "win";
-                else if (appVersion.indexOf("Mac") !== -1) os = "mac";
-                else if (appVersion.indexOf("X11") !== -1 || appVersion.indexOf("Linux") !== -1) os = "linux"
-                else os = "other";
-
-                // CPU architecture in older API is useless. Safari lies and says Intel even on ARM.
-                afterProbe(false, os);
-            }
-        }
-
-        // Make code copyable by clicking the button.
-        Array.from(document.getElementsByClassName("copy-button")).forEach((el) => {
-            el.addEventListener("click", (event) => {
-                const mimeType = 'text/plain';
-                const data = el.parentElement.parentElement.parentElement.children[0].textContent.split("\n").map(str => str.replace("$\xa0", "").replace("PS>\xa0", "").trim()).join("\n");
-
-                try {
-                    const promise = Promise.resolve(new Blob([data], {
-                        type: mimeType
-                    }));
-
-                    const clipboardItem = new ClipboardItem({
-                        [mimeType]: promise
-                    }, {
-                        presentationStyle: "unspecified"
-                    });
-
-                    navigator.clipboard.write([clipboardItem])
-                } catch (e) {
-                    // Try again with the older API. This is for Firefox.
-                    navigator.clipboard.writeText(data);
+                    afterProbe(false, os);
                 }
+            }
 
-                // Make the tooltip appear to confirm to the user.
-                var index = document.styleSheets[0].insertRule(".tooltip:before, .tooltip:after { opacity:1; }", document.styleSheets[0].cssRules.length);
-                setTimeout(function() { document.styleSheets[0].removeRule(index) }, 5000);
-            })
-        })
+            // Copy to clipboard
+            document.querySelectorAll(".copy-button").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const codeBlock = btn.closest(".terminal").querySelector(".terminal-code");
+                    // Extract text but ignore prompts
+                    const lines = Array.from(codeBlock.childNodes)
+                        .filter(node => node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && !node.classList.contains("terminal-prompt")))
+                        .map(node => node.textContent)
+                        .join("");
+                    
+                    const cleanText = lines.replace(/^\s+|\s+$/g, '').split('\n').map(l => l.trim()).filter(l => l.length > 0).join('\n');
+                    
+                    navigator.clipboard.writeText(cleanText).then(() => {
+                        const tooltip = btn.closest(".tooltip");
+                        tooltip.classList.add("show-tooltip");
+                        setTimeout(() => tooltip.classList.remove("show-tooltip"), 2000);
+                    });
+                });
+            });
+        });
     </script>
-</div>
 </body>
 </html>
