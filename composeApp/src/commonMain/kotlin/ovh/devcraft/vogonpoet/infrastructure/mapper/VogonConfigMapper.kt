@@ -10,16 +10,19 @@ fun Babelfish.toDomain(): VogonConfig =
                 VogonConfig.Hardware(
                     device = h.device,
                     microphoneName = h.microphone_name,
-                    onnxModelDir = h.onnx_model_dir,
-                    onnxExecutionProvider = h.onnx_execution_provider,
                     quantization = h.quantization,
-                    activeDevice = h.active_device,
-                    activeDeviceName = h.active_device_name,
-                    vramTotalGb = h.vram_total_gb,
-                    vramUsedBaselineGb = h.vram_used_baseline_gb,
-                    vramUsedModelGb = h.vram_used_model_gb,
                 )
             } ?: VogonConfig.Hardware(),
+        status =
+            status?.let { s ->
+                VogonConfig.Status(
+                    activeDevice = s.active_device,
+                    activeDeviceName = s.active_device_name,
+                    vramTotalGb = s.vram_total_gb,
+                    vramUsedBaselineGb = s.vram_used_baseline_gb,
+                    vramUsedModelGb = s.vram_used_model_gb,
+                )
+            } ?: VogonConfig.Status(),
         pipeline =
             pipeline?.let { p ->
                 VogonConfig.Pipeline(
@@ -101,14 +104,17 @@ fun VogonConfig.toInfrastructure(): Babelfish =
                 Babelfish.Hardware(
                     device = h.device,
                     microphone_name = h.microphoneName,
-                    onnx_model_dir = h.onnxModelDir,
-                    onnx_execution_provider = h.onnxExecutionProvider,
                     quantization = h.quantization,
-                    active_device = h.activeDevice,
-                    active_device_name = h.activeDeviceName,
-                    vram_total_gb = h.vramTotalGb,
-                    vram_used_baseline_gb = h.vramUsedBaselineGb,
-                    vram_used_model_gb = h.vramUsedModelGb,
+                )
+            },
+        status =
+            status.let { s ->
+                Babelfish.Status(
+                    active_device = s.activeDevice,
+                    active_device_name = s.activeDeviceName,
+                    vram_total_gb = s.vramTotalGb,
+                    vram_used_baseline_gb = s.vramUsedBaselineGb,
+                    vram_used_model_gb = s.vramUsedModelGb,
                 )
             },
         pipeline =

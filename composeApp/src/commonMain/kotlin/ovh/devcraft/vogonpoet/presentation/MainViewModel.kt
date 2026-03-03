@@ -90,14 +90,7 @@ class MainViewModel(
                         // are reflected in the UI even if the user is currently editing.
                         _draftConfig.value =
                             currentDraft.copy(
-                                hardware =
-                                    currentDraft.hardware.copy(
-                                        activeDevice = remoteConfig.hardware.activeDevice,
-                                        activeDeviceName = remoteConfig.hardware.activeDeviceName,
-                                        vramTotalGb = remoteConfig.hardware.vramTotalGb,
-                                        vramUsedBaselineGb = remoteConfig.hardware.vramUsedBaselineGb,
-                                        vramUsedModelGb = remoteConfig.hardware.vramUsedModelGb,
-                                    ),
+                                status = remoteConfig.status,
                                 pipeline =
                                     currentDraft.pipeline.copy(
                                         performance = remoteConfig.pipeline.performance,

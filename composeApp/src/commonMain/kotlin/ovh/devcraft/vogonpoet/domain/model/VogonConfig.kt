@@ -11,6 +11,7 @@ data class WakewordInfo(
 
 data class VogonConfig(
     val hardware: Hardware = Hardware(),
+    val status: Status = Status(),
     val pipeline: Pipeline = Pipeline(),
     val systemInput: SystemInput = SystemInput(),
     val voice: Voice = Voice(),
@@ -21,9 +22,10 @@ data class VogonConfig(
     data class Hardware(
         val device: String = "auto",
         val microphoneName: String? = null,
-        val onnxModelDir: String? = null,
-        val onnxExecutionProvider: String? = null,
         val quantization: String? = null,
+    )
+
+    data class Status(
         val activeDevice: String? = null,
         val activeDeviceName: String? = null,
         val vramTotalGb: Double? = null,

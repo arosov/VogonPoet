@@ -180,8 +180,8 @@ fun StatusCard(
             )
 
             if (connectionState is ConnectionState.Connected) {
-                val activeDevice = config?.hardware?.activeDevice
-                val activeDeviceName = config?.hardware?.activeDeviceName
+                val activeDevice = config?.status?.activeDevice
+                val activeDeviceName = config?.status?.activeDeviceName
                 val displayString = activeDeviceName ?: activeDevice
                 displayString?.let { text ->
                     OutlinedStatusText(

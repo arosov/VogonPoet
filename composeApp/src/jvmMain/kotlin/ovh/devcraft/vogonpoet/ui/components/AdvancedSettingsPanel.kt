@@ -208,7 +208,7 @@ fun AdvancedSettingsPanel(
                                     expanded = false
                                     onDismiss()
                                     if (value != currentDevice) {
-                                        val activeDevice = config.hardware.activeDevice
+                                        val activeDevice = config.status.activeDevice
 
                                         // If switching from Auto to the device it's ALREADY using, skip restart.
                                         val isSameAsActive = (currentDevice == "auto" && value == activeDevice && value != "cpu")
@@ -233,16 +233,16 @@ fun AdvancedSettingsPanel(
                     }
                 }
 
-                config.hardware.vramTotalGb?.let { total ->
-                    val isActiveCpu = config.hardware.activeDevice?.lowercase() == "cpu"
+                config.status.vramTotalGb?.let { total ->
+                    val isActiveCpu = config.status.activeDevice?.lowercase() == "cpu"
                     val isConfiguredCpu = config.hardware.device.lowercase() == "cpu"
                     if (total > 0 && !isActiveCpu && !isConfiguredCpu) {
                         Spacer(modifier = Modifier.height(8.dp))
                         VramUsageBar(
                             total = total,
-                            baseline = config.hardware.vramUsedBaselineGb ?: 0.0,
-                            model = config.hardware.vramUsedModelGb ?: 0.0,
-                            deviceName = config.hardware.activeDeviceName ?: config.hardware.activeDevice,
+                            baseline = config.status.vramUsedBaselineGb ?: 0.0,
+                            model = config.status.vramUsedModelGb ?: 0.0,
+                            deviceName = config.status.activeDeviceName ?: config.status.activeDevice,
                             modifier = Modifier.padding(vertical = 4.dp),
                         )
                     }
