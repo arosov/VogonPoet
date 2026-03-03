@@ -51,8 +51,40 @@ if not BABELFISH_DIR.exists():
 
 UV_CMD = "uv"
 
-D3D12INFO_VERSION = "3.16.0"
-D3D12INFO_URL = f"https://github.com/sawickiap/D3d12info/releases/download/v{D3D12INFO_VERSION}/D3d12info.zip"
+# --- Windows DXGI Structures for in-process GPU detection ---
+if sys.platform == "win32":
+
+    class GUID(ctypes.Structure):
+        _fields_ = [
+            ("Data1", ctypes.c_uint32),
+            ("Data2", ctypes.c_uint16),
+            ("Data3", ctypes.c_uint16),
+            ("Data4", ctypes.c_uint8 * 8),
+        ]
+
+        def __init__(self, guid_str):
+            import uuid
+
+            g = uuid.UUID(guid_str)
+            self.Data1 = g.time_low
+            self.Data2 = g.time_mid
+            self.Data3 = g.time_hi_version
+            self.Data4 = (ctypes.c_uint8 * 8)(*g.bytes[8:])
+
+    class DXGI_ADAPTER_DESC1(ctypes.Structure):
+        _fields_ = [
+            ("Description", ctypes.c_wchar * 128),
+            ("VendorId", ctypes.c_uint32),
+            ("DeviceId", ctypes.c_uint32),
+            ("SubSysId", ctypes.c_uint32),
+            ("Revision", ctypes.c_uint32),
+            ("DedicatedVideoMemory", ctypes.c_size_t),
+            ("DedicatedSystemMemory", ctypes.c_size_t),
+            ("SharedSystemMemory", ctypes.c_size_t),
+            ("AdapterLuidLow", ctypes.c_uint32),
+            ("AdapterLuidHigh", ctypes.c_int32),
+            ("Flags", ctypes.c_uint32),
+        ]
 
 
 class HardwareDetector:
@@ -103,48 +135,65 @@ class HardwareDetector:
 
     @staticmethod
     def get_all_gpus() -> List[str]:
-        """Retrieves a list of all detected GPU names using d3d12info or WMI fallback."""
+        """Retrieves a list of all detected GPU names using in-process DXGI or WMI fallback."""
         gpus = []
         try:
             if sys.platform == "win32":
-                # Prefer d3d12info for consistency with the backend
-                # Search common locations
-                search_paths = [
-                    Path(__file__).resolve().parent.parent
-                    / "babelfish"
-                    / ".d3d12info"
-                    / "D3d12info"
-                    / "D3d12info.exe",
-                    Path(__file__).resolve().parent.parent.parent
-                    / "babelfish"
-                    / ".d3d12info"
-                    / "D3d12info"
-                    / "D3d12info.exe",
-                ]
-                d3d12info_exe = None
-                for path in search_paths:
-                    if path.exists():
-                        d3d12info_exe = path
-                        break
-
-                if d3d12info_exe:
-                    try:
-                        out = subprocess.check_output(
-                            [str(d3d12info_exe), "-j"], stderr=subprocess.DEVNULL
+                # 1. Prefer DXGI for consistency with the backend
+                try:
+                    dxgi = ctypes.windll.dxgi
+                    factory_iid = GUID("{7b7166ec-21c7-44ae-b21a-c9ae321ae369}")
+                    p_factory = ctypes.c_void_p()
+                    if (
+                        dxgi.CreateDXGIFactory1(
+                            ctypes.byref(factory_iid), ctypes.byref(p_factory)
                         )
-                        data = json.loads(out)
-                        for adapter in data.get("Adapters", []):
-                            name = adapter.get("DXGI_ADAPTER_DESC3", {}).get(
-                                "Description"
-                            )
-                            if name:
-                                gpus.append(name.strip())
-                        if gpus:
-                            return list(dict.fromkeys(gpus))
-                    except Exception:
-                        pass
+                        == 0
+                    ):
 
-                # Fallback to powershell to avoid localized headers in wmic output
+                        def get_func(obj_ptr, index, argtypes):
+                            vtable = ctypes.cast(
+                                obj_ptr, ctypes.POINTER(ctypes.c_void_p)
+                            )[0]
+                            func_ptr = ctypes.cast(
+                                vtable, ctypes.POINTER(ctypes.c_void_p)
+                            )[index]
+                            return ctypes.WINFUNCTYPE(
+                                ctypes.c_long, ctypes.c_void_p, *argtypes
+                            )(func_ptr)
+
+                        for i in range(16):
+                            p_adapter = ctypes.c_void_p()
+                            # EnumAdapters1 index 12
+                            if (
+                                get_func(
+                                    p_factory, 12, [ctypes.c_uint32, ctypes.c_void_p]
+                                )(p_factory, i, ctypes.byref(p_adapter))
+                                != 0
+                            ):
+                                break
+
+                            desc = DXGI_ADAPTER_DESC1()
+                            # GetDesc1 index 10
+                            if (
+                                get_func(p_adapter, 10, [ctypes.c_void_p])(
+                                    p_adapter, ctypes.byref(desc)
+                                )
+                                == 0
+                            ):
+                                name = desc.Description.strip()
+                                if name:
+                                    gpus.append(name)
+
+                            get_func(p_adapter, 2, [])(p_adapter)  # Release
+                        get_func(p_factory, 2, [])(p_factory)  # Release
+                except Exception:
+                    pass
+
+                if gpus:
+                    return list(dict.fromkeys(gpus))
+
+                # Fallback to powershell
                 out = (
                     subprocess.check_output(
                         [
@@ -292,35 +341,12 @@ class EnvironmentManager:
         self.marker_file = self.cache_dir / ".last_hw_mode"
         self.d3d12info_dir = self.cache_dir / "d3d12info"
 
-    def ensure_d3d12info(self) -> Optional[Path]:
-        """Download and extract d3d12info CLI tool for GPU detection on Windows."""
-        if sys.platform != "win32":
-            return None
-
-        # Correct nested path to the executable
-        d3d12info_exe = self.d3d12info_dir / "D3d12info" / "D3d12info.exe"
-        if d3d12info_exe.exists():
-            return d3d12info_exe
-
-        import urllib.request
-        import zipfile
-
-        logger.info(f"Downloading d3d12info v{D3D12INFO_VERSION} to cache...")
-        try:
-            zip_path = self.cache_dir / f"d3d12info-{D3D12INFO_VERSION}.zip"
-            urllib.request.urlretrieve(D3D12INFO_URL, zip_path)
-
-            logger.info("Extracting d3d12info...")
-            with zipfile.ZipFile(zip_path, "r") as zf:
-                # Extract all to preserve DLLs (e.g., amd_ags_x64.dll)
-                zf.extractall(self.d3d12info_dir)
-
-            zip_path.unlink()
-            logger.info(f"d3d12info installed to {d3d12info_exe}")
-            return d3d12info_exe
-        except Exception as e:
-            logger.warning(f"Failed to download/extract d3d12info: {e}")
-            return None
+        # One-time cleanup of legacy d3d12info binary artifacts
+        if self.d3d12info_dir.exists():
+            try:
+                shutil.rmtree(self.d3d12info_dir)
+            except Exception:
+                pass
 
     def check_marker(self, hw_mode: str) -> bool:
         if self.marker_file.exists():
@@ -411,7 +437,6 @@ class BootstrapServer:
         self.detector = HardwareDetector()
         self.env_manager = EnvironmentManager(BABELFISH_DIR)
         self.completion_future = None
-        self.env_manager.ensure_d3d12info()
 
     def set_completion_future(self, future):
         self.completion_future = future
