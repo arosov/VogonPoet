@@ -103,11 +103,48 @@ class HardwareDetector:
 
     @staticmethod
     def get_all_gpus() -> List[str]:
-        """Retrieves a list of all detected GPU names."""
+        """Retrieves a list of all detected GPU names using d3d12info or WMI fallback."""
         gpus = []
         try:
             if sys.platform == "win32":
-                # Using powershell to avoid localized headers in wmic output
+                # Prefer d3d12info for consistency with the backend
+                # Search common locations
+                search_paths = [
+                    Path(__file__).resolve().parent.parent
+                    / "babelfish"
+                    / ".d3d12info"
+                    / "D3d12info"
+                    / "D3d12info.exe",
+                    Path(__file__).resolve().parent.parent.parent
+                    / "babelfish"
+                    / ".d3d12info"
+                    / "D3d12info"
+                    / "D3d12info.exe",
+                ]
+                d3d12info_exe = None
+                for path in search_paths:
+                    if path.exists():
+                        d3d12info_exe = path
+                        break
+
+                if d3d12info_exe:
+                    try:
+                        out = subprocess.check_output(
+                            [str(d3d12info_exe), "-j"], stderr=subprocess.DEVNULL
+                        )
+                        data = json.loads(out)
+                        for adapter in data.get("Adapters", []):
+                            name = adapter.get("DXGI_ADAPTER_DESC3", {}).get(
+                                "Description"
+                            )
+                            if name:
+                                gpus.append(name.strip())
+                        if gpus:
+                            return list(dict.fromkeys(gpus))
+                    except Exception:
+                        pass
+
+                # Fallback to powershell to avoid localized headers in wmic output
                 out = (
                     subprocess.check_output(
                         [
@@ -271,41 +308,43 @@ class HardwareDetector:
 class EnvironmentManager:
     def __init__(self, babelfish_dir: Path):
         self.babelfish_dir = babelfish_dir
-        self.marker_file = babelfish_dir / ".last_hw_mode"
-        self.d3d12info_dir = babelfish_dir / ".d3d12info"
+        # Use cache directory for runtime artifacts
+        self.cache_dir = Path(
+            os.environ.get("VOGON_APP_CACHE_DIR", str(babelfish_dir / ".cache"))
+        )
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+        self.marker_file = self.cache_dir / ".last_hw_mode"
+        self.d3d12info_dir = self.cache_dir / "d3d12info"
 
     def ensure_d3d12info(self) -> Optional[Path]:
         """Download and extract d3d12info CLI tool for GPU detection on Windows."""
         if sys.platform != "win32":
             return None
 
-        d3d12info_exe = self.d3d12info_dir / "D3d12info.exe"
+        # Correct nested path to the executable
+        d3d12info_exe = self.d3d12info_dir / "D3d12info" / "D3d12info.exe"
         if d3d12info_exe.exists():
             return d3d12info_exe
 
         import urllib.request
         import zipfile
 
-        logger.info(f"Downloading d3d12info v{D3D12INFO_VERSION}...")
+        logger.info(f"Downloading d3d12info v{D3D12INFO_VERSION} to cache...")
         try:
-            zip_path = self.babelfish_dir / f"d3d12info-{D3D12INFO_VERSION}.zip"
+            zip_path = self.cache_dir / f"d3d12info-{D3D12INFO_VERSION}.zip"
             urllib.request.urlretrieve(D3D12INFO_URL, zip_path)
 
+            logger.info("Extracting d3d12info...")
             with zipfile.ZipFile(zip_path, "r") as zf:
-                for member in zf.namelist():
-                    if member.endswith("D3d12info.exe"):
-                        source = zf.open(member)
-                        target_path = d3d12info_exe
-                        with open(target_path, "wb") as target:
-                            target.write(source.read())
-                        target_path.chmod(0o755)
-                        break
+                # Extract all to preserve DLLs (e.g., amd_ags_x64.dll)
+                zf.extractall(self.d3d12info_dir)
 
             zip_path.unlink()
             logger.info(f"d3d12info installed to {d3d12info_exe}")
             return d3d12info_exe
         except Exception as e:
-            logger.warning(f"Failed to download d3d12info: {e}")
+            logger.warning(f"Failed to download/extract d3d12info: {e}")
             return None
 
     def check_marker(self, hw_mode: str) -> bool:

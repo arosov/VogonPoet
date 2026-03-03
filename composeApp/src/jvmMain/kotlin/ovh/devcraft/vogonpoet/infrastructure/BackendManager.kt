@@ -341,6 +341,8 @@ object BackendManager {
 
                 pb.environment()["PYTHONUNBUFFERED"] = "1"
                 pb.environment()["VOGON_APP_DATA_DIR"] = SettingsRepository.appDataDir.absolutePath
+                val userCacheDir = settings.modelsDir?.let { File(it).parentFile?.absolutePath }
+                pb.environment()["VOGON_APP_CACHE_DIR"] = userCacheDir ?: SettingsRepository.appCacheDir.absolutePath
 
                 process = pb.start()
                 logVogon("Backend process started (PID: ${process!!.pid()})")
