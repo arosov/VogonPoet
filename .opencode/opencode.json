@@ -1,0 +1,27 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "permission": {
+        "external_directory": {
+            "/f/dev/babelfish/**": "allow"
+        },
+    },
+    "tui": {
+        "status_bar": {
+            "enabled": true,
+            "show_elapsed_time": true,
+            "show_git_status": true
+        }
+    },
+    "plugin": ["opencode-gemini-auth@latest"],
+    "mcp": {
+        "idea": {
+            "type": "remote",
+            "url": "http://127.0.0.1:64342/stream",
+            "enabled": true,
+            "timeout": 20000,
+            "headers": {
+                "IJ_MCP_SERVER_PROJECT_PATH": "F:/dev/VogonPoet"
+            }
+        }
+    }
+}
