@@ -1,26 +1,39 @@
 {
     "$schema": "https://opencode.ai/config.json",
-    "permission": {
-        "external_directory": {
-            "/f/dev/babelfish/**": "allow"
-        },
-    },
-    "tui": {
-        "status_bar": {
-            "enabled": true,
-            "show_elapsed_time": true,
-            "show_git_status": true
+    "permissions": [
+        { "action": "external_directory", "resource": "*/babelfish/*", "effect": "allow" },
+        { "action": "read", "resource": "*/babelfish/*", "effect": "allow" },
+        { "action": "edit", "resource": "*/babelfish/*", "effect": "allow" },
+        { "action": "glob", "resource": "*/babelfish/*", "effect": "allow" }
+    ],
+    "references": {
+        "babelfish": {
+            "path": "../../babelfish",
+            "description": "Babelfish STT server backend, sibling of VogonPoet. Use for websocket protocol or backend packaging."
         }
     },
-    "plugin": ["opencode-gemini-auth@latest"],
+    "plugins": ["opencode-gemini-auth@latest"],
+    "agents": {
+        "explore-kmp": {
+            "mode": "subagent",
+            "permissions": [
+                { "action": "idea_rename_refactoring", "resource": "*", "effect": "deny" },
+                { "action": "idea_reformat_file", "resource": "*", "effect": "deny" }
+            ]
+        }
+    },
     "mcp": {
-        "idea": {
-            "type": "remote",
-            "url": "http://127.0.0.1:64342/stream",
-            "enabled": true,
-            "timeout": 20000,
-            "headers": {
-                "IJ_MCP_SERVER_PROJECT_PATH": "F:/dev/VogonPoet"
+        "servers": {
+            "idea": {
+                "type": "remote",
+                "url": "http://127.0.0.1:64342/stream",
+                "timeout": {
+                    "startup": 20000,
+                    "catalog": 20000
+                },
+                "headers": {
+                    "IJ_MCP_SERVER_PROJECT_PATH": "F:/dev/VogonPoet"
+                }
             }
         }
     }
