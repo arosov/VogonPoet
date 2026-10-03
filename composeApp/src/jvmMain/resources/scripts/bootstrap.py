@@ -559,7 +559,7 @@ class BootstrapServer:
         # Final Launch Preparation
         launch_env = self.env_manager.get_env_with_dll_injection(hw_mode)
         # Use the same PORT for the actual server
-        args = [UV_CMD, "run", "--no-sync", "babelfish", "--port", str(PORT)]
+        args = [UV_CMD, "run", "--no-sync", "babelfish", "--server", "--port", str(PORT)]
 
         # Check if we should force CPU mode at RUNTIME (not SYNC time)
         force_cpu = str(os.environ.get("VOGON_FORCE_CPU", "")).lower() in (
