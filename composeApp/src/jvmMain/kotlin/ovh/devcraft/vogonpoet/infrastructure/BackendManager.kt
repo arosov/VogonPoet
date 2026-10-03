@@ -207,8 +207,15 @@ object BackendManager {
         return null
     }
 
-    private fun findDevBootstrap(workingDir: File): File? {
-        var current: File? = workingDir
+    private fun findDevBootstrap(devBackend: File): File? {
+        // ADR 0006: babelfish owns its bootstrap — prefer the copy that ships
+        // in the babelfish checkout itself.
+        val devOwned = File(devBackend, "scripts/bootstrap.py")
+        if (devOwned.exists()) return devOwned
+
+        // Transition fallback: the VogonPoet-owned resource copy, until
+        // babelfish's version is canonical in a published babelfish release.
+        var current: File? = File(System.getProperty("user.dir"))
         for (i in 0..3) {
             if (current == null) break
             // Check typical locations in the source tree
@@ -462,7 +469,7 @@ object BackendManager {
             // 1. Try Dev Mode
             val devBackend = findDevBackend(workingDir)
             if (devBackend != null) {
-                val devBootstrap = findDevBootstrap(workingDir)
+                val devBootstrap = findDevBootstrap(devBackend)
                 if (devBootstrap != null) {
                     logVogon("Dev environment detected.")
                     logVogon("  - Backend: ${devBackend.absolutePath}")

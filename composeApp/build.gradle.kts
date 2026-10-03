@@ -125,16 +125,11 @@ tasks.register("bundleBabelfish") {
             println("Warning: pyproject.toml not found in ${contentDir.absolutePath}")
         }
 
-        // Inject bootstrap.py
-        val bootstrapFile = file("src/jvmMain/resources/scripts/bootstrap.py")
-        if (bootstrapFile.exists()) {
-            val targetScriptsDir = File(contentDir, "scripts")
-            targetScriptsDir.mkdirs()
-            copy {
-                from(bootstrapFile)
-                into(targetScriptsDir)
-            }
-        }
+        // ADR 0006: babelfish owns its bootstrap — the babelfish zip carries
+        // scripts/bootstrap.py natively, so we no longer overwrite it with our
+        // resource copy. Keep the resource copy in src/jvmMain/resources as a
+        // transition fallback for findDevBootstrap until babelfish's version
+        // is canonical in a published babelfish release.
 
         // Create the final zip
         if (!outputDir.exists()) {
