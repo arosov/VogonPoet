@@ -74,7 +74,7 @@ This document outlines the key conventions and architectural guidelines for this
 * **Quantization Policy:**
     * **GPU:** Force highest precision available for the target hardware (typically `fp16` or `fp32`). Low-bit quantizations (like `int8`) must be disabled for GPU execution to ensure stability and accuracy.
     * **CPU:** All quantization modes (`int8`, `fp16`, `fp32`) are supported and should be made available to the user.
-* **Multi-GPU Capability:** Ensure standard support for NVIDIA (CUDA), AMD/Intel (DirectML), and platform-specific providers like ROCm or OpenVINO.
+* **Multi-GPU Capability:** NVIDIA (CUDA) is the Linux default; DirectML (AMD/Intel/NVIDIA) is the Windows default; CUDA is a Windows opt-in. There is no ROCm; OpenVINO is a manual opt-in only. `hardware.device` is always a concrete backend — no "auto" (babelfish ADR 0007).
 
 # Gradle module conventions
 

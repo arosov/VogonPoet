@@ -393,6 +393,27 @@ object BackendManager {
             }
         }
 
+    /** Runs one `uv sync --extra <extra> --no-install-project --refresh`, streaming
+     * output to the logs, and returns its exit code. Used by [warmupCache]. */
+    private suspend fun runUvSync(
+        backendDir: File,
+        extra: String,
+        logTag: String,
+    ): Int =
+        withContext(Dispatchers.IO) {
+            val pb =
+                UvExecutor.createProcess(
+                    listOf("sync", "--extra", extra, "--no-install-project", "--refresh"),
+                    backendDir,
+                )
+            pb.redirectErrorStream(true)
+            val process = pb.start()
+            process.inputStream.bufferedReader().use { reader ->
+                reader.forEachLine { line -> logBabel("[$logTag] $line") }
+            }
+            process.waitFor()
+        }
+
     private suspend fun warmupCache(backendDir: File) =
         withContext(Dispatchers.IO) {
             val marker = File(UvExecutor.getEffectiveCachePath(), ".warmup_done")
@@ -400,44 +421,60 @@ object BackendManager {
                 return@withContext
             }
 
-            logVogon("Hardware cache not found. Priming for all modes (this may take a few minutes)...")
-            try {
-                // Phase 1: CUDA
-                logVogon("  - Pre-fetching NVIDIA/CUDA libraries...")
-                val pbCuda =
-                    UvExecutor.createProcess(
-                        listOf("sync", "--extra", "nvidia-win", "--no-install-project", "--refresh"),
-                        backendDir,
-                    )
-                pbCuda.redirectErrorStream(true)
-                val procCuda = pbCuda.start()
-                procCuda.inputStream.bufferedReader().use { reader ->
-                    reader.forEachLine { line -> logBabel("[warmup-cuda] $line") }
+            val isWindows = System.getProperty("os.name").lowercase().contains("win")
+            val isLinux = System.getProperty("os.name").lowercase().contains("linux")
+            when {
+                // Windows defaults to DirectML (ADR 0007): prime only the small
+                // windows-gpu wheel. The cu13 CUDA set is fetched on demand when
+                // the user opts into a cuda device in the dropdown.
+                isWindows -> {
+                    logVogon("Hardware cache not found. Priming the Windows default (this may take a few minutes)...")
+                    try {
+                        logVogon("  - Pre-fetching DirectML libraries...")
+                        val exitDml =
+                            runUvSync(
+                                backendDir,
+                                extra = "windows-gpu",
+                                logTag = "warmup-dml",
+                            )
+                        if (exitDml == 0) {
+                            marker.createNewFile()
+                            logVogon("Hardware cache primed successfully.")
+                        } else {
+                            logVogon("Warning: Hardware cache priming incomplete (DML: $exitDml).")
+                        }
+                    } catch (e: Exception) {
+                        logVogon("Warning: Hardware cache warmup failed: ${e.message}")
+                    }
                 }
-                val exitCuda = procCuda.waitFor()
-
-                // Phase 2: DirectML
-                logVogon("  - Pre-fetching DirectML libraries...")
-                val pbDml =
-                    UvExecutor.createProcess(
-                        listOf("sync", "--extra", "windows-gpu", "--no-install-project", "--refresh"),
-                        backendDir,
-                    )
-                pbDml.redirectErrorStream(true)
-                val procDml = pbDml.start()
-                procDml.inputStream.bufferedReader().use { reader ->
-                    reader.forEachLine { line -> logBabel("[warmup-dml] $line") }
+                // Linux defaults to CUDA (ADR 0007): prime the native cu13 set.
+                isLinux -> {
+                    logVogon("Hardware cache not found. Priming the Linux default (this may take a few minutes)...")
+                    try {
+                        logVogon("  - Pre-fetching NVIDIA CUDA libraries...")
+                        val exitCuda =
+                            runUvSync(
+                                backendDir,
+                                extra = "nvidia-linux",
+                                logTag = "warmup-cuda",
+                            )
+                        if (exitCuda == 0) {
+                            marker.createNewFile()
+                            logVogon("Hardware cache primed successfully.")
+                        } else {
+                            logVogon("Warning: Hardware cache priming incomplete (CUDA: $exitCuda).")
+                        }
+                    } catch (e: Exception) {
+                        logVogon("Warning: Hardware cache warmup failed: ${e.message}")
+                    }
                 }
-                val exitDml = procDml.waitFor()
-
-                if (exitCuda == 0 && exitDml == 0) {
+                // macOS runs on CPU (metal/coreml is a passthrough; there are no
+                // GPU wheels to prefetch), so the base dependency sync at backend
+                // start is all there is — mark the warmup done immediately.
+                else -> {
+                    logVogon("Hardware cache: macOS needs no GPU wheel prefetch (CPU default).")
                     marker.createNewFile()
-                    logVogon("Hardware cache primed successfully.")
-                } else {
-                    logVogon("Warning: Hardware cache priming incomplete (CUDA: $exitCuda, DML: $exitDml).")
                 }
-            } catch (e: Exception) {
-                logVogon("Warning: Hardware cache warmup failed: ${e.message}")
             }
         }
 

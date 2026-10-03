@@ -19,7 +19,8 @@ class DomainModelTest {
     @Test
     fun testVogonConfigDefaults() {
         val config = VogonConfig()
-        assertEquals("auto", config.hardware.device)
+        // Concrete platform default (ADR 0007), never "auto"
+        assertEquals(platformDefaultDevice(), config.hardware.device)
         assertEquals(400L, config.pipeline.silenceThresholdMs)
         assertEquals("127.0.0.1", config.server.host)
         assertEquals(8123L, config.server.port)

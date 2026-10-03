@@ -20,7 +20,7 @@ data class VogonConfig(
     val cache: Cache = Cache(),
 ) {
     data class Hardware(
-        val device: String = "auto",
+        val device: String = platformDefaultDevice(),
         val microphoneName: String? = null,
         val quantization: String? = null,
     )

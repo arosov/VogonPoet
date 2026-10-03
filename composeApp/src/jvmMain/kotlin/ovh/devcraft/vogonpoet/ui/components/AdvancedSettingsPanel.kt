@@ -164,16 +164,39 @@ fun AdvancedSettingsPanel(
                 var expanded by remember { mutableStateOf(false) }
                 val rawDevice = config.hardware.device
 
-                // Combine dynamic hardware with auto and cpu options
-                val hardwareOptions =
-                    listOf("auto" to "Auto Detect (Recommended)", "cpu" to "CPU Only") +
-                        hardwareList.filter { it.id != "cpu" && it.id != "auto" }.map { it.id to it.name }
+                // Concrete backends only (ADR 0007) — no "auto": the platform
+                // default, CPU, and the specific devices list_hardware reports.
+                // On Linux the CUDA default only applies when a CUDA device is
+                // actually present.
+                val osName = System.getProperty("os.name").lowercase()
+                val defaultDevice = when {
+                    osName.contains("win") -> "dml"
+                    osName.contains("linux") &&
+                        hardwareList.any { it.id.startsWith("cuda") } -> "cuda"
+                    else -> "cpu"
+                }
+                val defaultLabel = when (defaultDevice) {
+                    "dml" -> "DirectML (Default)"
+                    "cuda" -> "CUDA (Default)"
+                    else -> "CPU Only"
+                }
 
-                // Safe current device selection:
+                val hardwareOptions =
+                    (if (defaultDevice == "cpu") {
+                        listOf("cpu" to "CPU Only")
+                    } else {
+                        listOf(defaultDevice to defaultLabel)
+                    }) +
+                        hardwareList
+                            .filter { it.id != "cpu" && it.id != "auto" && it.id != defaultDevice }
+                            .map { it.id to it.name }
+
+                // Safe current device selection: an unknown/stale saved device
+                // maps to the platform default.
                 val currentDevice =
                     when {
                         hardwareOptions.any { it.first == rawDevice } -> rawDevice
-                        else -> "auto"
+                        else -> defaultDevice
                     }
 
                 ExposedDropdownMenuBox(
@@ -208,11 +231,8 @@ fun AdvancedSettingsPanel(
                                     expanded = false
                                     onDismiss()
                                     if (value != currentDevice) {
-                                        val activeDevice = config.status.activeDevice
-
-                                        // If switching from Auto to the device it's ALREADY using, skip restart.
-                                        val isSameAsActive = (currentDevice == "auto" && value == activeDevice && value != "cpu")
-
+                                        // Device values are always concrete now
+                                        // (ADR 0007): every switch restarts.
                                         val newConfig =
                                             config.copy(
                                                 hardware =
@@ -221,11 +241,7 @@ fun AdvancedSettingsPanel(
                                                     ),
                                             )
 
-                                        if (isSameAsActive) {
-                                            viewModel.saveConfig(newConfig)
-                                        } else {
-                                            viewModel.saveAndRestart(newConfig)
-                                        }
+                                        viewModel.saveAndRestart(newConfig)
                                     }
                                 },
                             )
