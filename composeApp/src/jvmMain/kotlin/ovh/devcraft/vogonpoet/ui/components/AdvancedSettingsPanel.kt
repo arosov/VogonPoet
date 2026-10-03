@@ -185,7 +185,7 @@ fun AdvancedSettingsPanel(
                     (if (defaultDevice == "cpu") {
                         listOf("cpu" to "CPU Only")
                     } else {
-                        listOf(defaultDevice to defaultLabel)
+                        listOf(defaultDevice to defaultLabel, "cpu" to "CPU Only")
                     }) +
                         hardwareList
                             .filter { it.id != "cpu" && it.id != "auto" && it.id != defaultDevice }
