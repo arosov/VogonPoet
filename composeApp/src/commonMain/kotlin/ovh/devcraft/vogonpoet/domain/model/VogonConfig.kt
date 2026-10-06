@@ -35,20 +35,12 @@ data class VogonConfig(
 
     data class Pipeline(
         val silenceThresholdMs: Long = 400,
-        val updateIntervalMs: Long = 100,
-        val performance: Performance = Performance(),
-    )
-
-    data class Performance(
-        val ghostThrottleMs: Long = 100,
-        val ghostWindowS: Double? = null,
-        val minPaddingS: Double? = null,
-        val tier: String = "auto",
     )
 
     data class SystemInput(
         val enabled: Boolean = false,
         val typeGhost: Boolean = false,
+        val typingThrottleMs: Long = 350,
     )
 
     data class Voice(

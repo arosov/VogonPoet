@@ -464,6 +464,48 @@ fun AdvancedSettingsPanel(
                             disabledActiveTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
                         ),
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Typing Throttle: minimum spacing between keystrokes applied
+                // into the focused application. 0ms is deliberately excluded
+                // (unpaced typing floods editors and lost modifier key-ups
+                // turn backspaces into word deletion); the backend clamps
+                // nothing, so the floor lives in the slider range.
+                val rawThrottle = config.systemInput.typingThrottleMs.toFloat()
+                val typingThrottle = (Math.round(rawThrottle / 50.0) * 50).toFloat()
+
+                Text(
+                    text = "Typing Throttle: ${typingThrottle.toInt()}ms",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = GruvboxFg0,
+                )
+
+                var localThrottle by remember(typingThrottle) { mutableStateOf(typingThrottle) }
+                Slider(
+                    value = localThrottle,
+                    onValueChange = {
+                        localThrottle = (Math.round(it / 50.0) * 50).toFloat()
+                    },
+                    onValueChangeFinished = {
+                        onConfigChange(
+                            config.copy(
+                                systemInput =
+                                    config.systemInput.copy(typingThrottleMs = localThrottle.toLong()),
+                            ),
+                        )
+                    },
+                    enabled = isReady,
+                    valueRange = 50f..600f,
+                    steps = 10,
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = GruvboxGreenDark,
+                            activeTrackColor = GruvboxGreenDark,
+                            disabledThumbColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                            disabledActiveTrackColor = GruvboxGreenDark.copy(alpha = 0.5f),
+                        ),
+                )
             }
 
             // Voice Detection Tuning

@@ -88,15 +88,11 @@ class MainViewModel(
                         _draftConfig.value = remoteConfig
                     } else {
                         // Merge runtime-populated fields from remote back into draft.
-                        // This ensures that VRAM stats and calibrated performance profiles
-                        // are reflected in the UI even if the user is currently editing.
+                        // This ensures that VRAM stats are reflected in the UI even if
+                        // the user is currently editing.
                         _draftConfig.value =
                             currentDraft.copy(
                                 status = remoteConfig.status,
-                                pipeline =
-                                    currentDraft.pipeline.copy(
-                                        performance = remoteConfig.pipeline.performance,
-                                    ),
                             )
                     }
                 }

@@ -8,7 +8,9 @@ fun Babelfish.toDomain(): VogonConfig =
         hardware =
             hardware?.let { h ->
                 VogonConfig.Hardware(
-                    device = h.device,
+                    // The schema no longer bakes a default (ADR 0007 default_factory),
+                    // so a missing value falls back to the platform default.
+                    device = h.device ?: VogonConfig.Hardware().device,
                     microphoneName = h.microphone_name,
                     quantization = h.quantization,
                 )
@@ -27,16 +29,6 @@ fun Babelfish.toDomain(): VogonConfig =
             pipeline?.let { p ->
                 VogonConfig.Pipeline(
                     silenceThresholdMs = p.silence_threshold_ms,
-                    updateIntervalMs = p.update_interval_ms,
-                    performance =
-                        p.performance?.let { perf ->
-                            VogonConfig.Performance(
-                                ghostThrottleMs = perf.ghost_throttle_ms,
-                                ghostWindowS = perf.ghost_window_s,
-                                minPaddingS = perf.min_padding_s,
-                                tier = perf.tier,
-                            )
-                        } ?: VogonConfig.Performance(),
                 )
             } ?: VogonConfig.Pipeline(),
         systemInput =
@@ -44,6 +36,7 @@ fun Babelfish.toDomain(): VogonConfig =
                 VogonConfig.SystemInput(
                     enabled = si.enabled,
                     typeGhost = si.type_ghost,
+                    typingThrottleMs = si.typing_throttle_ms,
                 )
             } ?: VogonConfig.SystemInput(),
         voice =
@@ -120,16 +113,6 @@ fun VogonConfig.toInfrastructure(): Babelfish =
             pipeline.let { p ->
                 Babelfish.Pipeline(
                     silence_threshold_ms = p.silenceThresholdMs,
-                    update_interval_ms = p.updateIntervalMs,
-                    performance =
-                        p.performance.let { perf ->
-                            Babelfish.Performance(
-                                ghost_throttle_ms = perf.ghostThrottleMs,
-                                ghost_window_s = perf.ghostWindowS,
-                                min_padding_s = perf.minPaddingS,
-                                tier = perf.tier,
-                            )
-                        },
                 )
             },
         system_input =
@@ -137,6 +120,7 @@ fun VogonConfig.toInfrastructure(): Babelfish =
                 Babelfish.System_input(
                     enabled = si.enabled,
                     type_ghost = si.typeGhost,
+                    typing_throttle_ms = si.typingThrottleMs,
                 )
             },
         voice =

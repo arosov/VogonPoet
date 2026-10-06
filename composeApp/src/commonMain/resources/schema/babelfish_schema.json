@@ -37,7 +37,6 @@
     "HardwareConfig": {
       "properties": {
         "device": {
-          "default": "auto",
           "title": "Device",
           "type": "string"
         },
@@ -111,40 +110,6 @@
       "title": "HardwareStatus",
       "type": "object"
     },
-    "InputStrategy": {
-      "enum": [
-        "direct",
-        "clipboard",
-        "native",
-        "hybrid"
-      ],
-      "title": "InputStrategy",
-      "type": "string"
-    },
-    "PerformanceProfile": {
-      "properties": {
-        "ghost_throttle_ms": {
-          "default": 50,
-          "title": "Ghost Throttle Ms",
-          "type": "integer"
-        },
-        "ghost_window_s": {
-          "title": "Ghost Window S",
-          "type": "number"
-        },
-        "min_padding_s": {
-          "title": "Min Padding S",
-          "type": "number"
-        },
-        "tier": {
-          "default": "auto",
-          "title": "Tier",
-          "type": "string"
-        }
-      },
-      "title": "PerformanceProfile",
-      "type": "object"
-    },
     "PipelineConfig": {
       "properties": {
         "silence_threshold_ms": {
@@ -156,18 +121,19 @@
           "default": 300,
           "title": "Pre Roll Ms",
           "type": "integer"
-        },
-        "update_interval_ms": {
-          "default": 100,
-          "title": "Update Interval Ms",
-          "type": "integer"
-        },
-        "performance": {
-          "$ref": "#/$defs/PerformanceProfile"
         }
       },
       "title": "PipelineConfig",
       "type": "object"
+    },
+    "SeparatorPolicy": {
+      "enum": [
+        "trailing",
+        "leading",
+        "never"
+      ],
+      "title": "SeparatorPolicy",
+      "type": "string"
     },
     "ServerConfig": {
       "properties": {
@@ -208,9 +174,14 @@
           "title": "Type Ghost",
           "type": "boolean"
         },
-        "strategy": {
-          "$ref": "#/$defs/InputStrategy",
-          "default": "clipboard"
+        "typing_throttle_ms": {
+          "default": 350,
+          "title": "Typing Throttle Ms",
+          "type": "integer"
+        },
+        "separator": {
+          "$ref": "#/$defs/SeparatorPolicy",
+          "default": "trailing"
         }
       },
       "title": "SystemInputConfig",
