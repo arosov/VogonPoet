@@ -18,6 +18,7 @@ import ovh.devcraft.vogonpoet.infrastructure.mapper.toDomain
 import ovh.devcraft.vogonpoet.infrastructure.mapper.toInfrastructure
 import ovh.devcraft.vogonpoet.infrastructure.model.Babelfish
 import java.util.concurrent.ConcurrentHashMap
+import ovh.devcraft.vogonpoet.getCurrentTimeMillis
 import ovh.devcraft.vogonpoet.domain.BabelfishClient as IBabelfishClient
 
 class BabelfishClient(
@@ -59,6 +60,9 @@ class BabelfishClient(
 
     private val _transcription = MutableStateFlow(TranscriptionState())
     override val transcription: StateFlow<TranscriptionState> = _transcription.asStateFlow()
+
+    private val _utteranceTelemetry = MutableStateFlow(UtteranceTelemetry())
+    override val utteranceTelemetry: StateFlow<UtteranceTelemetry> = _utteranceTelemetry.asStateFlow()
 
     private var session: DefaultClientWebSocketSession? = null
     private var connectionJob: Job? = null
@@ -202,7 +206,20 @@ class BabelfishClient(
                         ) {
                             _connectionState.value = ConnectionState.Connected
                             when (vadStateStr) {
-                                "listening" -> _vadState.value = VadState.Listening
+                                "listening" -> {
+                                    // A new listening edge starts a new utterance:
+                                    // fully reset the telemetry for the current
+                                    // occurrence and stamp the voice-detect arrival.
+                                    if (_vadState.value != VadState.Listening) {
+                                        _utteranceTelemetry.value =
+                                            UtteranceTelemetry(
+                                                utteranceId = _utteranceTelemetry.value.utteranceId + 1,
+                                                voiceDetectedArrivalMs = getCurrentTimeMillis(),
+                                            )
+                                    }
+                                    _vadState.value = VadState.Listening
+                                }
+
                                 "idle" -> _vadState.value = VadState.Idle
                             }
                             when (modeStr) {
@@ -251,19 +268,80 @@ class BabelfishClient(
                                         ghostText = "",
                                     )
                                 }
+                                val finalComputeMs =
+                                    element["final_pass_ms"]?.jsonPrimitive?.floatOrNull
+                                // Increments are kept, never replaced: the
+                                // final only completes the telemetry panel.
+                                _utteranceTelemetry.update { current ->
+                                    current.copy(
+                                        finalText = text,
+                                        finalComputeMs = finalComputeMs ?: current.finalComputeMs,
+                                    )
+                                }
                             }
                         } else {
                             _transcription.update { it.copy(ghostText = ghost) }
+                            updateGhostTelemetry(element, ghost)
                         }
                     }
 
                     "transcription_reset" -> {
                         _transcription.update { it.copy(ghostText = "") }
+                        // babelfish resets right after the final (post-utterance
+                        // cleanup). The telemetry is left untouched here: the
+                        // whole utterance — raw increments, composed ghost line
+                        // and final — stays readable until the next listening
+                        // edge starts a new occurrence and fully resets it.
                     }
                 }
             }
         } catch (e: Exception) {
             VogonLogger.e("Error parsing message", e)
+        }
+    }
+
+    /**
+     * Folds a non-final `transcription` payload into the utterance
+     * telemetry: appends one [GhostIncrement] from the RAW ghost (never
+     * re-composed), stamps the local arrival offset relative to the
+     * voice-detect arrival, and updates the Section-2 composed split
+     * (`committed` / `live`) and the timing fields carried by the payload.
+     */
+    private fun updateGhostTelemetry(
+        element: JsonObject,
+        ghost: String,
+    ) {
+        val now = getCurrentTimeMillis()
+        val committed = element["committed"]?.jsonPrimitive?.contentOrNull
+        val live = element["live"]?.jsonPrimitive?.contentOrNull
+        val inferenceMs = element["inference_ms"]?.jsonPrimitive?.floatOrNull
+        val onsetMs = element["onset_ms"]?.jsonPrimitive?.floatOrNull
+        val window = element["window"] as? JsonArray
+        // The window holds (start, end) buffer samples; its end over 16 kHz
+        // is the utterance audio duration so far.
+        val utteranceDurationMs =
+            window?.lastOrNull()?.jsonPrimitive?.floatOrNull?.div(16000f)
+
+        _utteranceTelemetry.update { current ->
+            current.copy(
+                increments =
+                    if (ghost.isNotBlank()) {
+                        current.increments +
+                            GhostIncrement(
+                                raw = ghost,
+                                inferenceMs = inferenceMs,
+                                arrivalOffsetMs =
+                                    current.voiceDetectedArrivalMs?.let { (now - it).coerceAtLeast(0) }
+                                        ?: 0L,
+                            )
+                    } else {
+                        current.increments
+                    },
+                committed = committed ?: current.committed,
+                live = live ?: current.live,
+                firstGhostDelayMs = onsetMs ?: current.firstGhostDelayMs,
+                utteranceDurationMs = utteranceDurationMs ?: current.utteranceDurationMs,
+            )
         }
     }
 

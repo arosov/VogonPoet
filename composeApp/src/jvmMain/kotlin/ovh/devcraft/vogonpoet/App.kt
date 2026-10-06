@@ -17,6 +17,7 @@ import ovh.devcraft.vogonpoet.ui.components.AdvancedSettingsPanel
 import ovh.devcraft.vogonpoet.ui.components.CollapsibleSidePanel
 import ovh.devcraft.vogonpoet.ui.components.ConfigForm
 import ovh.devcraft.vogonpoet.ui.components.StatusCard
+import ovh.devcraft.vogonpoet.ui.components.TranscriptTelemetryCard
 import ovh.devcraft.vogonpoet.ui.components.UpdateBanner
 import ovh.devcraft.vogonpoet.ui.theme.*
 
@@ -34,6 +35,7 @@ fun App(
     val displayedEvent by viewModel.displayedEvent.collectAsState()
     val config by viewModel.config.collectAsState()
     val draftConfig by viewModel.draftConfig.collectAsState()
+    val utteranceTelemetry by viewModel.utteranceTelemetry.collectAsState()
     var isPanelExpanded by remember { mutableStateOf(false) }
 
     MaterialTheme(
@@ -63,6 +65,11 @@ fun App(
                         config = config,
                         displayedEvent = displayedEvent,
                     )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Ghost-pass telemetry for the current utterance
+                    TranscriptTelemetryCard(telemetry = utteranceTelemetry)
 
                     Spacer(modifier = Modifier.height(4.dp))
 

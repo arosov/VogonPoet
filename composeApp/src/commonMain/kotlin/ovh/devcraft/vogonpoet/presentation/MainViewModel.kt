@@ -18,6 +18,7 @@ import ovh.devcraft.vogonpoet.domain.model.EngineMode
 import ovh.devcraft.vogonpoet.domain.model.ProtocolMessage
 import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 import ovh.devcraft.vogonpoet.domain.model.TranscriptionState
+import ovh.devcraft.vogonpoet.domain.model.UtteranceTelemetry
 import ovh.devcraft.vogonpoet.domain.model.VadState
 import ovh.devcraft.vogonpoet.domain.model.VogonConfig
 import ovh.devcraft.vogonpoet.domain.model.WakewordInfo
@@ -35,6 +36,7 @@ class MainViewModel(
     val messages: StateFlow<List<ProtocolMessage>> = babelfishClient.messages
     val config: StateFlow<VogonConfig?> = babelfishClient.config
     val transcription: StateFlow<TranscriptionState> = babelfishClient.transcription
+    val utteranceTelemetry: StateFlow<UtteranceTelemetry> = babelfishClient.utteranceTelemetry
 
     private val _draftConfig = MutableStateFlow<VogonConfig?>(null)
     val draftConfig: StateFlow<VogonConfig?> = _draftConfig.asStateFlow()

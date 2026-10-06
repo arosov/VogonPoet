@@ -57,6 +57,9 @@ class MainViewModelTest {
         private val _transcription = MutableStateFlow(TranscriptionState())
         override val transcription: StateFlow<TranscriptionState> = _transcription
 
+        private val _utteranceTelemetry = MutableStateFlow(UtteranceTelemetry())
+        override val utteranceTelemetry: StateFlow<UtteranceTelemetry> = _utteranceTelemetry
+
         var connectCalled = 0
 
         override suspend fun connect() {
