@@ -205,17 +205,6 @@ class MainViewModel(
         }
     }
 
-    fun forceListen() {
-        viewModelScope.launch {
-            try {
-                babelfishClient.forceListen()
-                VogonLogger.i("Force listen command sent")
-            } catch (e: Exception) {
-                VogonLogger.e("Failed to send force listen command", e)
-            }
-        }
-    }
-
     fun toggleListening() {
         viewModelScope.launch {
             try {

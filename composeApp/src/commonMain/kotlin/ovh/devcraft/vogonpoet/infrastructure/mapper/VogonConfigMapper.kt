@@ -64,7 +64,6 @@ fun Babelfish.toDomain(): VogonConfig =
                         u.shortcuts?.let { s ->
                             VogonConfig.Shortcuts(
                                 toggleListening = s.toggle_listening,
-                                forceListen = s.force_listen,
                             )
                         } ?: VogonConfig.Shortcuts(),
                     activationDetection =
@@ -158,7 +157,6 @@ fun VogonConfig.toInfrastructure(): Babelfish =
                         u.shortcuts.let { s ->
                             Babelfish.Shortcuts(
                                 toggle_listening = s.toggleListening,
-                                force_listen = s.forceListen,
                             )
                         },
                     activation_detection =

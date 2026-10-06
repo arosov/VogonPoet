@@ -83,8 +83,6 @@ class MainViewModelTest {
 
         override suspend fun setMicTest(enabled: Boolean) {}
 
-        override suspend fun forceListen() {}
-
         override suspend fun toggleListening() {}
 
         override fun notifyBootstrap() {}

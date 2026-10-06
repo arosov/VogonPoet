@@ -191,11 +191,6 @@
           "default": "Ctrl+Space",
           "title": "Toggle Listening",
           "type": "string"
-        },
-        "force_listen": {
-          "default": "Left Shift",
-          "title": "Force Listen",
-          "type": "string"
         }
       },
       "title": "ShortcutsConfig",

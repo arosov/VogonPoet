@@ -68,7 +68,6 @@ data class VogonConfig(
 
     data class Shortcuts(
         val toggleListening: String = "Ctrl+Space",
-        val forceListen: String = "Left Shift",
     )
 
     data class ActivationDetection(

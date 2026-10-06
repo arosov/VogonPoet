@@ -208,27 +208,6 @@ fun ConfigForm(
                         modifier = Modifier.fillMaxWidth(),
                     )
 
-                    val pttShortcut = config.ui.shortcuts.forceListen
-                    var localPttShortcut by remember(pttShortcut) { mutableStateOf(pttShortcut) }
-
-                    SingleKeySelector(
-                        label = "Push to Talk",
-                        currentKey = localPttShortcut,
-                        onKeyChange = {
-                            localPttShortcut = it
-                            onConfigChange(
-                                config.copy(
-                                    ui =
-                                        config.ui.copy(
-                                            shortcuts =
-                                                config.ui.shortcuts.copy(forceListen = it),
-                                        ),
-                                ),
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
                     Text(
                         text = "Listening will continue until you stop speaking.",
                         style = MaterialTheme.typography.labelSmall,
