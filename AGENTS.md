@@ -123,3 +123,17 @@ Communication with babelfish happens over websockets.
 
 When dealing with jvmTest, always use the target cleanJvmTest before running the tests with jvmTest,
 otherwise the test results won't be recomputed.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as local markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five canonical roles used as-is. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout (root `GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
