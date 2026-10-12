@@ -93,11 +93,24 @@ tasks.register("bundleBabelfish") {
                     "models/**",
                     "tmp_extraction/**",
                     ".git/**",
-                    "__pycache__/**",
+                    // "__pycache__/**" alone only matches a top-level dir;
+                    // the nested form keeps second copies of compiled caches
+                    // (e.g. src/, scripts/) from being shipped to installs.
+                    "**/__pycache__/**",
                     "tests/**",
                     "*.log",
                     "uv.lock",
                     "test_output.txt",
+                    // Dev-environment artifacts that must not reach installs.
+                    ".cache/**",
+                    ".gemini/**",
+                    ".opencode/**",
+                    ".llm_kb/**",
+                    ".scratch/**",
+                    ".scratch_logs/**",
+                    ".pytest_cache/**",
+                    ".mypy_cache/**",
+                    ".ruff_cache/**",
                 )
             }
         }

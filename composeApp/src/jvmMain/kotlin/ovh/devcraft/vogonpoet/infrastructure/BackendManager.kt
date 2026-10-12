@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ovh.devcraft.vogonpoet.domain.model.ServerStatus
+import ovh.devcraft.vogonpoet.domain.model.platformDefaultDevice
 import ovh.devcraft.vogonpoet.uvdownloader.domain.model.UvDownloadStatus
 import ovh.devcraft.vogonpoet.uvdownloader.domain.usecase.DownloadUvUseCase
 import ovh.devcraft.vogonpoet.uvdownloader.infrastructure.UvRepositoryImpl
@@ -15,6 +16,8 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.io.PrintWriter
 import java.time.LocalDateTime
@@ -414,6 +417,33 @@ object BackendManager {
             process.waitFor()
         }
 
+    /** The effective device babelfish will run on — the driven-mode subset of
+     * babelfish's `_effective_device` (ADR 0014): `VOGON_FORCE_CPU=1` wins,
+     * then `hardware.device` from the config file the server round-trips,
+     * then the platform default (CPU everywhere since ADR 0014). Driven mode
+     * has no CLI passthrough, so there is no `--cpu`/`--gpu` case here. */
+    private fun effectiveDevice(): String {
+        val forceCpu = System.getenv("VOGON_FORCE_CPU")?.trim()?.lowercase()
+        if (forceCpu == "1" || forceCpu == "true" || forceCpu == "yes" || forceCpu == "on") {
+            return "cpu"
+        }
+        val configFile = File(SettingsRepository.appDataDir, "babelfish.config.json")
+        if (configFile.exists()) {
+            try {
+                val device =
+                    Json.parseToJsonElement(configFile.readText())
+                        .jsonObject["hardware"]?.jsonObject?.get("device")
+                        ?.jsonPrimitive?.content
+                if (!device.isNullOrBlank() && device != "auto" && !device.startsWith("rocm")) {
+                    return device
+                }
+            } catch (e: Exception) {
+                logVogon("Warning: could not parse babelfish.config.json for device: ${e.message}")
+            }
+        }
+        return platformDefaultDevice()
+    }
+
     private suspend fun warmupCache(backendDir: File) =
         withContext(Dispatchers.IO) {
             val marker = File(UvExecutor.getEffectiveCachePath(), ".warmup_done")
@@ -423,12 +453,24 @@ object BackendManager {
 
             val isWindows = System.getProperty("os.name").lowercase().contains("win")
             val isLinux = System.getProperty("os.name").lowercase().contains("linux")
+            // ADR 0014: the effective device decides what to pre-prime. Under
+            // the CPU default there is no GPU wheel to fetch — the plain
+            // onnxruntime wheel rides the base dependency sync at backend
+            // start — so the marker is written immediately. GPU users keep
+            // the old behavior: priming is an optimization only; the
+            // bootstrap's `uv sync --extra <flavor>` is the real mechanism
+            // and self-heals a later GPU switch.
+            val device = effectiveDevice()
             when {
-                // Windows defaults to DirectML (ADR 0007): prime only the small
-                // windows-gpu wheel. The cu13 CUDA set is fetched on demand when
-                // the user opts into a cuda device in the dropdown.
+                device == "cpu" -> {
+                    logVogon("Effective device is cpu: no GPU wheel prefetch (CPU default, ADR 0014).")
+                    marker.createNewFile()
+                }
+                // Windows GPU (DirectML or CUDA): prime only the small
+                // windows-gpu wheel. The cu13 CUDA set is fetched on demand
+                // when the user opts into a cuda device in the dropdown.
                 isWindows -> {
-                    logVogon("Hardware cache not found. Priming the Windows default (this may take a few minutes)...")
+                    logVogon("Hardware cache not found. Priming the Windows GPU wheel (device: $device; this may take a few minutes)...")
                     try {
                         logVogon("  - Pre-fetching DirectML libraries...")
                         val exitDml =
@@ -447,9 +489,11 @@ object BackendManager {
                         logVogon("Warning: Hardware cache warmup failed: ${e.message}")
                     }
                 }
-                // Linux defaults to CUDA (ADR 0007): prime the native cu13 set.
-                isLinux -> {
-                    logVogon("Hardware cache not found. Priming the Linux default (this may take a few minutes)...")
+                // Linux CUDA only: prime the native cu13 set. A Linux 'dml'
+                // device is invalid (babelfish degrades it to CPU), and any
+                // other value means no GPU wheels to prefetch.
+                isLinux && device.startsWith("cuda") -> {
+                    logVogon("Hardware cache not found. Priming the Linux CUDA set (device: $device; this may take a few minutes)...")
                     try {
                         logVogon("  - Pre-fetching NVIDIA CUDA libraries...")
                         val exitCuda =
@@ -472,7 +516,7 @@ object BackendManager {
                 // GPU wheels to prefetch), so the base dependency sync at backend
                 // start is all there is — mark the warmup done immediately.
                 else -> {
-                    logVogon("Hardware cache: macOS needs no GPU wheel prefetch (CPU default).")
+                    logVogon("Hardware cache: no GPU wheel prefetch for device '$device' (CPU default, ADR 0014).")
                     marker.createNewFile()
                 }
             }

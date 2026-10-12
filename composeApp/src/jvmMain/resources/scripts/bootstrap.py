@@ -5,18 +5,50 @@
 # ]
 # ///
 
+"""Babelfish environment bootstrap.
+
+Owned by babelfish — see docs/adr/0006-babelfish-owns-its-bootstrap.md.
+The bootstrap is the single owner of environment provisioning: hardware
+detection, `uv sync` with the right ORT extra, model provisioning, and
+DLL-path setup for the ONNX Runtime execution provider.
+
+Two modes of the same logic, selected by environment:
+
+- **Driven mode** (`VOGON_APP_DATA_DIR` set, as set by VogonPoet): stay a
+  status WebSocket on port 8123, write the PID file, and finally launch
+  `babelfish --server --port 8123`, emitting the stdout markers the Kotlin
+  backend scrapes (`BOOTSTRAP SERVER STARTED`, `Launching Babelfish`, and
+  downstream `SERVER: WebSockets running on`) and the status shapes
+  `{"type":"status","message":…,"vad_state":"bootstrapping"}`.
+- **Standalone mode** (those variables absent): detect hardware → sync the
+  right ORT extra → provision the Parakeet model if not cached → build the
+  DLL env → foreground `uv run --no-sync babelfish <passthrough args>`, all
+  logging to stdout/stderr. No server, no WebSocket bootstrap phase.
+
+Both modes share: `HardwareDetector.get_best_mode()`, the `.last_hw_mode`
+marker plus `uv sync --extra <extra> --reinstall-package <ort-flavor>`
+self-heal (this heals mixed ORT wheel installs), `verify_ort_flavor` — a
+live check that the installed onnxruntime actually exposes the mode's
+execution provider, which triggers the sync even on a matching marker
+(H1) and only records the marker once the intended provider imports (H2)
+—, device-keyed model provisioning (ADR 0014: the CPU default pulls the
+Parakeet Redux int4 export with a pinned revision; GPU devices keep the
+fp32 v3 export), and the
+DLL injection. The launcher scripts only resolve uv, seed the shared
+cache variables, and delegate.
+"""
+
 import asyncio
 import logging
 import sys
 import os
 import subprocess
 import shutil
-import argparse
 import json
 import ctypes
 import ctypes.util
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Tuple
 
 import websockets
 
@@ -32,30 +64,122 @@ uv_python = os.environ.get("UV_PYTHON_INSTALL_DIR", "System Default")
 logger.info(f"Active UV Cache: {uv_cache}")
 logger.info(f"Active UV Python Install Dir: {uv_python}")
 
-# Multilingual Parakeet-TDT v3 (25 languages)
-MODEL_REPO = "istupakov/parakeet-tdt-0.6b-v3-onnx"
-MODEL_DIR_NAME = "nemo-parakeet-tdt-0.6b-v3"
+# Multilingual Parakeet weight cards, keyed by device (ADR 0014). The CPU
+# default card is the Parakeet Redux int4 export (418 MB, loads 3.9x faster,
+# transcripts equivalent to fp32 v3 on the bundled fixtures) — the GPU card
+# is the fp32 v3 export we have always shipped. The redux repo is pinned to
+# the revision verified live in the Oct 2026 prototype pass (word-for-word
+# vs the Photon reference); re-verify after any upstream re-export.
+# License: CC-BY-4.0 derivative (moondream/parakeet-redux base model).
+MODEL_REPOS = {
+    "gpu": "istupakov/parakeet-tdt-0.6b-v3-onnx",
+    "cpu": "eschmidbauer/parakeet-redux-onnx",
+}
+MODEL_REPO_CPU_REVISION = "1c285ba78d6f1880803f65355133a5ad3559a407"
+MODEL_DIR_NAMES = {
+    "gpu": "nemo-parakeet-tdt-0.6b-v3",
+    "cpu": "nemo-parakeet-tdt-0.6b-v3-redux",
+}
+# Back-compat aliases: the GPU card keeps the historical constants.
+MODEL_REPO = MODEL_REPOS["gpu"]
+MODEL_DIR_NAME = MODEL_DIR_NAMES["gpu"]
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+# Provisioning patterns per device (ADR 0014): the CPU card is exactly the
+# four files the engine needs — never the repo extras (preprocessor.onnx,
+# vad-model.onnx, .cache/). GPU patterns are unchanged (fp32 v3, .data
+# external-weights layout).
+PROVISION_PATTERNS = {
+    "gpu": [
+        "encoder-model.onnx",
+        "decoder_joint-model.onnx",
+        "encoder-model.onnx.data",
+        "config.json",
+        "vocab.txt",
+    ],
+    "cpu": [
+        "config.json",
+        "vocab.txt",
+        "encoder-model.onnx",
+        "decoder_joint-model.onnx",
+    ],
+}
 
-# Default to Prod location
-BABELFISH_DIR = SCRIPT_DIR.parent / "babelfish"
+# This script lives in the babelfish checkout: its parent is the project root.
+BUNDLE_DIR = Path(__file__).resolve().parent.parent
 
-# Dev fallback
-if not BABELFISH_DIR.exists():
-    logger.info("Prod babelfish dir not found, searching for dev location...")
-    candidate = SCRIPT_DIR
-    found = False
-    # Walk up to find the project root containing 'babelfish'
-    for _ in range(8):  # Check up to 8 levels
-        candidate = candidate.parent
-        if (candidate / "babelfish").is_dir():
-            BABELFISH_DIR = candidate / "babelfish"
-            found = True
-            logger.info(f"Found dev babelfish dir at: {BABELFISH_DIR}")
-            break
+# ORT flavor per hardware mode: (package, provider that must be available).
+# Every flavor wheel installs the same top-level `onnxruntime/` package, so a
+# stale wheel can shadow the intended one and silently degrade to CPU. The
+# marker alone can't catch that (out-of-band venv mutations persist), so
+# `verify_ort_flavor` re-checks the live interpreter on every launch.
+# Providers are listed statically in the pyd — no DLL injection needed.
+ORT_FLAVOR: Dict[str, tuple] = {
+    "cpu": ("onnxruntime", None),
+    "nvidia_win": ("onnxruntime-gpu", "CUDAExecutionProvider"),
+    "nvidia_linux": ("onnxruntime-gpu", "CUDAExecutionProvider"),
+    "intel_linux": ("onnxruntime-openvino", "OpenVINOExecutionProvider"),
+    "windows_gpu": ("onnxruntime-directml", "DmlExecutionProvider"),
+    "metal": ("onnxruntime", None),
+}
 
 UV_CMD = os.environ.get("UV_CMD", "uv")
+
+
+def verify_ort_flavor(hw_mode: str) -> Tuple[bool, List[str]]:
+    """Check the live venv's ORT against the flavor the hardware mode needs.
+
+    Runs `uv run --no-sync python` and prints the installed onnxruntime
+    version plus `get_available_providers()`. Only spawns `uv run
+    --no-sync`, which does not touch installed packages — safe even while
+    an old babelfish instance still holds `babelfish.exe`.
+    Returns (ok, providers); ok means the required provider (if any) is
+    present. A missing provider means some other flavor wheel currently
+    owns the shared `onnxruntime/` package (shadow install).
+    """
+    package, required_provider = ORT_FLAVOR.get(hw_mode, ("onnxruntime", None))
+    try:
+        result = subprocess.run(
+            [
+                UV_CMD,
+                "run",
+                "--no-sync",
+                "python",
+                "-c",
+                "import onnxruntime; "
+                "print(onnxruntime.__version__); "
+                "print('|'.join(onnxruntime.get_available_providers()))",
+            ],
+            cwd=BUNDLE_DIR,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except Exception as e:
+        logger.warning(f"ORT flavor verification could not run: {e}")
+        return False, []
+
+    if result.returncode != 0:
+        stderr = (result.stderr or "").strip().splitlines()
+        reason = stderr[-1] if stderr else f"exit code {result.returncode}"
+        logger.warning(f"ORT flavor verification failed to import: {reason}")
+        return False, []
+
+    lines = [ln.strip() for ln in (result.stdout or "").splitlines() if ln.strip()]
+    version = lines[0] if lines else "unknown"
+    providers = lines[1].split("|") if len(lines) > 1 else []
+    if required_provider and required_provider not in providers:
+        logger.warning(
+            f"ORT flavor mismatch for {hw_mode}: {package} needs "
+            f"{required_provider}, but available providers are {providers} "
+            f"(installed onnxruntime {version}). Likely a shadowed install."
+        )
+        return False, providers
+    return True, providers
+
+# Driven mode is signaled by the same env contract the Kotlin side uses for
+# config/data locations. Setting VOGON_APP_DATA_DIR opts into the
+# status-WebSocket + server launch flow described above.
+DRIVEN = bool(os.environ.get("VOGON_APP_DATA_DIR"))
 
 # --- Windows DXGI Structures for in-process GPU detection ---
 if sys.platform == "win32":
@@ -93,14 +217,156 @@ if sys.platform == "win32":
         ]
 
 
+def _read_config_device() -> str:
+    """Reads `hardware.device` from the babelfish config, if one exists.
+
+    In driven mode only `<VOGON_APP_DATA_DIR>/babelfish.config.json` is
+    considered (matching ConfigManager); standalone also checks the project
+    root, where ConfigManager looks by default.
+    """
+    candidates: List[Path] = []
+    app_data_dir = os.environ.get("VOGON_APP_DATA_DIR")
+    if app_data_dir:
+        candidates.append(Path(app_data_dir) / "babelfish.config.json")
+    if not app_data_dir:
+        candidates.append(BUNDLE_DIR / "babelfish.config.json")
+
+    for config_path in candidates:
+        if config_path.exists():
+            try:
+                with open(config_path, "r") as f:
+                    data = json.load(f)
+                device = data.get("hardware", {}).get("device", "auto")
+                if device:
+                    return str(device)
+            except Exception:
+                pass
+    return "auto"
+
+
+def _force_cpu_env() -> bool:
+    """True when VOGON_FORCE_CPU asks for a CPU-only run."""
+    return str(os.environ.get("VOGON_FORCE_CPU", "")).lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
+def _effective_device(passthrough: Optional[List[str]] = None) -> str:
+    """The device every layer must agree on (ADR 0014): one helper consumed
+    by detection, provisioning, and the launch plan — previously only the
+    launch plan saw the CPU overrides, so a forced-CPU run still synced and
+    provisioned the GPU environment around a CPU inference (the observed
+    layering anomaly).
+
+    Resolution order:
+      1. VOGON_FORCE_CPU=1, or a `--cpu` in the CLI passthrough → "cpu".
+      2. config `hardware.device` as written (ADR 0007: always a concrete
+         backend; legacy ''/'auto'/rocm* map to the platform default).
+      3. missing config → the platform default.
+    """
+    if _force_cpu_env() or "--cpu" in (passthrough or []):
+        return "cpu"
+    device = _read_config_device()
+    if device in ("", "auto") or device.startswith("rocm"):
+        return _platform_default_device()
+    return device
+
+
 def _platform_default_device() -> str:
-    """The concrete backend a fresh/legacy config starts on (ADR 0007):
-    DirectML on Windows; CUDA on Linux with an NVIDIA driver, else CPU."""
-    if sys.platform == "win32":
-        return "dml"
-    if sys.platform == "linux":
-        return "cuda" if HardwareDetector.detect_nvidia() else "cpu"
+    """The concrete backend a fresh/legacy config starts on (ADR 0007,
+    ADR 0014).
+
+    The default is CPU on every platform — served by the Redux int4 card,
+    with GPUs an explicit opt-in (config hardware.device or `babelfish
+    --gpu`). Decided at config creation — never "auto"; kept authoritative
+    here in case the bootstrap must create one. Mirrors
+    babelfish_stt.config.platform_default_device.
+    """
     return "cpu"
+
+
+def _best_detected_gpu_backend() -> str:
+    """The best GPU backend nameable before ORT is installed: CUDA when an
+    NVIDIA driver loads, else DirectML when a GPU enumerates on Windows
+    (the runtime resolution still validates the exact device), else CPU."""
+    if HardwareDetector.detect_nvidia():
+        return "cuda"
+    if sys.platform == "win32" and HardwareDetector().get_all_gpus():
+        return "dml"
+    if HardwareDetector.detect_metal():
+        return "metal"
+    return "cpu"
+
+
+def _effective_device(passthrough: Optional[List[str]] = None) -> str:
+    """The device every layer must agree on (ADR 0014): one helper consumed
+    by detection, provisioning, and the launch plan — previously only the
+    launch plan saw the CPU overrides, so a forced-CPU run still synced and
+    provisioned the GPU environment around a CPU inference (the observed
+    layering anomaly).
+
+    Resolution order:
+      1. VOGON_FORCE_CPU=1, or a `--cpu` in the CLI passthrough → "cpu".
+      2. A `--gpu` in the CLI passthrough → the best detected GPU backend
+         (the CLI's in-memory --gpu override, mirrored here so the synced
+         flavor matches what the engine will resolve).
+      3. config `hardware.device` as written (ADR 0007: always a concrete
+         backend; legacy ''/'auto'/rocm* map to the platform default).
+      4. missing config → the platform default ("cpu" everywhere now).
+    """
+    if _force_cpu_env() or "--cpu" in (passthrough or []):
+        return "cpu"
+    args = passthrough or []
+    if "--gpu" in args:
+        return _best_detected_gpu_backend()
+    device = _read_config_device()
+    if device in ("", "auto") or device.startswith("rocm"):
+        return _platform_default_device()
+    return device
+
+
+def _weights_card(device: str) -> Dict[str, object]:
+    """The weights card a device resolves to (ADR 0014): directory name,
+    HF repo (pinned revision for the CPU card), and provisioning patterns.
+
+    Strict device-keying, no override: cpu implies the Redux card and
+    fp32 v3 never provisions for a cpu device; GPU devices keep fp32 v3
+    and never pull redux — mirrored from engine.weights_card_dir's
+    invariants.
+    """
+    card = "cpu" if device == "cpu" else "gpu"
+    return {
+        "card": card,
+        "dir_name": MODEL_DIR_NAMES[card],
+        "repo": MODEL_REPOS[card],
+        "revision": MODEL_REPO_CPU_REVISION if card == "cpu" else None,
+        "patterns": list(PROVISION_PATTERNS[card]),
+    }
+
+
+def _log_weight_digests(dest_dir: Path) -> None:
+    """SHA-256 per provisioned weights file, logged once on first provision.
+
+    The export-source pinning record (ADR 0014): the CPU card comes from a
+    community export, so the shipped bytes are fingerprinted at provision
+    time and comparable after any upstream re-export. Chunked reads: the
+    encoder is ~344 MB."""
+    import hashlib
+
+    for f in sorted(dest_dir.iterdir()):
+        if not f.is_file():
+            continue
+        digest = hashlib.sha256()
+        with open(f, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                digest.update(chunk)
+        logger.info(
+            f"Provisioned {f.name}: sha256={digest.hexdigest()} "
+            f"size={f.stat().st_size}"
+        )
 
 
 class HardwareDetector:
@@ -234,7 +500,7 @@ class HardwareDetector:
             pass
         return list(dict.fromkeys(gpus))
 
-    def get_best_mode(self) -> Dict[str, str]:
+    def get_best_mode(self, passthrough: Optional[List[str]] = None) -> Dict[str, str]:
         detected_caps = []
         if self.detect_nvidia():
             detected_caps.append("NVIDIA")
@@ -244,26 +510,31 @@ class HardwareDetector:
         all_gpu_names = self.get_all_gpus()
         logger.info(f"Hardware Detection: Caps={detected_caps}, GPUs={all_gpu_names}")
 
-        # Check for user preference in config (specifically for DML vs CUDA on Windows)
-        config_device = "auto"
-        app_data_dir = os.environ.get("VOGON_APP_DATA_DIR")
-        if app_data_dir:
-            config_path = Path(app_data_dir) / "babelfish.config.json"
-            if config_path.exists():
-                try:
-                    with open(config_path, "r") as f:
-                        data = json.load(f)
-                        config_device = data.get("hardware", {}).get("device", "auto")
-                except Exception:
-                    pass
-
-        # `hardware.device` is the source of truth (babelfish ADR 0007).
-        # Legacy values ('', 'auto', rocm*) map to the platform default
-        # (one log line; the running server migrates the config file itself).
-        if config_device in ("", "auto") or config_device.startswith("rocm"):
+        # Legacy values ('', 'auto', rocm*) map to the platform default; the
+        # config file itself is NOT rewritten here (runtime config_manager
+        # migration owns that).
+        raw_config = _read_config_device()
+        if raw_config in ("", "auto") or raw_config.startswith("rocm"):
             default = _platform_default_device()
-            logger.info(f"Migrating legacy device '{config_device}' → '{default}'")
-            config_device = default
+            logger.info(f"Migrating legacy device '{raw_config}' → '{default}'")
+
+        # The effective device (ADR 0014) — VOGON_FORCE_CPU, the --cpu/--gpu
+        # CLI passthrough, then `hardware.device` — is what detection,
+        # provisioning, and the launch plan all consume. Whenever it differs
+        # from the config's own value, say so: the exact confusion the
+        # 2026-10-12 run_redux trace showed (GPU environment around a CPU
+        # inference) becomes an explicit, reasoned log line.
+        device = _effective_device(passthrough)
+        if (
+            device != raw_config
+            and raw_config not in ("", "auto")
+            and not raw_config.startswith("rocm")
+        ):
+            logger.info(
+                f"Effective device: {device} (config says {raw_config}; "
+                "CLI/env override) — sync, provisioning, and launch all "
+                "follow it."
+            )
 
         # NVIDIA presence: driver libraries, or a GPU name from enumeration.
         nvidia_present = "NVIDIA" in detected_caps or any(
@@ -276,7 +547,7 @@ class HardwareDetector:
 
             arch = platform.machine().lower()
             if "arm" in arch or "aarch64" in arch:
-                if config_device == "cpu":
+                if device == "cpu":
                     logger.info("Apple Silicon detected but device is 'cpu'. Using CPU.")
                     return {"hw_mode": "cpu", "extra": "cpu", "desc": "Apple Silicon (CPU mode)"}
                 # Apple Silicon -> CoreML Capable
@@ -294,16 +565,21 @@ class HardwareDetector:
                 }
 
         if sys.platform == "win32":
-            # Windows is DirectML-first: the windows-gpu wheel is small and
-            # works on every GPU vendor. CUDA is an explicit opt-in via
-            # hardware.device ("cuda"/"cuda:N") and syncs nvidia-win on demand.
-            if config_device.startswith("cuda"):
+            # ADR 0014: CPU is the default — the small plain onnxruntime
+            # wheel, no GPU probing for the engine. GPU wheels are opt-in:
+            # CUDA via hardware.device ("cuda"/"cuda:N") syncs nvidia-win on
+            # demand; any other value rides DirectML (windows-gpu works on
+            # every GPU vendor).
+            if device == "cpu":
+                logger.info("Device cpu: using cpu extra (no GPU flavor sync).")
+                return {"hw_mode": "cpu", "extra": "cpu", "desc": "CPU"}
+            if device.startswith("cuda"):
                 if not nvidia_present:
                     logger.warning(
-                        f"hardware.device '{config_device}' requests CUDA but no "
+                        f"hardware.device '{device}' requests CUDA but no "
                         "NVIDIA GPU was detected; honoring the request anyway."
                     )
-                logger.info(f"Device {config_device}: using nvidia-win extra.")
+                logger.info(f"Device {device}: using nvidia-win extra.")
                 return {
                     "hw_mode": "nvidia_win",
                     "extra": "nvidia-win",
@@ -316,10 +592,10 @@ class HardwareDetector:
             }
 
         if sys.platform == "linux":
-            if config_device.startswith("cuda"):
+            if device.startswith("cuda"):
                 if not nvidia_present:
                     logger.warning(
-                        f"hardware.device '{config_device}' requests CUDA but no "
+                        f"hardware.device '{device}' requests CUDA but no "
                         "NVIDIA GPU was detected; syncing the CPU flavor — the "
                         "runtime will degrade to CPU."
                     )
@@ -334,14 +610,14 @@ class HardwareDetector:
                     "extra": "nvidia-linux",
                     "desc": "NVIDIA GPU",
                 }
-            if config_device.startswith("dml"):
+            if device.startswith("dml"):
                 logger.warning(
-                    f"Device '{config_device}' (DirectML) is invalid on Linux; using CPU."
+                    f"Device '{device}' (DirectML) is invalid on Linux; using CPU."
                 )
                 return {"hw_mode": "cpu", "extra": "cpu", "desc": "CPU"}
-            # 'cpu' and anything else. intel-linux is a manual opt-in extra
-            # and is never selected here.
-            logger.info(f"Device {config_device}: using cpu extra.")
+            # 'cpu', openvino (manual opt-in, never auto-selected), and
+            # anything else.
+            logger.info(f"Device {device}: using cpu extra.")
             return {"hw_mode": "cpu", "extra": "cpu", "desc": "CPU"}
 
         return {"hw_mode": "cpu", "extra": "cpu", "desc": "CPU"}
@@ -382,6 +658,7 @@ class EnvironmentManager:
         dest_dir: Path,
         allow_patterns: List[str],
         status_callback=None,
+        revision: Optional[str] = None,
     ):
         if dest_dir.exists() and any(dest_dir.glob("*.onnx")):
             return
@@ -389,17 +666,39 @@ class EnvironmentManager:
         from huggingface_hub import snapshot_download
 
         if status_callback:
-            await status_callback(f"Provisioning model from {repo_id}...")
+            message = f"Provisioning model from {repo_id}..."
+            if asyncio.iscoroutinefunction(status_callback):
+                await status_callback(message)
+            else:
+                status_callback(message)
 
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(
-            None,
-            lambda: snapshot_download(
-                repo_id=repo_id, local_dir=str(dest_dir), allow_patterns=allow_patterns
-            ),
-        )
+
+        def _download():
+            kwargs = {}
+            if revision:
+                kwargs["revision"] = revision
+            return snapshot_download(
+                repo_id=repo_id,
+                local_dir=str(dest_dir),
+                allow_patterns=allow_patterns,
+                **kwargs,
+            )
+
+        await loop.run_in_executor(None, _download)
+
+        # First provision: record what actually shipped (ADR 0014's
+        # export-pinning evidence — the CPU card is a community export).
+        _log_weight_digests(dest_dir)
 
     def get_env_with_dll_injection(self, hw_mode: str) -> Dict[str, str]:
+        """Prepends the ONNX Runtime capi dir and the pip NVIDIA DLL dirs to
+        the child's PATH (Windows) or LD_LIBRARY_PATH (Linux).
+
+        Source of truth for the in-process safety net in
+        `babelfish_stt.hardware.register_nvidia_dll_dirs`; keep the two in
+        agreement.
+        """
         env = os.environ.copy()
         # Clear VIRTUAL_ENV so uv uses the project .venv instead of bootstrap env
         env.pop("VIRTUAL_ENV", None)
@@ -449,13 +748,79 @@ class EnvironmentManager:
         return env
 
 
+async def ensure_ort_env(
+    env_manager: EnvironmentManager,
+    hw_mode: str,
+    extra: str,
+    run_sync,
+    status,
+) -> bool:
+    """Marker + live-verification gate around `uv sync` (closes H1 + H2).
+
+    - Marker matches but the live ORT flavor check fails (out-of-band venv
+      mutation left a stale shadow wheel) -> run the sync anyway, self-heal.
+    - After a successful sync, verify again and only write the marker when
+      the intended provider is actually importable — so a same-sync
+      ordering race (uv's install order deciding the pyd owner) can't
+      record a broken environment as good.
+
+    `run_sync(cmd)` executes one `uv sync` and returns its exit code;
+    `status(message)` reports progress (WebSocket in driven mode, stderr in
+    standalone). Returns True when the environment is verified good.
+    """
+    package, required_provider = ORT_FLAVOR.get(hw_mode, ("onnxruntime", None))
+
+    if env_manager.check_marker(hw_mode):
+        ok, _providers = verify_ort_flavor(hw_mode)
+        if ok:
+            await status("Environment matches hardware, skipping sync.")
+            return True
+        await status(
+            "Environment marker matches, but ORT flavor verification "
+            f"failed; re-syncing to self-heal ({package})..."
+        )
+
+    for attempt in (1, 2):
+        cmd = [UV_CMD, "sync", "--extra", extra, "--reinstall-package", package]
+        if attempt == 2:
+            await status(f"Retrying dependency sync for {hw_mode}...")
+        ret = await run_sync(cmd)
+        if ret != 0:
+            await status("Sync failed!")
+            return False
+        ok, providers = verify_ort_flavor(hw_mode)
+        if ok:
+            env_manager.write_marker(hw_mode)
+            return True
+        await status(
+            f"ORT flavor verification failed after sync (providers: "
+            f"{providers or 'import failed'})..."
+        )
+
+    await status(
+        f"ORT flavor verification failed: {hw_mode} needs "
+        f"{required_provider or 'a working onnxruntime import'}; two sync "
+        "attempts did not restore it. Not launching."
+    )
+    return False
+
+
 class BootstrapServer:
+    """Driven-mode only: a short-lived WebSocket on `PORT` streaming
+    provisioning status to the frontend, closed again before the server
+    launches on the same port."""
+
     def __init__(self, models_dir: Optional[Path] = None):
-        self.loop = asyncio.get_event_loop()
         self.websocket = None
-        self.models_dir = models_dir or (BABELFISH_DIR / "models")
+        # The models BASE: explicit dir if VogonPoet passed one, else the
+        # same resolution as the engine (config cache > env > repo-local).
+        # The device's card directory name is appended at provisioning time
+        # (ADR 0014), once the effective device is known.
+        self.models_dir = (
+            Path(models_dir) if models_dir else _resolve_models_base()
+        )
         self.detector = HardwareDetector()
-        self.env_manager = EnvironmentManager(BABELFISH_DIR)
+        self.env_manager = EnvironmentManager(BUNDLE_DIR)
         self.completion_future = None
 
     def set_completion_future(self, future):
@@ -505,98 +870,240 @@ class BootstrapServer:
                     await self.send_update(line_str)
         return await process.wait()
 
+    async def _sync_dependencies(self, hw_mode: str, extra: str) -> bool:
+        """Marker + verification gate (see ensure_ort_env), driven mode.
+
+        Streams sync output to the status socket, returns False (without
+        launching) when the environment cannot be verified good.
+        """
+
+        async def run_sync(cmd):
+            return await self.run_command(cmd, cwd=BUNDLE_DIR)
+
+        return await ensure_ort_env(
+            self.env_manager, hw_mode, extra, run_sync, self.send_update
+        )
+
     async def run_bootstrap(self):
         await self.send_update("Detecting Hardware...")
+        # The effective device keys BOTH the engine resolution and the
+        # provisioning card (ADR 0014); driven mode has no CLI passthrough,
+        # so the env/config decide here.
+        device = _effective_device()
+        card = _weights_card(device)
         hw = self.detector.get_best_mode()
         hw_mode = hw["hw_mode"]
         extra = hw["extra"]
 
         await self.send_update(f"Hardware: {hw['desc']}. Target mode: {hw_mode}")
 
-        # Model Provisioning
+        # Model Provisioning (device-keyed, ADR 0014)
         self.models_dir.mkdir(parents=True, exist_ok=True)
-        model_dest = self.models_dir / MODEL_DIR_NAME
-        patterns = ["*.onnx", "*.onnx.data", "config.json", "*.txt"]
-        if hw_mode != "cpu":
-            patterns = [
-                "encoder-model.onnx",
-                "decoder_joint-model.onnx",
-                "encoder-model.onnx.data",
-                "config.json",
-                "vocab.txt",
-            ]
+        model_dest = self.models_dir / card["dir_name"]
 
         await self.env_manager.provision_model(
-            MODEL_REPO, model_dest, patterns, self.send_update
+            card["repo"],
+            model_dest,
+            card["patterns"],
+            self.send_update,
+            revision=card["revision"],
         )
 
         # Dependency Sync
-        if not self.env_manager.check_marker(hw_mode):
-            await self.send_update(f"Syncing dependencies for {hw_mode}...")
-
-            cmd = [UV_CMD, "sync", "--extra", extra]
-            # Force reinstall of correct ORT
-            ort_map = {
-                "cpu": "onnxruntime",
-                "nvidia_win": "onnxruntime-gpu",
-                "nvidia_linux": "onnxruntime-gpu",
-                "windows_gpu": "onnxruntime-directml",
-                "metal": "onnxruntime",
-            }
-            if hw_mode in ort_map:
-                cmd.extend(["--reinstall-package", ort_map[hw_mode]])
-
-            ret = await self.run_command(cmd, cwd=BABELFISH_DIR)
-            if ret == 0:
-                self.env_manager.write_marker(hw_mode)
-            else:
-                await self.send_update("Sync failed!")
-                return
-        else:
-            await self.send_update("Environment matches hardware, skipping sync.")
+        if not await self._sync_dependencies(hw_mode, extra):
+            return
 
         await self.send_update("Starting Babelfish...")
+        launch_args, launch_env = HardwareLaunchPlan(self.env_manager).build(hw_mode)
         await asyncio.sleep(0.5)
         if self.websocket:
             await self.websocket.close()
 
-        # Final Launch Preparation
-        launch_env = self.env_manager.get_env_with_dll_injection(hw_mode)
-        # Use the same PORT for the actual server
-        args = [UV_CMD, "run", "--no-sync", "babelfish", "--server", "--port", str(PORT)]
-
-        # Check if we should force CPU mode at RUNTIME (not SYNC time)
-        force_cpu = str(os.environ.get("VOGON_FORCE_CPU", "")).lower() in (
-            "1",
-            "true",
-            "yes",
-            "on",
-        )
-        if not force_cpu:
-            app_data_dir = os.environ.get("VOGON_APP_DATA_DIR")
-            if app_data_dir:
-                config_path = Path(app_data_dir) / "babelfish.config.json"
-                if config_path.exists():
-                    try:
-                        with open(config_path, "r") as f:
-                            data = json.load(f)
-                            if data.get("hardware", {}).get("device") == "cpu":
-                                force_cpu = True
-                    except Exception:
-                        pass
-
-        if force_cpu or hw_mode == "cpu":
-            args.append("--cpu")
-
         # Signal completion to the main loop
         if self.completion_future and not self.completion_future.done():
-            self.completion_future.set_result((args, launch_env))
+            self.completion_future.set_result((launch_args, launch_env))
+
+def _split_args(argv: List[str]):
+    """Splits bootstrap args: consumes `--models-dir [X]` (VogonPoet's own
+    models location) and returns the remainder as babelfish CLI passthrough
+    args for standalone mode."""
+    models_dir = None
+    passthrough: List[str] = []
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "--models-dir" and i + 1 < len(argv):
+            models_dir = argv[i + 1]
+            i += 2
+        elif arg.startswith("--models-dir="):
+            models_dir = arg.split("=", 1)[1]
+            i += 1
+        else:
+            passthrough.append(arg)
+            i += 1
+    return models_dir, passthrough
 
 
-async def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--models-dir", type=str)
-    args = parser.parse_args()
+def _read_config_cache_dir() -> Optional[str]:
+    """Reads `cache.cache_dir` from the babelfish config, mirroring
+    ConfigManager's path resolution (driven: VOGON_APP_DATA_DIR; standalone:
+    project root). Used to pick the same model directory the engine resolves."""
+    candidates: List[Path] = []
+    app_data_dir = os.environ.get("VOGON_APP_DATA_DIR")
+    if app_data_dir:
+        candidates.append(Path(app_data_dir) / "babelfish.config.json")
+    if not app_data_dir:
+        candidates.append(BUNDLE_DIR / "babelfish.config.json")
+
+    for config_path in candidates:
+        if config_path.exists():
+            try:
+                with open(config_path, "r") as f:
+                    data = json.load(f)
+                cache_dir = data.get("cache", {}).get("cache_dir")
+                if cache_dir:
+                    return str(cache_dir)
+            except Exception:
+                pass
+    return None
+
+
+def _resolve_models_base(explicit: Optional[str] = None) -> Path:
+    """The models base matching engine.resolve_model_path's search order:
+    explicit --models-dir > config cache.cache_dir > VOGON_APP_CACHE_DIR >
+    repo-local models/."""
+    if explicit:
+        return Path(explicit)
+    base = _read_config_cache_dir() or os.environ.get("VOGON_APP_CACHE_DIR") or BUNDLE_DIR
+    return Path(base) / "models"
+
+
+def _resolve_models_dir(explicit: Optional[str] = None, device: str = "cpu") -> Path:
+    """Model destination: the models base under the device's weights-card
+    directory name (ADR 0014: cpu -> nemo-parakeet-tdt-0.6b-v3-redux,
+    gpu -> nemo-parakeet-tdt-0.6b-v3)."""
+    return _resolve_models_base(explicit) / _weights_card(device)["dir_name"]
+
+
+class HardwareLaunchPlan:
+    """Resolves the final `babelfish` launch command and environment.
+
+    Shared by driven mode (invoked after the status socket closes, so the
+    engine can rebind the port) and by standalone mode (invoked directly,
+    with no WebSocket phase). The `--no-sync` + `--reinstall-package`
+    pair above is where CPU↔GPU switching self-heals: the hw-mode marker
+    in the shared cache decides when to re-sync, and the ORT-flavor
+    reinstall pins out stale wheels from mixed installs.
+    """
+
+    def __init__(self, env_manager: EnvironmentManager):
+        self.env_manager = env_manager
+
+    def build(self, hw_mode: str, extra_args: Optional[List[str]] = None):
+        env = self.env_manager.get_env_with_dll_injection(hw_mode)
+        # UTF-8 stdio for the child regardless of pipe or console codepage:
+        # locale codecs (cp1252 'charmap') crash on any non-cp1252 character
+        # a transcript contains. main.py reconfigures its streams too; this
+        # pins the mode for paths that print before that reconfigure runs.
+        env["PYTHONUTF8"] = "1"
+        args = [UV_CMD, "run", "--no-sync", "babelfish"]
+        if DRIVEN:
+            args += ["--server", "--port", str(PORT)]
+        args += list(extra_args or [])
+
+        # The effective device (ADR 0014) decides the --cpu append: the same
+        # overrides detection consumed (VOGON_FORCE_CPU, --cpu passthrough,
+        # hardware.device == "cpu"), so the launch flags never disagree with
+        # the synced flavor.
+        if (
+            "--cpu" not in args
+            and (_effective_device(extra_args) == "cpu" or hw_mode == "cpu")
+        ):
+            args.append("--cpu")
+
+        return args, env
+
+
+def run_standalone(argv: List[str]) -> None:
+    """Provision the environment, then exec the babelfish CLI in the
+    foreground with the same stdout/stderr — no WebSocket bootstrap phase."""
+    models_dir_arg, passthrough_args = _split_args(argv)
+
+    print("Bootstrap: detecting hardware...", file=sys.stderr)
+    device = _effective_device(passthrough_args)
+    card = _weights_card(device)
+    hw = HardwareDetector().get_best_mode(passthrough_args)
+    hw_mode = hw["hw_mode"]
+    extra = hw["extra"]
+    print(f"Bootstrap: hardware: {hw['desc']} (mode: {hw_mode})", file=sys.stderr)
+
+    env_manager = EnvironmentManager(BUNDLE_DIR)
+
+    # Model provisioning is device-keyed (ADR 0014): the cpu device pulls
+    # the Redux int4 card — exactly 4 files, ~418 MB, pinned revision —
+    # while GPU devices provision fp32 v3 from the same repo as always.
+    # Whatever weights land in the resolved directory are what the engine
+    # ladder loads.
+    model_dest = _resolve_models_dir(models_dir_arg, device)
+    model_dest.parent.mkdir(parents=True, exist_ok=True)
+
+    if not (model_dest.exists() and any(model_dest.glob("*.onnx"))):
+        print(
+            f"Bootstrap: provisioning model from {card['repo']}...",
+            file=sys.stderr,
+        )
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(
+                env_manager.provision_model(
+                    card["repo"],
+                    model_dest,
+                    card["patterns"],
+                    revision=card["revision"],
+                )
+            )
+        finally:
+            loop.close()
+    else:
+        print(f"Bootstrap: model already provisioned at {model_dest}", file=sys.stderr)
+
+    # Dependency Sync (self-heals mixed ORT installs via --reinstall-package,
+    # gated on a live ORT flavor verification — see ensure_ort_env)
+    async def _run_sync(cmd) -> int:
+        return await asyncio.to_thread(subprocess.call, cmd, cwd=BUNDLE_DIR)
+
+    async def _status(message: str) -> None:
+        print(f"Bootstrap: {message}", file=sys.stderr)
+
+    try:
+        ok = asyncio.run(
+            ensure_ort_env(env_manager, hw_mode, extra, _run_sync, _status)
+        )
+    except Exception as e:
+        print(f"Bootstrap: dependency sync error: {e}", file=sys.stderr)
+        ok = False
+    if not ok:
+        sys.exit(1)
+
+    # Build the launch command (adds --cpu when forced or hw-locked to CPU,
+    # and drops --server/--port: standalone is CLI passthrough)
+    args, launch_env = HardwareLaunchPlan(env_manager).build(hw_mode, passthrough_args)
+
+    print(f"Bootstrap: launching Babelfish ({' '.join(args[1:])})...", file=sys.stderr)
+    os.chdir(BUNDLE_DIR)
+    if sys.platform == "win32":
+        # subprocess.call is blocking, so the script waits for Babelfish to exit
+        ret = subprocess.call(args, env=launch_env)
+        sys.exit(ret)
+    else:
+        # On Linux/Unix, replace the current process
+        os.execvpe(args[0], args, launch_env)
+
+
+async def run_driven(argv: List[str]):
+    models_dir_arg, remaining = _split_args(argv)
+    if remaining:
+        logger.warning(f"Ignoring unexpected args in driven mode: {remaining}")
 
     # Write PID file for robust cleanup
     app_data_dir = os.environ.get("VOGON_APP_DATA_DIR")
@@ -607,7 +1114,7 @@ async def main():
         except Exception as e:
             logger.warning(f"Failed to write PID file: {e}")
 
-    models_dir = Path(args.models_dir) if args.models_dir else None
+    models_dir = Path(models_dir_arg) if models_dir_arg else None
     server = BootstrapServer(models_dir)
 
     # Create a Future to signal completion
@@ -623,18 +1130,25 @@ async def main():
     # Server is now closed, port should be free
     logger.info(f"Bootstrap server stopped. Launching Babelfish on port {PORT}...")
 
-    os.chdir(BABELFISH_DIR)
+    os.chdir(BUNDLE_DIR)
     if sys.platform == "win32":
         # subprocess.call is blocking, so the script waits for Babelfish to exit
         subprocess.call(launch_args, env=launch_env)
         sys.exit(0)
     else:
         # On Linux/Unix, replace the current process
-        os.execvpe(UV_CMD, launch_args, launch_env)
+        os.execvpe(launch_args[0], launch_args, launch_env)
+
+
+def main():
+    if DRIVEN:
+        try:
+            asyncio.run(run_driven(sys.argv[1:]))
+        except KeyboardInterrupt:
+            pass
+    else:
+        run_standalone(sys.argv[1:])
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        pass
+    main()

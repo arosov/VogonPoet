@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import ovh.devcraft.vogonpoet.domain.model.ConnectionState
 import ovh.devcraft.vogonpoet.domain.model.ServerStatus
 import ovh.devcraft.vogonpoet.domain.model.VogonConfig
+import ovh.devcraft.vogonpoet.domain.model.platformDefaultDevice
 import ovh.devcraft.vogonpoet.infrastructure.AppVersion
 import ovh.devcraft.vogonpoet.infrastructure.SettingsRepository
 import ovh.devcraft.vogonpoet.presentation.MainViewModel
@@ -164,26 +165,20 @@ fun AdvancedSettingsPanel(
                 var expanded by remember { mutableStateOf(false) }
                 val rawDevice = config.hardware.device
 
-                // Concrete backends only (ADR 0007) — no "auto": the platform
-                // default, CPU, and the specific devices list_hardware reports.
-                // On Linux the CUDA default only applies when a CUDA device is
-                // actually present.
-                val osName = System.getProperty("os.name").lowercase()
-                val defaultDevice = when {
-                    osName.contains("win") -> "dml"
-                    osName.contains("linux") &&
-                        hardwareList.any { it.id.startsWith("cuda") } -> "cuda"
-                    else -> "cpu"
-                }
+                // Concrete backends only (ADR 0007) — no "auto". ADR 0014:
+                // CPU is the fresh default on every platform (the Parakeet
+                // Redux int4 card); GPUs are an explicit opt-in picked from
+                // the devices list_hardware reports.
+                val defaultDevice = platformDefaultDevice()
                 val defaultLabel = when (defaultDevice) {
                     "dml" -> "DirectML (Default)"
                     "cuda" -> "CUDA (Default)"
-                    else -> "CPU Only"
+                    else -> "CPU (Default)"
                 }
 
                 val hardwareOptions =
                     (if (defaultDevice == "cpu") {
-                        listOf("cpu" to "CPU Only")
+                        listOf("cpu" to defaultLabel)
                     } else {
                         listOf(defaultDevice to defaultLabel, "cpu" to "CPU Only")
                     }) +
